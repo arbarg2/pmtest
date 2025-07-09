@@ -102,7 +102,7 @@ const Index = () => {
                 Records
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
               </button>
-              <a href="#" className="text-slate-600 hover:text-slate-900 transition-colors relative group">
+              <a href="/api-docs" className="text-slate-600 hover:text-slate-900 transition-colors relative group">
                 API
                 <Badge className="ml-2 bg-green-100 text-green-800 text-xs">API-First</Badge>
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
