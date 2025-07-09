@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Search, Shield, TrendingUp, FileText, Zap, CheckCircle, AlertTriangle, XCircle, ArrowRight, Sparkles, DollarSign, Clock, Users } from 'lucide-react';
+import { Search, Shield, TrendingUp, FileText, Zap, CheckCircle, AlertTriangle, XCircle, ArrowRight, Sparkles, DollarSign, Clock, Users, Database } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +8,7 @@ import WalletResults from '@/components/WalletResults';
 import TransactionFlow from '@/components/TransactionFlow';
 import ReportGenerator from '@/components/ReportGenerator';
 import { QuickStartDemo } from '@/components/QuickStartDemo';
+import { LookupRecordsTable } from '@/components/LookupRecordsTable';
 import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
 
 const Index = () => {
@@ -45,6 +45,31 @@ const Index = () => {
     return <ReportGenerator wallet={analysisData} onBack={() => setCurrentView('results')} />;
   }
 
+  if (currentView === 'records') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <header className="border-b border-slate-200/50 bg-white/90 backdrop-blur-xl">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Button variant="ghost" onClick={() => setCurrentView('dashboard')}>
+                  ← Back to Dashboard
+                </Button>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900">Lookup Records</h1>
+                  <p className="text-sm text-slate-500">Review and manage wallet analysis records</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <LookupRecordsTable />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
       {/* Animated background elements */}
@@ -69,6 +94,14 @@ const Index = () => {
               </div>
             </div>
             <nav className="hidden md:flex items-center space-x-6">
+              <button 
+                onClick={() => setCurrentView('records')}
+                className="text-slate-600 hover:text-slate-900 transition-colors relative group flex items-center"
+              >
+                <Database className="w-4 h-4 mr-2" />
+                Records
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+              </button>
               <a href="#" className="text-slate-600 hover:text-slate-900 transition-colors relative group">
                 API
                 <Badge className="ml-2 bg-green-100 text-green-800 text-xs">API-First</Badge>

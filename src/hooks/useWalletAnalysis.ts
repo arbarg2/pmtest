@@ -1,12 +1,14 @@
 
 import { useState } from 'react';
 import { blockTraceAPI, WalletRiskResponse } from '@/services/api';
+import { lookupRecordService } from '@/services/lookupRecords';
 import { useToast } from '@/hooks/use-toast';
 
 export function useWalletAnalysis() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisData, setAnalysisData] = useState<WalletRiskResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [currentLookupRecord, setCurrentLookupRecord] = useState<string | null>(null);
   const { toast } = useToast();
 
   const analyzeWallet = async (address: string) => {
@@ -27,11 +29,15 @@ export function useWalletAnalysis() {
       const result = await blockTraceAPI.analyzeWallet(address);
       const endTime = Date.now();
 
+      // Automatically create lookup record
+      const lookupRecord = await lookupRecordService.createLookupRecord(result);
+      setCurrentLookupRecord(lookupRecord.id);
+
       setAnalysisData(result);
       
       toast({
         title: "Analysis Complete",
-        description: `Analyzed in ${endTime - startTime}ms - ${result.risk_level} risk detected`,
+        description: `Analyzed in ${endTime - startTime}ms - ${result.risk_level} risk detected. Lookup record created: ${lookupRecord.id}`,
       });
 
       return result;
@@ -57,7 +63,7 @@ export function useWalletAnalysis() {
         const url = URL.createObjectURL(report);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `blocktrace-report-${address.slice(0, 8)}.txt`;
+        a.download = `rian-report-${address.slice(0, 8)}.txt`;
         a.click();
         URL.revokeObjectURL(url);
       }
@@ -81,6 +87,7 @@ export function useWalletAnalysis() {
     isAnalyzing,
     analysisData,
     error,
+    currentLookupRecord,
     analyzeWallet,
     generateReport,
   };
