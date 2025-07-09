@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Search, Shield, TrendingUp, FileText, Zap, CheckCircle, AlertTriangle, XCircle, ArrowRight, Sparkles } from 'lucide-react';
+import { Search, Shield, TrendingUp, FileText, Zap, CheckCircle, AlertTriangle, XCircle, ArrowRight, Sparkles, DollarSign, Clock, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,74 +7,41 @@ import { Badge } from '@/components/ui/badge';
 import WalletResults from '@/components/WalletResults';
 import TransactionFlow from '@/components/TransactionFlow';
 import ReportGenerator from '@/components/ReportGenerator';
+import { QuickStartDemo } from '@/components/QuickStartDemo';
+import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
 
 const Index = () => {
   const [walletAddress, setWalletAddress] = useState('');
   const [currentView, setCurrentView] = useState('dashboard');
-  const [currentWallet, setCurrentWallet] = useState(null);
-  const [isSearching, setIsSearching] = useState(false);
+  const { isAnalyzing, analysisData, analyzeWallet, generateReport } = useWalletAnalysis();
 
   const handleWalletCheck = async () => {
     if (walletAddress.trim()) {
-      setIsSearching(true);
-      
-      // Simulate API call with loading state
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Generate placeholder risk data
-      const riskScores = ['Low', 'Medium', 'High'];
-      const randomRisk = riskScores[Math.floor(Math.random() * riskScores.length)];
-      
-      const walletData = {
-        address: walletAddress,
-        risk: randomRisk,
-        sanctioned: Math.random() > 0.7,
-        fraudReports: Math.random() > 0.8,
-        darkMarketExposure: Math.random() > 0.6,
-        lastActivity: new Date().toLocaleDateString(),
-        transactionCount: Math.floor(Math.random() * 1000) + 50
-      };
-      
-      setCurrentWallet(walletData);
-      setIsSearching(false);
+      const result = await analyzeWallet(walletAddress);
+      if (result) {
+        setCurrentView('results');
+      }
+    }
+  };
+
+  const handleDemoTry = async (address: string) => {
+    setWalletAddress(address);
+    const result = await analyzeWallet(address);
+    if (result) {
       setCurrentView('results');
     }
   };
 
-  const recentChecks = [
-    { address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', risk: 'Low', time: '2 hours ago' },
-    { address: '0x742C5F8A8FfC1b8B5Bb4b0B5e6C5D1A8F2C3D4E5', risk: 'High', time: '1 day ago' },
-    { address: '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy', risk: 'Medium', time: '3 days ago' }
-  ];
-
-  const getRiskColor = (risk) => {
-    switch (risk) {
-      case 'Low': return 'text-green-600 bg-green-50 border-green-200';
-      case 'Medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'High': return 'text-red-600 bg-red-50 border-red-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
-    }
-  };
-
-  const getRiskIcon = (risk) => {
-    switch (risk) {
-      case 'Low': return <CheckCircle className="w-4 h-4" />;
-      case 'Medium': return <AlertTriangle className="w-4 h-4" />;
-      case 'High': return <XCircle className="w-4 h-4" />;
-      default: return null;
-    }
-  };
-
-  if (currentView === 'results' && currentWallet) {
-    return <WalletResults wallet={currentWallet} onBack={() => setCurrentView('dashboard')} onViewFlow={() => setCurrentView('flow')} onGenerateReport={() => setCurrentView('report')} />;
+  if (currentView === 'results' && analysisData) {
+    return <WalletResults wallet={analysisData} onBack={() => setCurrentView('dashboard')} onViewFlow={() => setCurrentView('flow')} onGenerateReport={() => setCurrentView('report')} />;
   }
 
-  if (currentView === 'flow' && currentWallet) {
-    return <TransactionFlow wallet={currentWallet} onBack={() => setCurrentView('results')} />;
+  if (currentView === 'flow' && analysisData) {
+    return <TransactionFlow wallet={analysisData} onBack={() => setCurrentView('results')} />;
   }
 
-  if (currentView === 'report' && currentWallet) {
-    return <ReportGenerator wallet={currentWallet} onBack={() => setCurrentView('results')} />;
+  if (currentView === 'report' && analysisData) {
+    return <ReportGenerator wallet={analysisData} onBack={() => setCurrentView('results')} />;
   }
 
   return (
@@ -98,23 +64,24 @@ const Index = () => {
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
                   BlockTrace
                 </h1>
-                <p className="text-sm text-slate-500">Crypto Wallet Risk Intelligence</p>
+                <p className="text-sm text-slate-500">Lightweight Crypto Risk Intelligence</p>
               </div>
             </div>
             <nav className="hidden md:flex items-center space-x-6">
               <a href="#" className="text-slate-600 hover:text-slate-900 transition-colors relative group">
-                Dashboard
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
-              </a>
-              <a href="#" className="text-slate-600 hover:text-slate-900 transition-colors relative group">
-                Reports
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
-              </a>
-              <a href="#" className="text-slate-600 hover:text-slate-900 transition-colors relative group">
                 API
+                <Badge className="ml-2 bg-green-100 text-green-800 text-xs">API-First</Badge>
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
               </a>
-              <Button variant="outline" size="sm" className="hover:scale-105 transition-transform duration-200">Sign In</Button>
+              <a href="#" className="text-slate-600 hover:text-slate-900 transition-colors relative group">
+                Pricing
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+              </a>
+              <a href="#" className="text-slate-600 hover:text-slate-900 transition-colors relative group">
+                Docs
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+              </a>
+              <Button variant="outline" size="sm" className="hover:scale-105 transition-transform duration-200">Free Trial</Button>
             </nav>
           </div>
         </div>
@@ -124,21 +91,37 @@ const Index = () => {
         {/* Hero Section */}
         <div className="text-center mb-16 animate-fade-in">
           <div className="inline-flex items-center space-x-2 bg-blue-50 text-blue-700 px-6 py-3 rounded-full text-sm font-medium mb-8 border border-blue-200/50 hover:scale-105 transition-all duration-300 shadow-sm">
-            <Sparkles className="w-4 h-4" />
-            <span>Real-time Risk Assessment</span>
+            <Zap className="w-4 h-4" />
+            <span>Lightweight • Cost-Efficient • API-First</span>
           </div>
           <h2 className="text-6xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent mb-6 leading-tight">
-            Crypto Wallet Risk Scoring
+            Wallet Risk Scoring
             <br />
-            <span className="text-5xl">& Transaction Tracing</span>
+            <span className="text-4xl">Made Simple & Affordable</span>
           </h2>
-          <p className="text-xl text-slate-600 max-w-3xl mx-auto mb-12 leading-relaxed">
-            Instantly assess wallet risk, trace transaction flows, and generate compliance reports. 
-            Built for exchanges, fintechs, and compliance teams.
+          <p className="text-xl text-slate-600 max-w-3xl mx-auto mb-8 leading-relaxed">
+            Real-time risk analysis for Bitcoin & Ethereum. API-first design, transparent pricing, 
+            and results in under 1 second. Built for teams priced out of enterprise solutions.
           </p>
 
+          {/* Value Props */}
+          <div className="grid md:grid-cols-4 gap-4 mb-12">
+            {[
+              { icon: Clock, label: "< 1 Second", desc: "Real-time analysis" },
+              { icon: DollarSign, label: "From $99/mo", desc: "Transparent pricing" },
+              { icon: Zap, label: "API-First", desc: "Easy integration" },
+              { icon: Users, label: "No Lock-in", desc: "Use our UI or yours" }
+            ].map((item, index) => (
+              <div key={index} className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-slate-200/50 hover:shadow-lg transition-all duration-300">
+                <item.icon className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+                <p className="font-semibold text-slate-900">{item.label}</p>
+                <p className="text-sm text-slate-500">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
           {/* Enhanced Wallet Input */}
-          <Card className="max-w-2xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-1">
+          <Card className="max-w-2xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-1 mb-8">
             <CardContent className="p-8">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1 relative">
@@ -147,17 +130,17 @@ const Index = () => {
                     value={walletAddress}
                     onChange={(e) => setWalletAddress(e.target.value)}
                     className="h-14 text-lg border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 transition-all duration-300 pl-12"
-                    onKeyPress={(e) => e.key === 'Enter' && !isSearching && handleWalletCheck()}
-                    disabled={isSearching}
+                    onKeyPress={(e) => e.key === 'Enter' && !isAnalyzing && handleWalletCheck()}
+                    disabled={isAnalyzing}
                   />
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 </div>
                 <Button 
                   onClick={handleWalletCheck}
                   className="h-14 px-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                  disabled={!walletAddress.trim() || isSearching}
+                  disabled={!walletAddress.trim() || isAnalyzing}
                 >
-                  {isSearching ? (
+                  {isAnalyzing ? (
                     <div className="flex items-center space-x-2">
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       <span>Analyzing...</span>
@@ -172,6 +155,9 @@ const Index = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Quick Start Demo */}
+          <QuickStartDemo onTryDemo={handleDemoTry} />
         </div>
 
         {/* Enhanced Feature Cards */}
@@ -179,70 +165,86 @@ const Index = () => {
           {[
             {
               icon: Shield,
-              title: "Risk Assessment",
-              description: "Get instant risk scores with plain-English explanations. Identify sanctioned addresses, fraud reports, and dark market exposure.",
+              title: "Lightweight Analysis",
+              description: "1-3 hop transaction tracing, real-time scoring, and AI-powered risk detection. Fast results without the enterprise complexity.",
               gradient: "from-green-500 to-emerald-600",
-              delay: "0"
+              delay: "0",
+              badge: "< 1 sec"
             },
             {
               icon: TrendingUp,
-              title: "Transaction Flow",
-              description: "Visualize complex transaction networks with interactive graphs. Trace money flows and identify suspicious patterns.",
+              title: "Cost-Efficient Data",
+              description: "Built on public blockchain data with selective premium enrichment. 80% less expensive than traditional solutions.",
               gradient: "from-blue-500 to-indigo-600",
-              delay: "200"
+              delay: "200",
+              badge: "80% Cheaper"
             },
             {
               icon: FileText,
-              title: "Compliance Reports",
-              description: "Generate professional PDF reports for audits, compliance, and client documentation with one click.",
+              title: "API-First Design",
+              description: "RESTful API with auto-generated SDKs. Use our dashboard or integrate into your existing systems in minutes.",
               gradient: "from-purple-500 to-pink-600",
-              delay: "400"
+              delay: "400",
+              badge: "Easy Integration"
             }
           ].map((feature, index) => (
             <Card key={index} className={`group hover:shadow-2xl transition-all duration-500 border-0 bg-white/90 backdrop-blur-sm transform hover:-translate-y-2 animate-fade-in`} style={{ animationDelay: `${feature.delay}ms` }}>
               <CardHeader>
-                <div className={`w-14 h-14 bg-gradient-to-br ${feature.gradient} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-all duration-300 shadow-lg`}>
-                  <feature.icon className="w-7 h-7 text-white" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`w-14 h-14 bg-gradient-to-br ${feature.gradient} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg`}>
+                    <feature.icon className="w-7 h-7 text-white" />
+                  </div>
+                  <Badge className="bg-blue-50 text-blue-700 text-xs">{feature.badge}</Badge>
                 </div>
                 <CardTitle className="text-xl group-hover:text-blue-600 transition-colors duration-300">{feature.title}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-slate-600 leading-relaxed mb-4">
                   {feature.description}
                 </p>
-                <ArrowRight className="w-5 h-5 text-slate-400 mt-4 group-hover:text-blue-600 group-hover:translate-x-2 transition-all duration-300" />
+                <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-2 transition-all duration-300" />
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Enhanced Recent Checks */}
+        {/* Pricing Preview */}
         <Card className="shadow-2xl border-0 bg-white/90 backdrop-blur-sm animate-fade-in" style={{ animationDelay: '600ms' }}>
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl">
-              <TrendingUp className="w-6 h-6 mr-3 text-blue-600" />
-              Recent Wallet Checks
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center text-2xl">
+              <DollarSign className="w-6 h-6 mr-3 text-green-600" />
+              Simple, Transparent Pricing
             </CardTitle>
+            <p className="text-slate-600">No hidden fees. No enterprise sales calls. Start free.</p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentChecks.map((check, index) => (
-                <div key={index} className="flex items-center justify-between p-5 rounded-2xl bg-slate-50/80 hover:bg-slate-100/80 transition-all duration-300 cursor-pointer group hover:scale-[1.02] hover:shadow-md">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      <Shield className="w-6 h-6 text-slate-600" />
-                    </div>
-                    <div>
-                      <p className="font-mono text-sm text-slate-900 group-hover:text-blue-600 transition-colors duration-300">{check.address}</p>
-                      <p className="text-xs text-slate-500">{check.time}</p>
-                    </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              {[
+                { name: "Free", price: "$0", checks: "100 checks/month", features: ["Basic risk scoring", "Public API access", "Community support"] },
+                { name: "Pro", price: "$99", checks: "10,000 checks/month", features: ["Advanced risk factors", "Transaction graphs", "Priority support", "Custom reports"] },
+                { name: "Enterprise", price: "Custom", checks: "Unlimited", features: ["White-label option", "Custom data sources", "SLA guarantee", "Dedicated support"] }
+              ].map((plan, index) => (
+                <div key={index} className={`p-6 rounded-2xl border-2 transition-all duration-300 hover:shadow-lg ${index === 1 ? 'border-blue-500 bg-blue-50/50' : 'border-slate-200 bg-slate-50/50'}`}>
+                  <div className="text-center">
+                    <h3 className="font-bold text-lg">{plan.name}</h3>
+                    <p className="text-3xl font-bold text-blue-600 my-2">{plan.price}</p>
+                    <p className="text-sm text-slate-500 mb-4">{plan.checks}</p>
+                    <ul className="space-y-2 text-sm text-slate-600">
+                      {plan.features.map((feature, fIndex) => (
+                        <li key={fIndex} className="flex items-center">
+                          <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <Badge className={`${getRiskColor(check.risk)} border font-medium shadow-sm hover:shadow-md transition-shadow duration-300`}>
-                    {getRiskIcon(check.risk)}
-                    <span className="ml-2">{check.risk} Risk</span>
-                  </Badge>
                 </div>
               ))}
+            </div>
+            <div className="text-center mt-8">
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+                Start Free Trial
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -261,43 +263,37 @@ const Index = () => {
                 <span className="text-2xl font-bold">BlockTrace</span>
               </div>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Professional crypto wallet risk assessment and transaction tracing for compliance teams.
+                Lightweight, cost-efficient crypto wallet risk intelligence. API-first design for modern compliance teams.
               </p>
             </div>
             {[
               {
                 title: "Product",
-                links: ["Risk Assessment", "Transaction Tracing", "Compliance Reports"]
+                links: ["API Documentation", "Pricing", "Integration Guide", "Status Page"]
+              },
+              {
+                title: "Company",
+                links: ["About", "Blog", "Careers", "Contact"]
               },
               {
                 title: "Legal",
-                links: ["Privacy Policy", "Terms of Service", "Disclaimers"]
-              },
-              {
-                title: "Disclaimer",
-                content: "This is a risk scoring and trace visualization tool, not a forensic product. Risk assessments are based on available data sources and should not be considered definitive."
+                links: ["Privacy Policy", "Terms of Service", "Data Processing", "Compliance"]
               }
             ].map((section, index) => (
               <div key={index} className="animate-fade-in" style={{ animationDelay: `${(index + 1) * 100}ms` }}>
                 <h4 className="font-semibold mb-4 text-lg">{section.title}</h4>
-                {section.links ? (
-                  <ul className="space-y-3 text-sm text-slate-400">
-                    {section.links.map((link, linkIndex) => (
-                      <li key={linkIndex}>
-                        <a href="#" className="hover:text-white transition-colors duration-300 hover:underline">{link}</a>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    {section.content}
-                  </p>
-                )}
+                <ul className="space-y-3 text-sm text-slate-400">
+                  {section.links.map((link, linkIndex) => (
+                    <li key={linkIndex}>
+                      <a href="#" className="hover:text-white transition-colors duration-300 hover:underline">{link}</a>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </div>
           <div className="border-t border-slate-800 mt-12 pt-8 text-center text-sm text-slate-400">
-            <p>&copy; 2024 BlockTrace. All rights reserved.</p>
+            <p>&copy; 2024 BlockTrace. Built for compliance teams who need speed, accuracy, and affordability.</p>
           </div>
         </div>
       </footer>
