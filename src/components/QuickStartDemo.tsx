@@ -48,7 +48,7 @@ export function QuickStartDemo({ onTryDemo }: QuickStartDemoProps) {
           Try It Now - No Signup Required
         </CardTitle>
         <p className="text-emerald-700 text-sm">
-          Experience BlockTrace in under 60 seconds with these sample addresses
+          Experience Rian in under 60 seconds with these sample addresses
         </p>
       </CardHeader>
       <CardContent className="space-y-4">

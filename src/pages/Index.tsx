@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Search, Shield, TrendingUp, FileText, Zap, CheckCircle, AlertTriangle, XCircle, ArrowRight, Sparkles, DollarSign, Clock, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,7 +63,7 @@ const Index = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                  BlockTrace
+                  Rian
                 </h1>
                 <p className="text-sm text-slate-500">Lightweight Crypto Risk Intelligence</p>
               </div>
@@ -260,7 +261,7 @@ const Index = () => {
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center">
                   <Shield className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-2xl font-bold">BlockTrace</span>
+                <span className="text-2xl font-bold">Rian</span>
               </div>
               <p className="text-slate-400 text-sm leading-relaxed">
                 Lightweight, cost-efficient crypto wallet risk intelligence. API-first design for modern compliance teams.
@@ -293,7 +294,7 @@ const Index = () => {
             ))}
           </div>
           <div className="border-t border-slate-800 mt-12 pt-8 text-center text-sm text-slate-400">
-            <p>&copy; 2024 BlockTrace. Built for compliance teams who need speed, accuracy, and affordability.</p>
+            <p>&copy; 2024 Rian. Built for compliance teams who need speed, accuracy, and affordability.</p>
           </div>
         </div>
       </footer>
