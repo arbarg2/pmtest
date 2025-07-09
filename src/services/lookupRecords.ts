@@ -1,4 +1,3 @@
-
 import { LookupRecord, LookupRecordFilters } from '@/types/lookupRecords';
 import { WalletRiskResponse } from './api';
 
@@ -58,7 +57,7 @@ class LookupRecordService {
   private generateRecentTransactions(network: string, riskLevel: string) {
     const transactionCount = Math.floor(Math.random() * 5) + 3;
     return Array.from({ length: transactionCount }, (_, i) => ({
-      direction: Math.random() > 0.5 ? 'inbound' : 'outbound' as const,
+      direction: (Math.random() > 0.5 ? 'inbound' : 'outbound') as 'inbound' | 'outbound',
       amount: Math.random() * 100,
       risk_score: riskLevel === 'High' ? Math.random() * 4 + 6 : Math.random() * 6,
       timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString()

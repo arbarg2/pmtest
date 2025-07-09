@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Search, Filter, Download, Eye, Edit3, Tag, Clock, Shield, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +15,7 @@ export function LookupRecordsTable() {
   const [editingRecord, setEditingRecord] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     case_notes: '',
-    analyst_decision: 'pending' as const,
+    analyst_decision: 'pending' as LookupRecord['analyst_fields']['analyst_decision'],
     tags: [] as string[],
   });
 
@@ -174,7 +173,7 @@ export function LookupRecordsTable() {
                     <label className="block text-sm font-medium mb-1">Decision</label>
                     <select
                       value={editForm.analyst_decision}
-                      onChange={(e) => setEditForm({ ...editForm, analyst_decision: e.target.value as any })}
+                      onChange={(e) => setEditForm({ ...editForm, analyst_decision: e.target.value as LookupRecord['analyst_fields']['analyst_decision'] })}
                       className="w-full p-2 border border-gray-300 rounded-md"
                     >
                       <option value="pending">Pending</option>
