@@ -35,9 +35,12 @@ export function useWalletAnalysis() {
 
       setAnalysisData(result);
       
+      const entityName = result.entity_attribution.name || 'Unknown Entity';
+      const behaviorType = result.behavioral_classification.primary_type;
+      
       toast({
-        title: "Analysis Complete",
-        description: `Analyzed in ${endTime - startTime}ms - ${result.risk_level} risk detected. Lookup record created: ${lookupRecord.id}`,
+        title: "Enhanced Analysis Complete",
+        description: `${entityName} (${behaviorType}) • ${result.risk_level} risk • ${endTime - startTime}ms • Record: ${lookupRecord.id}`,
       });
 
       return result;
@@ -63,21 +66,21 @@ export function useWalletAnalysis() {
         const url = URL.createObjectURL(report);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `rian-report-${address.slice(0, 8)}.txt`;
+        a.download = `enhanced-wallet-report-${address.slice(0, 8)}.txt`;
         a.click();
         URL.revokeObjectURL(url);
       }
 
       toast({
-        title: "Report Generated",
-        description: `${format.toUpperCase()} report ready for download`,
+        title: "Enhanced Report Generated",
+        description: `Comprehensive ${format.toUpperCase()} report with entity attribution, risk breakdown, and counterparty analysis`,
       });
 
       return report;
     } catch (err) {
       toast({
         title: "Report Generation Failed",
-        description: err instanceof Error ? err.message : 'Failed to generate report',
+        description: err instanceof Error ? err.message : 'Failed to generate enhanced report',
         variant: "destructive",
       });
     }
