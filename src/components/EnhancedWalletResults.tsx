@@ -1,12 +1,12 @@
-
 import React, { useState } from 'react';
-import { ArrowLeft, Shield, AlertTriangle, CheckCircle, XCircle, Eye, FileText, ChevronDown, ChevronUp, Building2, Globe, Clock, TrendingUp, Users, PieChart, Target, MapPin, Activity } from 'lucide-react';
+import { ArrowLeft, Shield, AlertTriangle, CheckCircle, XCircle, Eye, FileText, ChevronDown, ChevronUp, Building2, Globe, Clock, TrendingUp, Users, PieChart, Target, MapPin, Activity, Copy } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Progress } from '@/components/ui/progress';
 import { WalletRiskResponse } from '@/services/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface EnhancedWalletResultsProps {
   wallet: WalletRiskResponse;
@@ -18,9 +18,26 @@ interface EnhancedWalletResultsProps {
 const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }: EnhancedWalletResultsProps) => {
   const [isAnalystMode, setIsAnalystMode] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Copied to clipboard",
+        description: "Wallet address copied successfully",
+      });
+    } catch (err) {
+      toast({
+        title: "Copy failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive",
+      });
+    }
   };
 
   const getRiskConfig = (risk: string) => {
@@ -57,6 +74,7 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
   };
 
   const riskConfig = getRiskConfig(wallet.risk_level);
+  const analysisTimestamp = new Date().toLocaleString();
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${riskConfig.bgClass} relative overflow-hidden`}>
@@ -96,6 +114,65 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Wallet Address & Analysis Info - Prominent Display */}
+        <Card className="mb-6 shadow-xl border-0 bg-white/95 backdrop-blur-sm">
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-600 font-medium">Wallet Address</p>
+                    <div className="flex items-center space-x-2">
+                      <code className="text-lg font-mono bg-slate-100 px-3 py-1 rounded-lg border">
+                        {wallet.address}
+                      </code>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => copyToClipboard(wallet.address)}
+                        className="p-1 h-8 w-8"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-slate-600 font-medium">Analysis Time</p>
+                  <p className="text-lg font-bold text-slate-900">{analysisTimestamp}</p>
+                  <p className="text-xs text-slate-500">Processing: {wallet.processing_time_ms}ms</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-4 gap-4 pt-4 border-t border-slate-200">
+                <div className="text-center">
+                  <p className="text-sm text-slate-600">Network</p>
+                  <Badge variant="outline" className="font-semibold">
+                    {wallet.network}
+                  </Badge>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-slate-600">Risk Level</p>
+                  <Badge className={`${riskConfig.color} font-semibold`}>
+                    {wallet.risk_level}
+                  </Badge>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-slate-600">Risk Score</p>
+                  <p className="text-xl font-bold text-slate-900">{wallet.risk_score.toFixed(1)}/10</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-slate-600">Entity Type</p>
+                  <p className="font-semibold text-slate-900">{wallet.entity_attribution.type}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Entity Attribution Card */}
         <Card className="mb-6 shadow-xl border-0 bg-white/95 backdrop-blur-sm">
           <CardContent className="p-6">

@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Search, Shield, Zap, Eye, BarChart3, FileText, Users, Globe, TrendingUp, AlertTriangle, Building2 } from 'lucide-react';
+import { Search, Shield, Zap, Eye, BarChart3, FileText, Users, Globe, TrendingUp, AlertTriangle, Building2, Database, History } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,12 +14,14 @@ import ReportGenerator from '@/components/ReportGenerator';
 import { AIExplainer } from '@/components/AIExplainer';
 import { QuickStartDemo } from '@/components/QuickStartDemo';
 import { LookupRecordsTable } from '@/components/LookupRecordsTable';
+import { useLookupRecords } from '@/hooks/useLookupRecords';
 
 const Index = () => {
   const [walletAddress, setWalletAddress] = useState('');
   const [showFlow, setShowFlow] = useState(false);
   const [activeTab, setActiveTab] = useState('lookup');
   const { isAnalyzing, analysisData, analyzeWallet, generateReport } = useWalletAnalysis();
+  const { stats } = useLookupRecords();
 
   const handleAnalyze = async () => {
     if (walletAddress.trim()) {
@@ -158,8 +161,13 @@ const Index = () => {
                 Quick Lookup
               </TabsTrigger>
               <TabsTrigger value="records" className="flex items-center">
-                <FileText className="w-4 h-4 mr-2" />
-                Lookup Records
+                <Database className="w-4 h-4 mr-2" />
+                Analysis Records
+                {stats && stats.total > 0 && (
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    {stats.total}
+                  </Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger value="demo" className="flex items-center">
                 <Eye className="w-4 h-4 mr-2" />
@@ -227,6 +235,31 @@ const Index = () => {
             </TabsContent>
 
             <TabsContent value="records" className="mt-6">
+              <Card className="bg-white/90 backdrop-blur shadow-xl border-0 mb-4">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <History className="w-6 h-6 mr-3 text-blue-600" />
+                      Analysis Records
+                    </div>
+                    {stats && (
+                      <div className="flex items-center space-x-4">
+                        <Badge variant="outline" className="text-green-600">
+                          {stats.total || 0} Total Records
+                        </Badge>
+                        {stats.pending_review > 0 && (
+                          <Badge variant="outline" className="text-yellow-600">
+                            {stats.pending_review} Pending Review
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </CardTitle>
+                  <p className="text-slate-600">
+                    All wallet analyses are automatically stored with timestamps and relevant data for audit trails and compliance reporting
+                  </p>
+                </CardHeader>
+              </Card>
               <LookupRecordsTable />
             </TabsContent>
 
@@ -235,17 +268,7 @@ const Index = () => {
             </TabsContent>
 
             <TabsContent value="ai" className="mt-6">
-              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-2 mb-4">
-                    <Zap className="w-5 h-5 text-blue-600" />
-                    <h3 className="font-semibold text-blue-900">AI Explanation</h3>
-                  </div>
-                  <p className="text-blue-600 text-sm">
-                    Analyze a wallet address to get AI-powered explanations of risk factors and behavioral patterns.
-                  </p>
-                </CardContent>
-              </Card>
+              <AIExplainer walletData={analysisData} />
             </TabsContent>
           </Tabs>
         </div>

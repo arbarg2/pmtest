@@ -29,6 +29,9 @@ export function useWalletAnalysis() {
       const result = await blockTraceAPI.analyzeWallet(address);
       const endTime = Date.now();
 
+      // Ensure processing time is set
+      result.processing_time_ms = endTime - startTime;
+
       // Automatically create lookup record
       const lookupRecord = await lookupRecordService.createLookupRecord(result);
       setCurrentLookupRecord(lookupRecord.id);
@@ -40,7 +43,7 @@ export function useWalletAnalysis() {
       
       toast({
         title: "Enhanced Analysis Complete",
-        description: `${entityName} (${behaviorType}) • ${result.risk_level} risk • ${endTime - startTime}ms • Record: ${lookupRecord.id}`,
+        description: `${entityName} (${behaviorType}) • ${result.risk_level} risk • ${endTime - startTime}ms • Record: ${lookupRecord.id.slice(-8)}`,
       });
 
       return result;
