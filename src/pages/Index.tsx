@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Search, Shield, Zap, Eye, BarChart3, FileText, Users, Globe, TrendingUp, AlertTriangle, Building2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,10 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
-import { WalletResults } from '@/components/WalletResults';
+import WalletResults from '@/components/WalletResults';
 import EnhancedWalletResults from '@/components/EnhancedWalletResults';
-import { TransactionFlow } from '@/components/TransactionFlow';
-import { ReportGenerator } from '@/components/ReportGenerator';
+import TransactionFlow from '@/components/TransactionFlow';
+import ReportGenerator from '@/components/ReportGenerator';
 import { AIExplainer } from '@/components/AIExplainer';
 import { QuickStartDemo } from '@/components/QuickStartDemo';
 import { LookupRecordsTable } from '@/components/LookupRecordsTable';
@@ -39,6 +38,11 @@ const Index = () => {
     if (analysisData) {
       await generateReport(analysisData.address);
     }
+  };
+
+  const handleTryDemo = (address: string) => {
+    setWalletAddress(address);
+    handleAnalyze();
   };
 
   // If we have enhanced analysis data and not showing flow, show enhanced results
@@ -227,11 +231,21 @@ const Index = () => {
             </TabsContent>
 
             <TabsContent value="demo" className="mt-6">
-              <QuickStartDemo />
+              <QuickStartDemo onTryDemo={handleTryDemo} />
             </TabsContent>
 
             <TabsContent value="ai" className="mt-6">
-              <AIExplainer />
+              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <Zap className="w-5 h-5 text-blue-600" />
+                    <h3 className="font-semibold text-blue-900">AI Explanation</h3>
+                  </div>
+                  <p className="text-blue-600 text-sm">
+                    Analyze a wallet address to get AI-powered explanations of risk factors and behavioral patterns.
+                  </p>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>
