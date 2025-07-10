@@ -61,7 +61,7 @@ const Index = () => {
   if (showFlow && analysisData) {
     return (
       <TransactionFlow
-        walletAddress={analysisData.address}
+        wallet={analysisData}
         onBack={handleBackToResults}
       />
     );
