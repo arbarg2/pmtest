@@ -395,9 +395,9 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {wallet.counterparty_connections && wallet.counterparty_connections.length > 0 ? (
+                  {wallet.top_counterparties && wallet.top_counterparties.length > 0 ? (
                     <div className="space-y-2">
-                      {wallet.counterparty_connections.slice(0, 3).map((connection, index) => (
+                      {wallet.top_counterparties.slice(0, 3).map((connection, index) => (
                         <div key={index} className="p-3 bg-white rounded-lg border">
                           <div className="flex justify-between items-center mb-1">
                             <span className="text-sm font-medium">{connection.entity_name || 'Unknown Entity'}</span>
