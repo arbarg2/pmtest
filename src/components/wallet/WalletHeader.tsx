@@ -4,6 +4,7 @@ import { ArrowLeft, Download, Network } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { UserDropdown } from '@/components/UserDropdown';
 import { WalletRiskResponse } from '@/services/api';
 
 interface WalletHeaderProps {
@@ -42,15 +43,18 @@ export function WalletHeader({ wallet, onBack, onViewFlow, onGenerateReport }: W
                 <p className="text-sm text-slate-500">Comprehensive risk assessment and analytics</p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Button onClick={onViewFlow} variant="outline">
-                <Network className="w-4 h-4 mr-2" />
-                View Transaction Flow
-              </Button>
-              <Button onClick={onGenerateReport} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-                <Download className="w-4 h-4 mr-2" />
-                Generate Report
-              </Button>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Button onClick={onViewFlow} variant="outline">
+                  <Network className="w-4 h-4 mr-2" />
+                  View Transaction Flow
+                </Button>
+                <Button onClick={onGenerateReport} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                  <Download className="w-4 h-4 mr-2" />
+                  Generate Report
+                </Button>
+              </div>
+              <UserDropdown />
             </div>
           </div>
         </div>

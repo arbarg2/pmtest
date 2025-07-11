@@ -15,6 +15,7 @@ import { QuickStartDemo } from '@/components/QuickStartDemo';
 import { LookupRecordsTable } from '@/components/LookupRecordsTable';
 import { useLookupRecords } from '@/hooks/useLookupRecords';
 import { BulkAnalysis } from '@/components/BulkAnalysis';
+import { UserDropdown } from '@/components/UserDropdown';
 
 const Index = () => {
   const [walletAddress, setWalletAddress] = useState('');
@@ -72,16 +73,24 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Header with User Dropdown */}
+      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Shield className="w-8 h-8 text-blue-600 mr-3" />
+              <h1 className="text-2xl font-bold text-slate-900">
+                <span className="text-blue-600">Rìan</span>
+              </h1>
+            </div>
+            <UserDropdown />
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section */}
       <section className="relative px-4 py-16 md:py-24">
         <div className="max-w-6xl mx-auto text-center">
-          <div className="flex items-center justify-center mb-6">
-            <Shield className="w-12 h-12 text-blue-600 mr-3" />
-            <h1 className="text-4xl md:text-6xl font-bold text-slate-900">
-              <span className="text-blue-600">Rìan</span>
-            </h1>
-          </div>
-          
           <p className="text-xl md:text-2xl text-slate-600 mb-8 max-w-3xl mx-auto">
             Advanced blockchain wallet intelligence with comprehensive risk assessment and forensic analysis
           </p>
@@ -155,7 +164,7 @@ const Index = () => {
       <section className="px-4 pb-16">
         <div className="max-w-6xl mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-white/80 backdrop-blur">
+            <TabsList className="grid w-full grid-cols-3 bg-white/80 backdrop-blur">
               <TabsTrigger value="lookup" className="flex items-center">
                 <Search className="w-4 h-4 mr-2" />
                 Intelligence Lookup
@@ -172,10 +181,6 @@ const Index = () => {
                     {stats.total}
                   </Badge>
                 )}
-              </TabsTrigger>
-              <TabsTrigger value="demo" className="flex items-center">
-                <Eye className="w-4 h-4 mr-2" />
-                Live Demo
               </TabsTrigger>
             </TabsList>
 
@@ -260,15 +265,11 @@ const Index = () => {
                     )}
                   </CardTitle>
                   <p className="text-slate-600">
-                    All wallet analyses are automatically stored with timestamps and forensic data for audit trails and investigation continuity
+                    All wallet analyses are automatically stored with unique Record IDs, timestamps and forensic data for audit trails and investigation continuity
                   </p>
                 </CardHeader>
               </Card>
               <LookupRecordsTable />
-            </TabsContent>
-
-            <TabsContent value="demo" className="mt-6">
-              <QuickStartDemo onTryDemo={handleTryDemo} />
             </TabsContent>
           </Tabs>
         </div>
