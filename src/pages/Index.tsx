@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Search, Shield, Zap, Eye, BarChart3, FileText, Users, Globe, TrendingUp, AlertTriangle, Building2, Database, History, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,7 +103,7 @@ const Index = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -160,9 +161,9 @@ const Index = () => {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Shield className="w-8 h-8 text-blue-600 dark:text-blue-400 mr-3" />
+              <Shield className="w-8 h-8 text-primary mr-3" />
               <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                <span className="text-blue-600 dark:text-blue-400">Rìan</span>
+                <span className="text-primary">Rìan</span>
               </h1>
             </div>
             <UserDropdown />
@@ -190,7 +191,7 @@ const Index = () => {
               <Button 
                 onClick={handleAnalyze}
                 disabled={isAnalyzing || !walletAddress.trim()}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-lg font-semibold"
+                className="bg-accent hover:bg-accent/90 text-accent-foreground px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover-lift"
               >
                 {isAnalyzing ? (
                   <>
@@ -209,29 +210,29 @@ const Index = () => {
 
           {/* Feature Highlights */}
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
-            <Card className="bg-white/80 backdrop-blur border-0 shadow-lg dark:bg-slate-800/80">
+            <Card className="bg-white/80 backdrop-blur border-0 shadow-lg dark:bg-slate-800/80 hover:shadow-xl transition-all duration-300 hover-lift group">
               <CardContent className="p-6">
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                  <Zap className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-200">
+                  <Zap className="w-6 h-6 text-accent" />
                 </div>
                 <h3 className="font-semibold text-lg mb-2 dark:text-slate-100">Lightning Fast Analysis</h3>
                 <p className="text-slate-600 dark:text-slate-300">Real-time blockchain forensics with comprehensive transaction mapping</p>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/80 backdrop-blur border-0 shadow-lg dark:bg-slate-800/80">
+            <Card className="bg-white/80 backdrop-blur border-0 shadow-lg dark:bg-slate-800/80 hover:shadow-xl transition-all duration-300 hover-lift group">
               <CardContent className="p-6">
-                <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                  <Shield className="w-6 h-6 text-green-600 dark:text-green-400" />
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-200">
+                  <Shield className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="font-semibold text-lg mb-2 dark:text-slate-100">Advanced Risk Intelligence</h3>
                 <p className="text-slate-600 dark:text-slate-300">Multi-layer risk assessment with entity attribution and behavioral analysis</p>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/80 backdrop-blur border-0 shadow-lg dark:bg-slate-800/80">
+            <Card className="bg-white/80 backdrop-blur border-0 shadow-lg dark:bg-slate-800/80 hover:shadow-xl transition-all duration-300 hover-lift group">
               <CardContent className="p-6">
-                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-200">
                   <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
                 <h3 className="font-semibold text-lg mb-2 dark:text-slate-100">Forensic Reporting</h3>
@@ -270,7 +271,7 @@ const Index = () => {
               <Card className="bg-white/90 backdrop-blur shadow-xl border-0 dark:bg-slate-800/90">
                 <CardHeader>
                   <CardTitle className="flex items-center text-2xl">
-                    <TrendingUp className="w-6 h-6 mr-3 text-blue-600 dark:text-blue-400" />
+                    <TrendingUp className="w-6 h-6 mr-3 text-primary" />
                     Comprehensive Wallet Intelligence
                   </CardTitle>
                   <p className="text-slate-600 dark:text-slate-300">
@@ -279,28 +280,28 @@ const Index = () => {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">
-                      <Building2 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                    <div className="flex items-center space-x-3 p-4 bg-primary/5 rounded-lg">
+                      <Building2 className="w-8 h-8 text-primary" />
                       <div>
                         <p className="font-medium dark:text-slate-100">Entity Attribution</p>
                         <p className="text-sm text-slate-600 dark:text-slate-300">Exchange, Mixer, DeFi, Custodial</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900 rounded-lg">
-                      <BarChart3 className="w-8 h-8 text-green-600 dark:text-green-400" />
+                    <div className="flex items-center space-x-3 p-4 bg-accent/5 rounded-lg">
+                      <BarChart3 className="w-8 h-8 text-accent" />
                       <div>
                         <p className="font-medium dark:text-slate-100">Transaction Intelligence</p>
                         <p className="text-sm text-slate-600 dark:text-slate-300">Volume, frequency, counterparties</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3 p-4 bg-purple-50 dark:bg-purple-900 rounded-lg">
+                    <div className="flex items-center space-x-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
                       <Globe className="w-8 h-8 text-purple-600 dark:text-purple-400" />
                       <div>
                         <p className="font-medium dark:text-slate-100">Source & Destination</p>
                         <p className="text-sm text-slate-600 dark:text-slate-300">Fund flows and attribution</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3 p-4 bg-red-50 dark:bg-red-900 rounded-lg">
+                    <div className="flex items-center space-x-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
                       <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
                       <div>
                         <p className="font-medium dark:text-slate-100">Risk & Compliance</p>
@@ -313,7 +314,7 @@ const Index = () => {
                     <p className="text-slate-600 dark:text-slate-300 mb-4">
                       Enter a wallet address to begin comprehensive forensic analysis
                     </p>
-                    <Badge variant="outline" className="text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-700">
+                    <Badge variant="outline" className="text-accent border-accent/20">
                       Live blockchain data • AI-powered insights • Investigation ready
                     </Badge>
                   </div>
