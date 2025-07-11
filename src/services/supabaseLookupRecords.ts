@@ -1,104 +1,112 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { LookupRecord } from '@/types/lookupRecords';
 import { WalletRiskResponse } from './api';
 
-class SupabaseLookupRecordService {
-  // Generate AI compliance summary
-  private generateComplianceSummary(walletData: WalletRiskResponse): LookupRecord['compliance_summary'] {
-    const riskFactors = Object.entries(walletData.risk_factors)
-      .filter(([_, value]) => value)
-      .map(([key, _]) => key.replace(/_/g, ' '));
-
-    let explanation = '';
-    let regulatoryRelevance: string[] = [];
-    let suggestedAction: LookupRecord['compliance_summary']['suggested_action'] = 'allow';
-
-    switch (walletData.risk_level) {
-      case 'Low':
-        explanation = `This wallet demonstrates normal transaction patterns with minimal risk indicators. The address appears to engage primarily with reputable counterparties and shows no significant red flags that would raise compliance concerns.`;
-        suggestedAction = 'allow';
-        break;
-      case 'Medium':
-        explanation = `This wallet shows moderate risk indicators that warrant additional scrutiny. While not immediately concerning, the transaction patterns or counterparty associations suggest enhanced due diligence may be appropriate.`;
-        regulatoryRelevance = ['Enhanced Due Diligence Required'];
-        suggestedAction = 'manual_review';
-        break;
-      case 'High':
-        explanation = `This wallet exhibits significant risk indicators including potential connections to high-risk entities or suspicious activity patterns. Immediate review and potential blocking recommended pending further investigation.`;
-        regulatoryRelevance = ['AML Compliance Review', 'Suspicious Activity'];
-        suggestedAction = 'escalation';
-        break;
-    }
-
-    if (walletData.risk_factors.sanctioned) {
-      regulatoryRelevance.push('OFAC Sanctions Screening');
-      suggestedAction = 'block';
-      explanation += ' WARNING: Potential sanctions exposure detected.';
-    }
-
-    if (walletData.risk_factors.fraud_reports) {
-      regulatoryRelevance.push('Fraud Prevention');
-    }
-
-    if (walletData.risk_factors.mixer_usage) {
-      regulatoryRelevance.push('Privacy Coin/Mixer Activity');
-    }
-
-    return {
-      explanation,
-      regulatory_relevance: regulatoryRelevance,
-      suggested_action: suggestedAction,
-      confidence_level: Math.min(0.95, 0.6 + (walletData.risk_score / 10) * 0.35)
+export interface LookupRecord {
+  id: string;
+  timestamp: string;
+  wallet_address: string;
+  network: 'BTC' | 'ETH';
+  risk_assessment: {
+    risk_score: number;
+    risk_level: 'Low' | 'Medium' | 'High';
+    key_risk_factors: string[];
+    recent_transactions: Array<{
+      direction: 'inbound' | 'outbound';
+      amount: number;
+      risk_score: number;
+      timestamp: string;
+    }>;
+    flow_analysis: {
+      total_inbound: number;
+      total_outbound: number;
+      net_flow: number;
     };
-  }
+  };
+  compliance_summary: {
+    explanation: string;
+    regulatory_relevance: string[];
+    suggested_action: 'approve' | 'pending' | 'reject';
+    confidence_level: number;
+  };
+  analyst_fields: {
+    case_notes: string;
+    analyst_decision: 'approve' | 'pending' | 'reject';
+    tags: string[];
+    attachments: string[];
+  };
+  created_at: string;
+  updated_at: string;
+  processing_time_ms: number;
+}
 
-  // Generate mock transaction data
-  private generateRecentTransactions(network: string, riskLevel: string) {
-    const transactionCount = Math.floor(Math.random() * 5) + 3;
-    return Array.from({ length: transactionCount }, (_, i) => ({
-      direction: (Math.random() > 0.5 ? 'inbound' : 'outbound') as 'inbound' | 'outbound',
-      amount: Math.random() * 100,
-      risk_score: riskLevel === 'High' ? Math.random() * 4 + 6 : Math.random() * 6,
-      timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString()
-    }));
-  }
+export interface LookupRecordFilters {
+  risk_level?: string[];
+  network?: string[];
+  analyst_decision?: string[];
+  date_range?: {
+    start: string;
+    end: string;
+  };
+}
 
-  // Create a new lookup record in Supabase
-  async createLookupRecord(walletData: WalletRiskResponse): Promise<LookupRecord | null> {
+export interface LookupRecordStats {
+  total_lookups: number;
+  risk_level_distribution: Record<string, number>;
+  network_distribution: Record<string, number>;
+  analyst_decision_distribution: Record<string, number>;
+  recent_activity: Array<{
+    date: string;
+    count: number;
+  }>;
+}
+
+class SupabaseLookupRecordsService {
+  async saveLookupRecord(
+    walletAddress: string,
+    walletData: WalletRiskResponse,
+    userId: string
+  ): Promise<{ success: boolean; recordId?: string; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('User not authenticated');
-        return null;
-      }
+      console.log('Saving lookup record to Supabase:', {
+        wallet_address: walletAddress,
+        network: walletData.network,
+        risk_score: walletData.risk_score,
+        risk_level: walletData.risk_level,
+        user_id: userId
+      });
 
-      const recentTransactions = this.generateRecentTransactions(walletData.network, walletData.risk_level);
-      const totalInbound = recentTransactions
-        .filter(tx => tx.direction === 'inbound')
-        .reduce((sum, tx) => sum + tx.amount, 0);
-      const totalOutbound = recentTransactions
-        .filter(tx => tx.direction === 'outbound')
-        .reduce((sum, tx) => sum + tx.amount, 0);
+      // Generate a unique record ID if not provided
+      const recordId = `LR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+      // Prepare analysis data structure
       const analysisData = {
         risk_assessment: {
           risk_score: walletData.risk_score,
           risk_level: walletData.risk_level,
-          key_risk_factors: Object.entries(walletData.risk_factors)
-            .filter(([_, value]) => value)
-            .map(([key, _]) => key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())),
-          recent_transactions: recentTransactions,
+          key_risk_factors: [
+            ...(walletData.risk_factors.sanctioned ? ['OFAC sanctions exposure'] : []),
+            ...(walletData.risk_factors.fraud_reports ? ['Fraud reports'] : []),
+            ...(walletData.risk_factors.dark_market_exposure ? ['Dark market exposure'] : []),
+            ...(walletData.risk_factors.mixer_usage ? ['Mixer usage'] : []),
+            ...(walletData.risk_factors.high_frequency_trading ? ['High frequency trading'] : [])
+          ],
+          recent_transactions: [],
           flow_analysis: {
-            total_inbound: totalInbound,
-            total_outbound: totalOutbound,
-            net_flow: totalInbound - totalOutbound
+            total_inbound: 0,
+            total_outbound: 0,
+            net_flow: 0
           }
         },
-        compliance_summary: this.generateComplianceSummary(walletData),
+        compliance_summary: {
+          explanation: `Risk assessment completed for ${walletAddress} on ${walletData.network} network.`,
+          regulatory_relevance: [],
+          suggested_action: 'pending' as const,
+          confidence_level: 0.85
+        },
         analyst_fields: {
           case_notes: '',
-          analyst_decision: 'pending',
+          analyst_decision: 'pending' as const,
           tags: [],
           attachments: []
         },
@@ -109,8 +117,9 @@ class SupabaseLookupRecordService {
       const { data, error } = await supabase
         .from('investigation_records')
         .insert({
-          user_id: user.id,
-          wallet_address: walletData.address,
+          record_id: recordId,
+          user_id: userId,
+          wallet_address: walletAddress,
           network: walletData.network,
           risk_score: walletData.risk_score,
           risk_level: walletData.risk_level,
@@ -120,15 +129,16 @@ class SupabaseLookupRecordService {
         .single();
 
       if (error) {
-        console.error('Error creating lookup record:', error);
-        return null;
+        console.error('Error saving lookup record:', error);
+        return { success: false, error: error.message };
       }
 
-      console.log('Created lookup record:', data);
-      return this.transformToLookupRecord(data);
-    } catch (error) {
-      console.error('Error creating lookup record:', error);
-      return null;
+      console.log('Lookup record saved successfully:', data);
+      return { success: true, recordId: data.record_id };
+
+    } catch (err) {
+      console.error('Unexpected error saving lookup record:', err);
+      return { success: false, error: 'Failed to save lookup record' };
     }
   }
 
@@ -166,76 +176,164 @@ class SupabaseLookupRecordService {
     };
   }
 
-  // Get all lookup records for the current user
-  async getLookupRecords(filters?: any): Promise<LookupRecord[]> {
+  async getLookupRecords(
+    userId: string,
+    filters: LookupRecordFilters = {},
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<{ records: LookupRecord[]; total: number; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
       let query = supabase
         .from('investigation_records')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' })
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
 
-      const { data, error } = await query;
+      // Apply filters
+      if (filters.risk_level?.length) {
+        query = query.in('risk_level', filters.risk_level);
+      }
+
+      if (filters.network?.length) {
+        query = query.in('network', filters.network);
+      }
+
+      if (filters.date_range) {
+        query = query
+          .gte('created_at', filters.date_range.start)
+          .lte('created_at', filters.date_range.end);
+      }
+
+      const { data, error, count } = await query;
 
       if (error) {
         console.error('Error fetching lookup records:', error);
-        return [];
+        return { records: [], total: 0, error: error.message };
       }
 
-      return data?.map(record => this.transformToLookupRecord(record)) || [];
-    } catch (error) {
-      console.error('Error fetching lookup records:', error);
-      return [];
+      const records = data?.map(this.transformToLookupRecord) || [];
+      return { records, total: count || 0 };
+
+    } catch (err) {
+      console.error('Unexpected error fetching lookup records:', err);
+      return { records: [], total: 0, error: 'Failed to fetch lookup records' };
     }
   }
 
-  // Get a single lookup record by record_id
-  async getLookupRecord(recordId: string): Promise<LookupRecord | null> {
+  async getLookupRecordById(recordId: string, userId: string): Promise<{ record?: LookupRecord; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
       const { data, error } = await supabase
         .from('investigation_records')
         .select('*')
-        .eq('user_id', user.id)
         .eq('record_id', recordId)
+        .eq('user_id', userId)
         .single();
 
       if (error) {
         console.error('Error fetching lookup record:', error);
-        return null;
+        return { error: error.message };
       }
 
-      return data ? this.transformToLookupRecord(data) : null;
-    } catch (error) {
-      console.error('Error fetching lookup record:', error);
-      return null;
+      if (!data) {
+        return { error: 'Record not found' };
+      }
+
+      return { record: this.transformToLookupRecord(data) };
+
+    } catch (err) {
+      console.error('Unexpected error fetching lookup record:', err);
+      return { error: 'Failed to fetch lookup record' };
     }
   }
 
-  // Get lookup statistics
-  async getLookupStats() {
+  async updateLookupRecord(
+    recordId: string,
+    userId: string,
+    updates: Partial<Pick<LookupRecord, 'analyst_fields' | 'compliance_summary'>>
+  ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      const { data, error } = await supabase
+      // First get the current record to merge the updates
+      const { data: currentData, error: fetchError } = await supabase
         .from('investigation_records')
-        .select('risk_level, analysis_data')
-        .eq('user_id', user.id);
+        .select('analysis_data')
+        .eq('record_id', recordId)
+        .eq('user_id', userId)
+        .single();
 
-      if (error) {
-        console.error('Error fetching lookup stats:', error);
-        return null;
+      if (fetchError) {
+        return { success: false, error: fetchError.message };
       }
 
-      const total = data?.length || 0;
+      const currentAnalysisData = currentData.analysis_data as any;
+      const updatedAnalysisData = {
+        ...currentAnalysisData,
+        ...(updates.analyst_fields && { analyst_fields: updates.analyst_fields }),
+        ...(updates.compliance_summary && { compliance_summary: updates.compliance_summary })
+      };
+
+      const { error } = await supabase
+        .from('investigation_records')
+        .update({
+          analysis_data: updatedAnalysisData as any,
+          updated_at: new Date().toISOString()
+        })
+        .eq('record_id', recordId)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error updating lookup record:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+
+    } catch (err) {
+      console.error('Unexpected error updating lookup record:', err);
+      return { success: false, error: 'Failed to update lookup record' };
+    }
+  }
+
+  async deleteLookupRecord(recordId: string, userId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('investigation_records')
+        .delete()
+        .eq('record_id', recordId)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error deleting lookup record:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+
+    } catch (err) {
+      console.error('Unexpected error deleting lookup record:', err);
+      return { success: false, error: 'Failed to delete lookup record' };
+    }
+  }
+
+  async getLookupRecordStats(userId: string): Promise<{ stats?: LookupRecordStats; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('investigation_records')
+        .select('risk_level, network, analysis_data, created_at')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error fetching lookup record stats:', error);
+        return { error: error.message };
+      }
+
       const riskLevelCounts = data?.reduce((acc, record) => {
         acc[record.risk_level] = (acc[record.risk_level] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      const networkCounts = data?.reduce((acc, record) => {
+        acc[record.network] = (acc[record.network] || 0) + 1;
         return acc;
       }, {} as Record<string, number>) || {};
 
@@ -246,17 +344,34 @@ class SupabaseLookupRecordService {
         return acc;
       }, {} as Record<string, number>) || {};
 
-      return {
-        total,
-        risk_level_breakdown: riskLevelCounts,
-        decision_breakdown: decisionCounts,
-        pending_review: decisionCounts.pending || 0
+      // Calculate recent activity (last 7 days)
+      const recentActivity = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        const count = data?.filter(record => 
+          record.created_at.startsWith(dateStr)
+        ).length || 0;
+
+        return { date: dateStr, count };
+      }).reverse();
+
+      const stats: LookupRecordStats = {
+        total_lookups: data?.length || 0,
+        risk_level_distribution: riskLevelCounts,
+        network_distribution: networkCounts,
+        analyst_decision_distribution: decisionCounts,
+        recent_activity: recentActivity
       };
-    } catch (error) {
-      console.error('Error fetching lookup stats:', error);
-      return null;
+
+      return { stats };
+
+    } catch (err) {
+      console.error('Unexpected error fetching lookup record stats:', err);
+      return { error: 'Failed to fetch lookup record stats' };
     }
   }
 }
 
-export const supabaseLookupRecordService = new SupabaseLookupRecordService();
+export const supabaseLookupRecords = new SupabaseLookupRecordsService();
