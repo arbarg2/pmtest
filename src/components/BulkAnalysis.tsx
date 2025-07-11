@@ -24,6 +24,16 @@ export function BulkAnalysis() {
   const { analyzeWallet } = useWalletAnalysis();
   const { toast } = useToast();
 
+  const validateAddress = (address: string): boolean => {
+    const cleanAddress = address.trim();
+    // Bitcoin addresses: Legacy (1...), Script Hash (3...), Bech32 (bc1...)
+    const bitcoinRegex = /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
+    // Ethereum addresses: 0x followed by 40 hex characters
+    const ethereumRegex = /^0x[a-fA-F0-9]{40}$/;
+    
+    return bitcoinRegex.test(cleanAddress) || ethereumRegex.test(cleanAddress);
+  };
+
   const parseCSV = (text: string): string[] => {
     const lines = text.split('\n').filter(line => line.trim());
     const addresses: string[] = [];
@@ -31,12 +41,11 @@ export function BulkAnalysis() {
     console.log('Parsing CSV, found lines:', lines.length);
     
     lines.forEach((line, index) => {
-      const cells = line.split(',').map(cell => cell.trim().replace(/['"]/g, ''));
+      // Handle both comma and semicolon separated values
+      const cells = line.split(/[,;]/).map(cell => cell.trim().replace(/['"]/g, ''));
       cells.forEach(cell => {
-        // Enhanced validation for Bitcoin/Ethereum addresses
         const cleanCell = cell.trim();
-        if (cleanCell.match(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/) || 
-            cleanCell.match(/^0x[a-fA-F0-9]{40}$/)) {
+        if (validateAddress(cleanCell)) {
           addresses.push(cleanCell);
           console.log(`Found valid address on line ${index + 1}: ${cleanCell}`);
         }
@@ -57,8 +66,7 @@ export function BulkAnalysis() {
       const extractAddresses = (obj: any, path = '') => {
         if (typeof obj === 'string') {
           const cleanStr = obj.trim();
-          if (cleanStr.match(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/) || 
-              cleanStr.match(/^0x[a-fA-F0-9]{40}$/)) {
+          if (validateAddress(cleanStr)) {
             addresses.push(cleanStr);
             console.log(`Found address at ${path}: ${cleanStr}`);
           }
@@ -92,31 +100,43 @@ export function BulkAnalysis() {
       
       let addresses: string[] = [];
       
-      if (file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv') {
+      // Enhanced file type detection
+      const fileName = file.name.toLowerCase();
+      const fileType = file.type.toLowerCase();
+      
+      if (fileName.endsWith('.csv') || fileType.includes('csv') || fileType === 'text/csv') {
+        console.log('Processing as CSV file');
         addresses = parseCSV(text);
-      } else if (file.name.toLowerCase().endsWith('.json') || file.type === 'application/json') {
+      } else if (fileName.endsWith('.json') || fileType.includes('json') || fileType === 'application/json') {
+        console.log('Processing as JSON file');
         addresses = parseJSON(text);
-      } else if (file.type === 'text/plain') {
+      } else if (fileType === 'text/plain' || fileType === '') {
+        console.log('Processing as plain text, attempting to detect format');
         // Try to detect format from content
-        if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+        const trimmedText = text.trim();
+        if (trimmedText.startsWith('{') || trimmedText.startsWith('[')) {
+          console.log('Detected JSON format');
           addresses = parseJSON(text);
         } else {
+          console.log('Defaulting to CSV format');
           addresses = parseCSV(text);
         }
       } else {
-        throw new Error('Unsupported file format. Please upload CSV or JSON files.');
+        throw new Error(`Unsupported file format: ${fileType}. Please upload CSV or JSON files.`);
       }
       
       if (addresses.length === 0) {
         throw new Error('No valid wallet addresses found in the file. Please ensure your file contains Bitcoin (starting with 1, 3, or bc1) or Ethereum (starting with 0x) addresses.');
       }
       
+      console.log(`Successfully parsed ${addresses.length} unique addresses`);
+      
       toast({
         title: "File Processed Successfully",
         description: `Found ${addresses.length} unique wallet addresses. Starting analysis...`,
       });
       
-      // Initialize results
+      // Initialize results with all addresses
       const initialResults: BulkAnalysisResult[] = addresses.map(address => ({
         address,
         status: 'pending'
@@ -137,28 +157,33 @@ export function BulkAnalysis() {
                 : result
             ));
             console.log(`Successfully analyzed: ${address}`);
+          } else {
+            throw new Error('No analysis data returned');
           }
         } catch (error) {
           console.error(`Failed to analyze ${address}:`, error);
+          const errorMessage = error instanceof Error ? error.message : 'Analysis failed';
           setResults(prev => prev.map(result => 
             result.address === address 
-              ? { ...result, status: 'error', error: error instanceof Error ? error.message : 'Analysis failed' }
+              ? { ...result, status: 'error', error: errorMessage }
               : result
           ));
         }
         
-        // Add small delay between requests
+        // Add delay between requests to avoid rate limiting
         if (i < addresses.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
       
-      const completedCount = addresses.length;
-      const failedCount = results.filter(r => r.status === 'error').length;
+      // Final summary
+      const finalResults = results.filter(r => r.status !== 'pending');
+      const completedCount = finalResults.filter(r => r.status === 'completed').length;
+      const failedCount = finalResults.filter(r => r.status === 'error').length;
       
       toast({
         title: "Bulk Analysis Complete",
-        description: `${completedCount - failedCount} addresses analyzed successfully, ${failedCount} failed. All records stored for compliance.`,
+        description: `${completedCount} addresses analyzed successfully, ${failedCount} failed. All records stored for compliance.`,
       });
       
     } catch (error) {
@@ -183,22 +208,18 @@ export function BulkAnalysis() {
     console.log('Dropped file:', file?.name, file?.type);
     
     if (file) {
-      const isValidFile = file.name.toLowerCase().endsWith('.csv') || 
-                         file.name.toLowerCase().endsWith('.json') ||
-                         file.type === 'text/csv' ||
-                         file.type === 'application/json' ||
-                         file.type === 'text/plain';
-      
-      if (isValidFile) {
-        processFile(file);
-      } else {
-        toast({
-          title: "Invalid File Type",
-          description: "Please upload a CSV or JSON file containing wallet addresses.",
-          variant: "destructive",
-        });
-      }
+      processFile(file);
     }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -246,8 +267,8 @@ export function BulkAnalysis() {
                 : 'border-gray-300 hover:border-gray-400'
             }`}
             onDrop={handleDrop}
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-            onDragLeave={() => setIsDragging(false)}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
           >
             <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">Upload Wallet Addresses</h3>
@@ -263,8 +284,8 @@ export function BulkAnalysis() {
               disabled={isProcessing}
             />
             <label htmlFor="file-upload">
-              <Button variant="outline" className="cursor-pointer" disabled={isProcessing}>
-                {isProcessing ? 'Processing...' : 'Choose File'}
+              <Button variant="outline" className="cursor-pointer" disabled={isProcessing} asChild>
+                <span>{isProcessing ? 'Processing...' : 'Choose File'}</span>
               </Button>
             </label>
           </div>
