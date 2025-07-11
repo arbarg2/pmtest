@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Sparkles, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,7 +22,7 @@ export function AIExplainer({ walletData }: AIExplainerProps) {
     const explanations = {
       Low: `This wallet demonstrates standard, low-risk behavior patterns. Analysis reveals legitimate usage characteristics including regular interactions with established exchanges like ${walletData.entity_attribution.name || 'Coinbase'}, consistent transaction timing patterns, and no flagged connections to high-risk entities. The address maintains a clean transaction history with ${walletData.transaction_count} total transactions, showing normal holding and trading behaviors typical of retail or institutional users.`,
       Medium: `This wallet exhibits moderate risk indicators that require enhanced monitoring. While not definitively suspicious, several factors contribute to elevated risk: potential indirect exposure to higher-risk addresses, unusual transaction clustering patterns, or connections to services with mixed reputations. The ${walletData.behavioral_classification.primary_type} classification suggests active usage that may involve privacy-focused services or less regulated platforms. Additional due diligence is recommended for compliance purposes.`,
-      High: `This wallet presents significant risk indicators requiring immediate attention. Multiple red flags have been identified including direct or indirect connections to sanctioned addresses, known fraud schemes, or suspicious transaction patterns consistent with money laundering activities. The behavioral profile shows characteristics typical of ${walletData.behavioral_classification.primary_type} usage, with ${walletData.behavioral_classification.confidence_score}% confidence. Manual review and potential reporting obligations should be considered.`
+      High: `This wallet presents significant risk indicators requiring immediate attention. Multiple red flags have been identified including direct or indirect connections to sanctioned addresses, known fraud schemes, or suspicious transaction patterns consistent with money laundering activities. The behavioral profile shows characteristics typical of ${walletData.behavioral_classification.primary_type} usage, with ${walletData.behavioral_classification.confidence_level}% confidence. Manual review and potential reporting obligations should be considered.`
     };
 
     const riskSpecificFactors = [];
@@ -51,7 +50,7 @@ export function AIExplainer({ walletData }: AIExplainerProps) {
 
     // Add entity attribution details
     if (walletData.entity_attribution.name !== 'Unknown') {
-      fullExplanation += `\n\n**Entity Attribution:**\nPrimary classification identifies this wallet as associated with ${walletData.entity_attribution.name} (${walletData.entity_attribution.category}), with ${walletData.entity_attribution.confidence_score}% confidence based on transaction pattern analysis.`;
+      fullExplanation += `\n\n**Entity Attribution:**\nPrimary classification identifies this wallet as associated with ${walletData.entity_attribution.name} (${walletData.entity_attribution.type}), with ${walletData.entity_attribution.confidence}% confidence based on transaction pattern analysis.`;
     }
 
     // Add transaction intelligence
