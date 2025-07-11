@@ -118,7 +118,7 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
               <div>
                 <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Rìan Intelligence Report</h1>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Analyzed in {wallet.processing_time_ms}ms • {wallet.network} Network
+                  Analyzed in {wallet.processing_time_ms || 0}ms • {wallet.network || 'Unknown'} Network
                 </p>
               </div>
             </div>
@@ -158,7 +158,7 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                   <div className="flex items-center space-x-2 mb-2">
                     <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Target Address:</span>
                     <Badge variant="outline" className="text-xs">
-                      {wallet.network} Network
+                      {wallet.network || 'Unknown'} Network
                     </Badge>
                   </div>
                   <code className="bg-white dark:bg-slate-900 px-4 py-2 rounded-lg text-sm font-mono text-slate-800 dark:text-slate-200 break-all block border">
@@ -184,7 +184,7 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                         <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Last Active</span>
                       </div>
                       <span className="text-sm text-slate-700 dark:text-slate-200">
-                        {wallet.temporal_patterns?.last_active ? new Date(wallet.temporal_patterns.last_active).toLocaleDateString() : wallet.last_activity}
+                        {wallet.temporal_patterns?.last_active ? new Date(wallet.temporal_patterns.last_active).toLocaleDateString() : wallet.last_activity || 'Unknown'}
                       </span>
                     </div>
                   </div>
@@ -194,7 +194,7 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                         <Hash className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                         <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Total Transactions</span>
                       </div>
-                      <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{wallet.transaction_count.toLocaleString()}</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{(wallet.transaction_count || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-lg border">
                       <div className="flex items-center space-x-2">
@@ -215,7 +215,7 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                   <Badge className={`${getRiskConfig(wallet.risk_level).color} text-xl px-6 py-3 font-bold mb-4`}>
                     {wallet.risk_level.toUpperCase()} RISK
                   </Badge>
-                  <div className="text-4xl font-bold text-slate-900 dark:text-slate-100">{wallet.risk_score.toFixed(1)}</div>
+                  <div className="text-4xl font-bold text-slate-900 dark:text-slate-100">{(wallet.risk_score || 0).toFixed(1)}</div>
                   <div className="text-slate-600 dark:text-slate-300">Risk Score / 10</div>
                 </div>
                 
