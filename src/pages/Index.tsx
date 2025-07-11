@@ -11,7 +11,6 @@ import WalletResults from '@/components/WalletResults';
 import EnhancedWalletResults from '@/components/EnhancedWalletResults';
 import TransactionFlow from '@/components/TransactionFlow';
 import ReportGenerator from '@/components/ReportGenerator';
-import { AIExplainer } from '@/components/AIExplainer';
 import { QuickStartDemo } from '@/components/QuickStartDemo';
 import { LookupRecordsTable } from '@/components/LookupRecordsTable';
 import { useLookupRecords } from '@/hooks/useLookupRecords';
@@ -156,7 +155,7 @@ const Index = () => {
       <section className="px-4 pb-16">
         <div className="max-w-6xl mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 bg-white/80 backdrop-blur">
+            <TabsList className="grid w-full grid-cols-4 bg-white/80 backdrop-blur">
               <TabsTrigger value="lookup" className="flex items-center">
                 <Search className="w-4 h-4 mr-2" />
                 Intelligence Lookup
@@ -177,10 +176,6 @@ const Index = () => {
               <TabsTrigger value="demo" className="flex items-center">
                 <Eye className="w-4 h-4 mr-2" />
                 Live Demo
-              </TabsTrigger>
-              <TabsTrigger value="ai" className="flex items-center">
-                <Zap className="w-4 h-4 mr-2" />
-                AI Explainer
               </TabsTrigger>
             </TabsList>
 
@@ -274,10 +269,6 @@ const Index = () => {
 
             <TabsContent value="demo" className="mt-6">
               <QuickStartDemo onTryDemo={handleTryDemo} />
-            </TabsContent>
-
-            <TabsContent value="ai" className="mt-6">
-              <AIExplainer walletData={analysisData} />
             </TabsContent>
           </Tabs>
         </div>
