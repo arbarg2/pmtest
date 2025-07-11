@@ -115,14 +115,19 @@ class LookupRecordService {
   // Update an existing lookup record
   async updateLookupRecord(id: string, updates: Partial<LookupRecord['analyst_fields']>): Promise<LookupRecord | null> {
     const recordIndex = this.records.findIndex(record => record.id === id);
-    if (recordIndex === -1) return null;
+    if (recordIndex === -1) {
+      console.warn(`Lookup record with ID ${id} not found`);
+      return null;
+    }
 
+    const currentRecord = this.records[recordIndex];
+    
     this.records[recordIndex] = {
-      ...this.records[recordIndex],
+      ...currentRecord,
       analyst_fields: {
-        ...this.records[recordIndex].analyst_fields,
+        ...currentRecord.analyst_fields,
         ...updates,
-        ...(updates.analyst_decision && {
+        ...(updates.analyst_decision && updates.analyst_decision !== currentRecord.analyst_fields.analyst_decision && {
           reviewed_at: new Date().toISOString(),
           analyst_name: 'Current User' // In production, get from auth context
         })
@@ -130,6 +135,7 @@ class LookupRecordService {
       updated_at: new Date().toISOString()
     };
 
+    console.log(`Updated lookup record ${id}:`, this.records[recordIndex]);
     return this.records[recordIndex];
   }
 

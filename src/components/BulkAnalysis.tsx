@@ -21,7 +21,6 @@ export function BulkAnalysis() {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<BulkAnalysisResult[]>([]);
-  const [selectedResult, setSelectedResult] = useState<WalletRiskResponse | null>(null);
   const { analyzeWallet } = useWalletAnalysis();
   const { toast } = useToast();
 
@@ -29,17 +28,22 @@ export function BulkAnalysis() {
     const lines = text.split('\n').filter(line => line.trim());
     const addresses: string[] = [];
     
-    lines.forEach(line => {
-      const cells = line.split(',').map(cell => cell.trim().replace(/"/g, ''));
+    console.log('Parsing CSV, found lines:', lines.length);
+    
+    lines.forEach((line, index) => {
+      const cells = line.split(',').map(cell => cell.trim().replace(/['"]/g, ''));
       cells.forEach(cell => {
-        // Basic validation for Bitcoin/Ethereum addresses
-        if (cell.match(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/) || 
-            cell.match(/^0x[a-fA-F0-9]{40}$/)) {
-          addresses.push(cell);
+        // Enhanced validation for Bitcoin/Ethereum addresses
+        const cleanCell = cell.trim();
+        if (cleanCell.match(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/) || 
+            cleanCell.match(/^0x[a-fA-F0-9]{40}$/)) {
+          addresses.push(cleanCell);
+          console.log(`Found valid address on line ${index + 1}: ${cleanCell}`);
         }
       });
     });
     
+    console.log('Total addresses found:', addresses.length);
     return [...new Set(addresses)]; // Remove duplicates
   };
 
@@ -48,48 +52,67 @@ export function BulkAnalysis() {
       const data = JSON.parse(text);
       const addresses: string[] = [];
       
-      const extractAddresses = (obj: any) => {
+      console.log('Parsing JSON data:', data);
+      
+      const extractAddresses = (obj: any, path = '') => {
         if (typeof obj === 'string') {
-          if (obj.match(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/) || 
-              obj.match(/^0x[a-fA-F0-9]{40}$/)) {
-            addresses.push(obj);
+          const cleanStr = obj.trim();
+          if (cleanStr.match(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/) || 
+              cleanStr.match(/^0x[a-fA-F0-9]{40}$/)) {
+            addresses.push(cleanStr);
+            console.log(`Found address at ${path}: ${cleanStr}`);
           }
         } else if (Array.isArray(obj)) {
-          obj.forEach(extractAddresses);
+          obj.forEach((item, index) => extractAddresses(item, `${path}[${index}]`));
         } else if (typeof obj === 'object' && obj !== null) {
-          Object.values(obj).forEach(extractAddresses);
+          Object.entries(obj).forEach(([key, value]) => 
+            extractAddresses(value, path ? `${path}.${key}` : key)
+          );
         }
       };
       
       extractAddresses(data);
+      console.log('Total addresses found in JSON:', addresses.length);
       return [...new Set(addresses)]; // Remove duplicates
     } catch (error) {
+      console.error('JSON parse error:', error);
       throw new Error('Invalid JSON format');
     }
   };
 
   const processFile = async (file: File) => {
+    console.log('Processing file:', file.name, file.type, file.size);
     setIsProcessing(true);
     setResults([]);
     
     try {
       const text = await file.text();
+      console.log('File content length:', text.length);
+      console.log('File content preview:', text.substring(0, 200));
+      
       let addresses: string[] = [];
       
-      if (file.name.endsWith('.csv')) {
+      if (file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv') {
         addresses = parseCSV(text);
-      } else if (file.name.endsWith('.json')) {
+      } else if (file.name.toLowerCase().endsWith('.json') || file.type === 'application/json') {
         addresses = parseJSON(text);
+      } else if (file.type === 'text/plain') {
+        // Try to detect format from content
+        if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+          addresses = parseJSON(text);
+        } else {
+          addresses = parseCSV(text);
+        }
       } else {
         throw new Error('Unsupported file format. Please upload CSV or JSON files.');
       }
       
       if (addresses.length === 0) {
-        throw new Error('No valid wallet addresses found in the file.');
+        throw new Error('No valid wallet addresses found in the file. Please ensure your file contains Bitcoin (starting with 1, 3, or bc1) or Ethereum (starting with 0x) addresses.');
       }
       
       toast({
-        title: "File Processed",
+        title: "File Processed Successfully",
         description: `Found ${addresses.length} unique wallet addresses. Starting analysis...`,
       });
       
@@ -103,6 +126,8 @@ export function BulkAnalysis() {
       // Process addresses sequentially to avoid overwhelming the API
       for (let i = 0; i < addresses.length; i++) {
         const address = addresses[i];
+        console.log(`Processing address ${i + 1}/${addresses.length}: ${address}`);
+        
         try {
           const analysisData = await analyzeWallet(address);
           if (analysisData) {
@@ -111,8 +136,10 @@ export function BulkAnalysis() {
                 ? { ...result, status: 'completed', data: analysisData }
                 : result
             ));
+            console.log(`Successfully analyzed: ${address}`);
           }
         } catch (error) {
+          console.error(`Failed to analyze ${address}:`, error);
           setResults(prev => prev.map(result => 
             result.address === address 
               ? { ...result, status: 'error', error: error instanceof Error ? error.message : 'Analysis failed' }
@@ -122,19 +149,20 @@ export function BulkAnalysis() {
         
         // Add small delay between requests
         if (i < addresses.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
       
-      const completed = results.filter(r => r.status === 'completed').length;
-      const failed = results.filter(r => r.status === 'error').length;
+      const completedCount = addresses.length;
+      const failedCount = results.filter(r => r.status === 'error').length;
       
       toast({
         title: "Bulk Analysis Complete",
-        description: `${completed} addresses analyzed successfully, ${failed} failed. All records stored for compliance.`,
+        description: `${completedCount - failedCount} addresses analyzed successfully, ${failedCount} failed. All records stored for compliance.`,
       });
       
     } catch (error) {
+      console.error('File processing error:', error);
       toast({
         title: "Processing Failed",
         description: error instanceof Error ? error.message : 'Failed to process file',
@@ -152,19 +180,30 @@ export function BulkAnalysis() {
     const files = Array.from(e.dataTransfer.files);
     const file = files[0];
     
-    if (file && (file.name.endsWith('.csv') || file.name.endsWith('.json'))) {
-      processFile(file);
-    } else {
-      toast({
-        title: "Invalid File",
-        description: "Please upload a CSV or JSON file containing wallet addresses.",
-        variant: "destructive",
-      });
+    console.log('Dropped file:', file?.name, file?.type);
+    
+    if (file) {
+      const isValidFile = file.name.toLowerCase().endsWith('.csv') || 
+                         file.name.toLowerCase().endsWith('.json') ||
+                         file.type === 'text/csv' ||
+                         file.type === 'application/json' ||
+                         file.type === 'text/plain';
+      
+      if (isValidFile) {
+        processFile(file);
+      } else {
+        toast({
+          title: "Invalid File Type",
+          description: "Please upload a CSV or JSON file containing wallet addresses.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    console.log('Selected file:', file?.name, file?.type);
     if (file) {
       processFile(file);
     }
@@ -195,7 +234,7 @@ export function BulkAnalysis() {
             Bulk Wallet Analysis
           </CardTitle>
           <p className="text-slate-600">
-            Upload CSV or JSON files containing wallet addresses for batch analysis. All results are automatically stored for compliance and audit purposes.
+            Upload CSV or JSON files containing wallet addresses for batch analysis. Supported formats: Bitcoin (1..., 3..., bc1...) and Ethereum (0x...) addresses.
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -217,7 +256,7 @@ export function BulkAnalysis() {
             </p>
             <input
               type="file"
-              accept=".csv,.json"
+              accept=".csv,.json,text/csv,application/json,text/plain"
               onChange={handleFileSelect}
               className="hidden"
               id="file-upload"
@@ -268,8 +307,8 @@ export function BulkAnalysis() {
                     <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                       <div className="flex items-center space-x-3">
                         {getStatusIcon(result.status)}
-                        <code className="text-sm bg-gray-100 px-2 py-1 rounded">
-                          {result.address.slice(0, 8)}...{result.address.slice(-6)}
+                        <code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono">
+                          {result.address.slice(0, 12)}...{result.address.slice(-8)}
                         </code>
                         <Badge className={getStatusColor(result.status)}>
                           {result.status}
