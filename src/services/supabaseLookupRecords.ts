@@ -103,7 +103,7 @@ class SupabaseLookupRecordService {
           attachments: []
         },
         processing_time_ms: walletData.processing_time_ms,
-        full_wallet_data: walletData
+        full_wallet_data: JSON.parse(JSON.stringify(walletData))
       };
 
       const { data, error } = await supabase
@@ -114,7 +114,7 @@ class SupabaseLookupRecordService {
           network: walletData.network,
           risk_score: walletData.risk_score,
           risk_level: walletData.risk_level,
-          analysis_data: analysisData
+          analysis_data: analysisData as any
         })
         .select()
         .single();
@@ -134,17 +134,35 @@ class SupabaseLookupRecordService {
 
   // Transform Supabase record to LookupRecord format
   private transformToLookupRecord(data: any): LookupRecord {
+    const analysisData = data.analysis_data as any;
+    
     return {
       id: data.record_id,
       timestamp: data.created_at,
       wallet_address: data.wallet_address,
       network: data.network as 'BTC' | 'ETH',
-      risk_assessment: data.analysis_data.risk_assessment,
-      compliance_summary: data.analysis_data.compliance_summary,
-      analyst_fields: data.analysis_data.analyst_fields,
+      risk_assessment: analysisData.risk_assessment || {
+        risk_score: data.risk_score,
+        risk_level: data.risk_level,
+        key_risk_factors: [],
+        recent_transactions: [],
+        flow_analysis: { total_inbound: 0, total_outbound: 0, net_flow: 0 }
+      },
+      compliance_summary: analysisData.compliance_summary || {
+        explanation: '',
+        regulatory_relevance: [],
+        suggested_action: 'pending' as const,
+        confidence_level: 0
+      },
+      analyst_fields: analysisData.analyst_fields || {
+        case_notes: '',
+        analyst_decision: 'pending' as const,
+        tags: [],
+        attachments: []
+      },
       created_at: data.created_at,
       updated_at: data.updated_at,
-      processing_time_ms: data.analysis_data.processing_time_ms || 0
+      processing_time_ms: analysisData.processing_time_ms || 0
     };
   }
 
@@ -222,7 +240,8 @@ class SupabaseLookupRecordService {
       }, {} as Record<string, number>) || {};
 
       const decisionCounts = data?.reduce((acc, record) => {
-        const decision = record.analysis_data?.analyst_fields?.analyst_decision || 'pending';
+        const analysisData = record.analysis_data as any;
+        const decision = analysisData?.analyst_fields?.analyst_decision || 'pending';
         acc[decision] = (acc[decision] || 0) + 1;
         return acc;
       }, {} as Record<string, number>) || {};
