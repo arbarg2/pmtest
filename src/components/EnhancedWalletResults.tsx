@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -101,6 +102,8 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
   };
 
   const quickTags = ['High Risk', 'Sanctioned Entity', 'Mixer Activity', 'Exchange Wallet', 'DeFi Protocol', 'Fraud Indicators', 'AML Flag'];
+
+  const riskConfig = getRiskConfig(wallet.risk_level);
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${riskConfig.bgClass} relative overflow-hidden`}>

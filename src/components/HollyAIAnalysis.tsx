@@ -23,8 +23,8 @@ export function HollyAIAnalysis({ walletData }: HollyAIAnalysisProps) {
     
     const behavioralAnalysis = `**Behavioral Anomaly Detection:**
 • Transaction clustering patterns suggest ${walletData.behavioral_classification?.primary_type || 'standard'} usage with ${walletData.behavioral_classification?.confidence_level || 85}% confidence
-• Temporal analysis reveals ${walletData.temporal_patterns?.activity_hours || 'distributed'} activity patterns across multiple time zones
-• Volume distribution indicates ${walletData.volume_metrics?.transaction_frequency || 'moderate'} trading velocity
+• Temporal analysis reveals ${walletData.temporal_patterns?.activity_bursts?.length || 'limited'} activity bursts across multiple time periods
+• Volume distribution indicates ${walletData.volume_metrics?.average_transaction_size || 'moderate'} average transaction size
 
 **Contextual Risk Score Breakdown:**
 • Base Risk Score: ${walletData.risk_score.toFixed(1)}/10 (${walletData.risk_level})
