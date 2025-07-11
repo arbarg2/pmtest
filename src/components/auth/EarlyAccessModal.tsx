@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
-import { X, Shield, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Shield, Loader2, Mail, User, Building, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import RegistrationForm from './RegistrationForm';
+import { Textarea } from '@/components/ui/textarea';
+import { useNavigate } from 'react-router-dom';
 
 interface EarlyAccessModalProps {
   isOpen: boolean;
@@ -13,43 +13,45 @@ interface EarlyAccessModalProps {
 }
 
 const EarlyAccessModal = ({ isOpen, onClose }: EarlyAccessModalProps) => {
-  const [step, setStep] = useState<'code' | 'registration'>('code');
-  const [accessCode, setAccessCode] = useState('');
-  const [isValidating, setIsValidating] = useState(false);
-  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    company: '',
+    useCase: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const navigate = useNavigate();
 
-  const handleCodeSubmit = async (e: React.FormEvent) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsValidating(true);
-    setError('');
+    setIsSubmitting(true);
 
     try {
-      // Simulate API call to validate early access code
+      // Simulate API call to submit early access request
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // For demo purposes, accept "RIAN2024" as valid code
-      if (accessCode.toUpperCase() === 'RIAN2024') {
-        setStep('registration');
-      } else {
-        setError('Invalid early access code. Please try again.');
-      }
+      setSubmitted(true);
     } catch (err) {
-      setError('Failed to validate code. Please try again.');
+      console.error('Error submitting early access request:', err);
     } finally {
-      setIsValidating(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleRegistrationSuccess = () => {
+  const handleCreateAccount = () => {
     onClose();
-    // In a real app, this would redirect to the dashboard
-    window.location.href = '/dashboard';
+    // Navigate to auth page with signup tab active
+    navigate('/auth', { state: { tab: 'signup', email: formData.email } });
   };
 
   const handleClose = () => {
-    setStep('code');
-    setAccessCode('');
-    setError('');
+    setFormData({ fullName: '', email: '', company: '', useCase: '' });
+    setSubmitted(false);
     onClose();
   };
 
@@ -66,7 +68,7 @@ const EarlyAccessModal = ({ isOpen, onClose }: EarlyAccessModalProps) => {
                 <Shield className="w-5 h-5 text-blue-600" />
               </div>
               <h2 className="text-xl font-semibold text-slate-900">
-                {step === 'code' ? 'Early Access' : 'Create Your Account'}
+                {submitted ? 'Welcome to Rìan!' : 'Request Early Access'}
               </h2>
             </div>
             <Button variant="ghost" size="sm" onClick={handleClose}>
@@ -74,57 +76,119 @@ const EarlyAccessModal = ({ isOpen, onClose }: EarlyAccessModalProps) => {
             </Button>
           </div>
 
-          {step === 'code' ? (
-            <div>
+          {submitted ? (
+            <div className="text-center py-4">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                Thank you for your interest!
+              </h3>
               <p className="text-slate-600 mb-6">
-                Enter your early access code to get started with Rìan's advanced blockchain intelligence platform.
+                We've received your early access request. You can now create your account to get started with Rìan.
+              </p>
+              <Button
+                onClick={handleCreateAccount}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Create Account
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <p className="text-slate-600 mb-6">
+                Join leading compliance and investigation teams using Rìan for advanced blockchain intelligence.
               </p>
 
-              <form onSubmit={handleCodeSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <Label htmlFor="accessCode">Early Access Code</Label>
-                  <Input
-                    id="accessCode"
-                    type="text"
-                    value={accessCode}
-                    onChange={(e) => setAccessCode(e.target.value)}
-                    placeholder="Enter your access code"
-                    className="mt-1"
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <div className="relative mt-1">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <Input
+                      id="fullName"
+                      name="fullName"
+                      type="text"
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      placeholder="Enter your full name"
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="email">Email Address</Label>
+                  <div className="relative mt-1">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="Enter your email address"
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="company">Company/Organization</Label>
+                  <div className="relative mt-1">
+                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <Input
+                      id="company"
+                      name="company"
+                      type="text"
+                      value={formData.company}
+                      onChange={handleInputChange}
+                      placeholder="Enter your company name"
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="useCase">Use Case</Label>
+                  <Textarea
+                    id="useCase"
+                    name="useCase"
+                    value={formData.useCase}
+                    onChange={handleInputChange}
+                    placeholder="Briefly describe how you plan to use Rìan for blockchain intelligence..."
+                    className="mt-1 min-h-[80px]"
                     required
                   />
                 </div>
 
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
                 <Button
                   type="submit"
-                  disabled={isValidating || !accessCode.trim()}
+                  disabled={isSubmitting}
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
-                  {isValidating ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Validating...
+                      Submitting Request...
                     </>
                   ) : (
-                    'Validate Code'
+                    'Request Early Access'
                   )}
                 </Button>
               </form>
 
               <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                 <p className="text-sm text-blue-700">
-                  <strong>Demo Code:</strong> Try "RIAN2024" to access the registration form.
+                  <strong>Early Access Benefits:</strong> Priority onboarding, dedicated support, 
+                  and input on feature development.
                 </p>
               </div>
-            </div>
-          ) : (
-            <RegistrationForm onSuccess={handleRegistrationSuccess} />
+            </>
           )}
         </div>
       </div>
