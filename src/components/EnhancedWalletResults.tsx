@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ArrowLeft, Download, TrendingUp, Shield, AlertTriangle, CheckCircle, XCircle, Eye, Network, DollarSign, Clock, MapPin, Users, BarChart3, PieChart, Activity } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,11 +17,11 @@ interface EnhancedWalletResultsProps {
   onGenerateReport: () => void;
 }
 
-const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }) => {
+const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }: EnhancedWalletResultsProps) => {
   const [currentTab, setCurrentTab] = useState('overview');
   const currentLookupRecord = 'your_lookup_record_id';
 
-  const getRiskConfig = (risk) => {
+  const getRiskConfig = (risk: string) => {
     switch (risk) {
       case 'Low':
         return {
@@ -132,13 +133,16 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport })
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {Object.entries(wallet.risk_score_breakdown).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between">
-                      <span className="capitalize">{key.replace(/_/g, ' ')}</span>
-                      <Progress value={value.score * 10} className="w-48" />
-                      <span className="text-sm text-slate-600">{value.score.toFixed(1)}</span>
-                    </div>
-                  ))}
+                  {Object.entries(wallet.risk_score_breakdown || {}).map(([key, value]) => {
+                    const scoreValue = typeof value === 'object' && value && typeof (value as any).score === 'number' ? (value as any).score : 0;
+                    return (
+                      <div key={key} className="flex items-center justify-between">
+                        <span className="capitalize">{key.replace(/_/g, ' ')}</span>
+                        <Progress value={scoreValue * 10} className="w-48" />
+                        <span className="text-sm text-slate-600">{scoreValue.toFixed(1)}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -149,13 +153,18 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport })
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {Object.entries(wallet.asset_breakdown).map(([asset, data]) => (
-                    <div key={asset} className="flex items-center justify-between">
-                      <span>{asset}</span>
-                      <span className="text-sm text-slate-600">{data.balance.toFixed(2)}</span>
-                      <span className="text-sm text-slate-600">${data.usd_value.toFixed(2)}</span>
-                    </div>
-                  ))}
+                  {Object.entries(wallet.asset_breakdown || {}).map(([asset, data]) => {
+                    const assetData = data as any;
+                    const balance = typeof assetData?.balance === 'number' ? assetData.balance : 0;
+                    const usdValue = typeof assetData?.usd_value === 'number' ? assetData.usd_value : 0;
+                    return (
+                      <div key={asset} className="flex items-center justify-between">
+                        <span>{asset}</span>
+                        <span className="text-sm text-slate-600">{balance.toFixed(2)}</span>
+                        <span className="text-sm text-slate-600">${usdValue.toFixed(2)}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -168,7 +177,7 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport })
                 <CardTitle>Identified Risk Factors</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {Object.entries(wallet.risk_factors).map(([key, value]) => (
+                {Object.entries(wallet.risk_factors || {}).map(([key, value]) => (
                   <div key={key} className="flex items-center justify-between p-4 rounded-lg border">
                     <div className="flex items-center space-x-3">
                       {value ? (
@@ -192,10 +201,10 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport })
                 <CardTitle>Entity Attribution</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <p><strong>Name:</strong> {wallet.entity_attribution.name || 'Unknown'}</p>
-                <p><strong>Type:</strong> {wallet.entity_attribution.type}</p>
-                <p><strong>Risk Level:</strong> {wallet.entity_attribution.risk_level}</p>
-                <p><strong>Confidence:</strong> {(wallet.entity_attribution.confidence * 100).toFixed(0)}%</p>
+                <p><strong>Name:</strong> {wallet.entity_attribution?.name || 'Unknown'}</p>
+                <p><strong>Type:</strong> {wallet.entity_attribution?.type || 'Unknown'}</p>
+                <p><strong>Risk Level:</strong> {wallet.entity_attribution?.risk_level || 'Unknown'}</p>
+                <p><strong>Confidence:</strong> {((wallet.entity_attribution?.confidence || 0) * 100).toFixed(0)}%</p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -207,11 +216,11 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport })
                 <CardTitle>Volume Metrics</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <p><strong>Lifetime Inbound:</strong> {wallet.volume_metrics.lifetime_value.inbound.toFixed(2)}</p>
-                <p><strong>Lifetime Outbound:</strong> {wallet.volume_metrics.lifetime_value.outbound.toFixed(2)}</p>
-                <p><strong>Net Value:</strong> {wallet.volume_metrics.lifetime_value.net.toFixed(2)}</p>
-                <p><strong>USD Equivalent:</strong> ${wallet.volume_metrics.lifetime_value.usd_equivalent.toFixed(2)}</p>
-                <p><strong>Average Transaction Size:</strong> {wallet.volume_metrics.average_transaction_size.toFixed(2)}</p>
+                <p><strong>Lifetime Inbound:</strong> {wallet.volume_metrics?.lifetime_value?.inbound?.toFixed(2) || '0.00'}</p>
+                <p><strong>Lifetime Outbound:</strong> {wallet.volume_metrics?.lifetime_value?.outbound?.toFixed(2) || '0.00'}</p>
+                <p><strong>Net Value:</strong> {wallet.volume_metrics?.lifetime_value?.net?.toFixed(2) || '0.00'}</p>
+                <p><strong>USD Equivalent:</strong> ${wallet.volume_metrics?.lifetime_value?.usd_equivalent?.toFixed(2) || '0.00'}</p>
+                <p><strong>Average Transaction Size:</strong> {wallet.volume_metrics?.average_transaction_size?.toFixed(2) || '0.00'}</p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -223,9 +232,9 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport })
                 <CardTitle>Geographic Risk</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <p><strong>Primary Region:</strong> {wallet.geographic_risk.primary_region}</p>
-                <p><strong>Risk Jurisdictions:</strong> {wallet.geographic_risk.risk_jurisdictions.join(', ') || 'None'}</p>
-                <p><strong>Geo Risk Score:</strong> {wallet.geographic_risk.geo_risk_score.toFixed(2)}</p>
+                <p><strong>Primary Region:</strong> {wallet.geographic_risk?.primary_region || 'Unknown'}</p>
+                <p><strong>Risk Jurisdictions:</strong> {wallet.geographic_risk?.risk_jurisdictions?.join(', ') || 'None'}</p>
+                <p><strong>Geo Risk Score:</strong> {wallet.geographic_risk?.geo_risk_score?.toFixed(2) || '0.00'}</p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -237,8 +246,8 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport })
                 <CardTitle>Temporal Patterns</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <p><strong>First Seen:</strong> {new Date(wallet.temporal_patterns.first_seen).toLocaleString()}</p>
-                <p><strong>Last Active:</strong> {new Date(wallet.temporal_patterns.last_active).toLocaleString()}</p>
+                <p><strong>First Seen:</strong> {wallet.temporal_patterns?.first_seen ? new Date(wallet.temporal_patterns.first_seen).toLocaleString() : 'Unknown'}</p>
+                <p><strong>Last Active:</strong> {wallet.temporal_patterns?.last_active ? new Date(wallet.temporal_patterns.last_active).toLocaleString() : 'Unknown'}</p>
               </CardContent>
             </Card>
           </TabsContent>
