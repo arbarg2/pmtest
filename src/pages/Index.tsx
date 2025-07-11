@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Search, Shield, Zap, Eye, BarChart3, FileText, Users, Globe, TrendingUp, AlertTriangle, Building2, Database, History, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -78,12 +79,12 @@ const Index = () => {
           <div className="flex items-center justify-center mb-6">
             <Shield className="w-12 h-12 text-blue-600 mr-3" />
             <h1 className="text-4xl md:text-6xl font-bold text-slate-900">
-              Block<span className="text-blue-600">Trace</span>
+              <span className="text-blue-600">Rìan</span>
             </h1>
           </div>
           
           <p className="text-xl md:text-2xl text-slate-600 mb-8 max-w-3xl mx-auto">
-            Advanced blockchain wallet analysis with AI-powered risk assessment and compliance reporting
+            Advanced blockchain wallet intelligence with comprehensive risk assessment and forensic analysis
           </p>
 
           {/* Main Search */}
@@ -123,8 +124,8 @@ const Index = () => {
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
                   <Zap className="w-6 h-6 text-blue-600" />
                 </div>
-                <h3 className="font-semibold text-lg mb-2">Lightning Fast</h3>
-                <p className="text-slate-600">Real-time blockchain analysis with sub-second response times</p>
+                <h3 className="font-semibold text-lg mb-2">Lightning Fast Analysis</h3>
+                <p className="text-slate-600">Real-time blockchain forensics with comprehensive transaction mapping</p>
               </CardContent>
             </Card>
 
@@ -133,8 +134,8 @@ const Index = () => {
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
                   <Shield className="w-6 h-6 text-green-600" />
                 </div>
-                <h3 className="font-semibold text-lg mb-2">Enhanced Risk Scoring</h3>
-                <p className="text-slate-600">AI-powered risk assessment with entity attribution and behavioral analysis</p>
+                <h3 className="font-semibold text-lg mb-2">Advanced Risk Intelligence</h3>
+                <p className="text-slate-600">Multi-layer risk assessment with entity attribution and behavioral analysis</p>
               </CardContent>
             </Card>
 
@@ -143,8 +144,8 @@ const Index = () => {
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
                   <FileText className="w-6 h-6 text-purple-600" />
                 </div>
-                <h3 className="font-semibold text-lg mb-2">Compliance Ready</h3>
-                <p className="text-slate-600">Automated reporting with sanctions screening and audit trails</p>
+                <h3 className="font-semibold text-lg mb-2">Forensic Reporting</h3>
+                <p className="text-slate-600">Detailed investigation reports with audit trails and compliance documentation</p>
               </CardContent>
             </Card>
           </div>
@@ -158,7 +159,7 @@ const Index = () => {
             <TabsList className="grid w-full grid-cols-5 bg-white/80 backdrop-blur">
               <TabsTrigger value="lookup" className="flex items-center">
                 <Search className="w-4 h-4 mr-2" />
-                Quick Lookup
+                Intelligence Lookup
               </TabsTrigger>
               <TabsTrigger value="bulk" className="flex items-center">
                 <Upload className="w-4 h-4 mr-2" />
@@ -166,7 +167,7 @@ const Index = () => {
               </TabsTrigger>
               <TabsTrigger value="records" className="flex items-center">
                 <Database className="w-4 h-4 mr-2" />
-                Analysis Records
+                Investigation Records
                 {stats && stats.total > 0 && (
                   <Badge variant="secondary" className="ml-2 text-xs">
                     {stats.total}
@@ -188,10 +189,10 @@ const Index = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center text-2xl">
                     <TrendingUp className="w-6 h-6 mr-3 text-blue-600" />
-                    Enhanced Wallet Analysis
+                    Comprehensive Wallet Intelligence
                   </CardTitle>
                   <p className="text-slate-600">
-                    Comprehensive blockchain analysis with entity attribution, volume metrics, and risk scoring
+                    Deep blockchain forensics with transaction history, entity attribution, risk scoring, and behavioral analysis
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -200,38 +201,38 @@ const Index = () => {
                       <Building2 className="w-8 h-8 text-blue-600" />
                       <div>
                         <p className="font-medium">Entity Attribution</p>
-                        <p className="text-sm text-slate-600">Exchange, Mixer, Private Wallet</p>
+                        <p className="text-sm text-slate-600">Exchange, Mixer, DeFi, Custodial</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-lg">
                       <BarChart3 className="w-8 h-8 text-green-600" />
                       <div>
-                        <p className="font-medium">Volume Analysis</p>
-                        <p className="text-sm text-slate-600">Transaction patterns & trends</p>
+                        <p className="font-medium">Transaction Intelligence</p>
+                        <p className="text-sm text-slate-600">Volume, frequency, counterparties</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3 p-4 bg-purple-50 rounded-lg">
                       <Globe className="w-8 h-8 text-purple-600" />
                       <div>
-                        <p className="font-medium">Geographic Risk</p>
-                        <p className="text-sm text-slate-600">Jurisdiction exposure</p>
+                        <p className="font-medium">Source & Destination</p>
+                        <p className="text-sm text-slate-600">Fund flows and attribution</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3 p-4 bg-red-50 rounded-lg">
                       <AlertTriangle className="w-8 h-8 text-red-600" />
                       <div>
-                        <p className="font-medium">Sanctions Screening</p>
-                        <p className="text-sm text-slate-600">Direct & indirect exposure</p>
+                        <p className="font-medium">Risk & Compliance</p>
+                        <p className="text-sm text-slate-600">Sanctions, AML, fraud detection</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="text-center">
                     <p className="text-slate-600 mb-4">
-                      Try analyzing a wallet address to see the enhanced analysis in action
+                      Enter a wallet address to begin comprehensive forensic analysis
                     </p>
                     <Badge variant="outline" className="text-blue-600 border-blue-200">
-                      Real blockchain data • AI-powered insights • Compliance ready
+                      Live blockchain data • AI-powered insights • Investigation ready
                     </Badge>
                   </div>
                 </CardContent>
@@ -248,7 +249,7 @@ const Index = () => {
                   <CardTitle className="flex items-center justify-between">
                     <div className="flex items-center">
                       <History className="w-6 h-6 mr-3 text-blue-600" />
-                      Analysis Records
+                      Investigation Records
                     </div>
                     {stats && (
                       <div className="flex items-center space-x-4">
@@ -264,7 +265,7 @@ const Index = () => {
                     )}
                   </CardTitle>
                   <p className="text-slate-600">
-                    All wallet analyses are automatically stored with timestamps and relevant data for audit trails and compliance reporting
+                    All wallet analyses are automatically stored with timestamps and forensic data for audit trails and investigation continuity
                   </p>
                 </CardHeader>
               </Card>

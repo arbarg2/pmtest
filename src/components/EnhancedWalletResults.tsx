@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input';
 import { 
   ArrowLeft, Download, Network, Shield, AlertTriangle, CheckCircle, XCircle,
   TrendingUp, Activity, Hash, Calendar, Eye, FileText, Save, Plus, X,
-  DollarSign, Globe, Clock, Users, Zap
+  DollarSign, Globe, Clock, Users, Zap, Building2, BarChart3, Coins, 
+  History, Target, ArrowUpDown, ArrowRightLeft, Wallet, TrendingDown
 } from 'lucide-react';
 import { WalletRiskResponse } from '@/services/api';
 import { TransactionGraph } from './TransactionGraph';
@@ -77,13 +78,13 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
       });
       
       toast({
-        title: "Notes Saved",
-        description: "Analysis notes saved successfully",
+        title: "Investigation Notes Saved",
+        description: "Analysis notes and decision recorded",
       });
     } catch (error) {
       toast({
         title: "Save Failed",
-        description: "Failed to save notes",
+        description: "Failed to save investigation notes",
         variant: "destructive",
       });
     }
@@ -101,16 +102,10 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
-  const quickTags = ['High Risk', 'Sanctioned Entity', 'Mixer Activity', 'Exchange Wallet', 'Fraud Indicators'];
+  const quickTags = ['High Risk', 'Sanctioned Entity', 'Mixer Activity', 'Exchange Wallet', 'DeFi Protocol', 'Fraud Indicators', 'AML Flag'];
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${riskConfig.bgClass} relative overflow-hidden`}>
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/10 to-indigo-400/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-indigo-400/10 to-purple-400/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-      </div>
-
       {/* Header */}
       <header className="border-b border-slate-200/50 bg-white/90 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -120,7 +115,7 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">Enhanced Wallet Analysis</h1>
+                <h1 className="text-xl font-bold text-slate-900">Rìan Intelligence Report</h1>
                 <p className="text-sm text-slate-500">
                   Analyzed in {wallet.processing_time_ms}ms • {wallet.network} Network
                 </p>
@@ -129,15 +124,15 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
             <div className="flex items-center space-x-2">
               <Button onClick={() => setShowGraph(!showGraph)} variant="outline">
                 <Network className="w-4 h-4 mr-2" />
-                {showGraph ? 'Hide Graph' : 'Show Graph'}
+                {showGraph ? 'Hide Graph' : 'Transaction Graph'}
               </Button>
               <Button onClick={onViewFlow} variant="outline">
                 <Eye className="w-4 h-4 mr-2" />
-                View Flow
+                Flow Analysis
               </Button>
               <Button onClick={onGenerateReport} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                 <Download className="w-4 h-4 mr-2" />
-                Generate Report
+                Export Report
               </Button>
             </div>
           </div>
@@ -145,27 +140,71 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-8 relative z-10">
-        {/* Main Analysis Card */}
+        {/* Address & Risk Score Header */}
         <Card className="mb-8 shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
           <CardContent className="p-8">
-            {/* Wallet Address & Risk Score Header */}
             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-8">
               <div className="flex-1 space-y-4 mb-6 lg:mb-0 lg:mr-8">
                 <div className="flex items-center space-x-4">
                   {riskConfig.icon}
                   <div>
-                    <h2 className="text-2xl font-bold text-slate-900">Risk Assessment Complete</h2>
-                    <p className="text-slate-600">Comprehensive analysis results</p>
+                    <h2 className="text-2xl font-bold text-slate-900">Wallet Intelligence Analysis</h2>
+                    <p className="text-slate-600">Comprehensive forensic investigation results</p>
                   </div>
                 </div>
                 
                 <div className="bg-slate-50 rounded-xl p-4">
                   <div className="flex items-center space-x-2 mb-2">
-                    <span className="text-sm font-medium text-slate-600">Address:</span>
+                    <span className="text-sm font-medium text-slate-600">Target Address:</span>
+                    <Badge variant="outline" className="text-xs">
+                      {wallet.network} Network
+                    </Badge>
                   </div>
                   <code className="bg-white px-4 py-2 rounded-lg text-sm font-mono text-slate-800 break-all block border">
                     {wallet.address}
                   </code>
+                </div>
+
+                {/* Basic Information Grid */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                      <div className="flex items-center space-x-2">
+                        <Clock className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm font-medium">First Seen</span>
+                      </div>
+                      <span className="text-sm text-slate-700">
+                        {wallet.temporal_patterns?.first_seen ? new Date(wallet.temporal_patterns.first_seen).toLocaleDateString() : 'Unknown'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                      <div className="flex items-center space-x-2">
+                        <Activity className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm font-medium">Last Active</span>
+                      </div>
+                      <span className="text-sm text-slate-700">
+                        {wallet.temporal_patterns?.last_active ? new Date(wallet.temporal_patterns.last_active).toLocaleDateString() : wallet.last_activity}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                      <div className="flex items-center space-x-2">
+                        <Hash className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm font-medium">Total Transactions</span>
+                      </div>
+                      <span className="text-sm font-bold text-slate-900">{wallet.transaction_count.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                      <div className="flex items-center space-x-2">
+                        <Wallet className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm font-medium">Address Type</span>
+                      </div>
+                      <span className="text-sm text-slate-700">
+                        {wallet.entity_attribution?.type || 'Unknown'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -179,15 +218,14 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                   <div className="text-slate-600">Risk Score / 10</div>
                 </div>
                 
-                {/* Quick Decision */}
                 <div className="space-y-3">
                   <Select value={decision} onValueChange={setDecision}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Decision" />
+                      <SelectValue placeholder="Investigation Decision" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pending">Pending Review</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="approved">Cleared</SelectItem>
                       <SelectItem value="blocked">Blocked</SelectItem>
                       <SelectItem value="escalated">Escalated</SelectItem>
                     </SelectContent>
@@ -196,19 +234,19 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
               </div>
             </div>
 
-            {/* Key Insights Grid */}
-            <div className="grid lg:grid-cols-3 gap-6 mb-8">
-              {/* Entity Information */}
+            {/* Enhanced Intelligence Grid */}
+            <div className="grid lg:grid-cols-4 gap-6 mb-8">
+              {/* Entity Attribution */}
               <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center text-lg">
-                    <Users className="w-5 h-5 mr-2 text-blue-600" />
+                    <Building2 className="w-5 h-5 mr-2 text-blue-600" />
                     Entity Attribution
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-slate-600">Name:</span>
+                    <span className="text-sm text-slate-600">Entity:</span>
                     <span className="font-medium">{wallet.entity_attribution?.name || 'Unknown'}</span>
                   </div>
                   <div className="flex justify-between">
@@ -219,6 +257,12 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                     <span className="text-sm text-slate-600">Confidence:</span>
                     <span className="font-medium">{((wallet.entity_attribution?.confidence || 0) * 100).toFixed(0)}%</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-600">Entity Risk:</span>
+                    <Badge variant={wallet.entity_attribution?.risk_level === 'High' ? 'destructive' : 'outline'} className="text-xs">
+                      {wallet.entity_attribution?.risk_level || 'Unknown'}
+                    </Badge>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -226,27 +270,31 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
               <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center text-lg">
-                    <DollarSign className="w-5 h-5 mr-2 text-green-600" />
-                    Volume Analysis
+                    <BarChart3 className="w-5 h-5 mr-2 text-green-600" />
+                    Volume Intelligence
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm text-slate-600">Total Volume:</span>
-                    <span className="font-medium">${(wallet.volume_metrics?.lifetime_value?.usd_equivalent || 0).toFixed(2)}</span>
+                    <span className="font-medium">${(wallet.volume_metrics?.lifetime_value?.usd_equivalent || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-slate-600">Net Value:</span>
-                    <span className="font-medium">{(wallet.volume_metrics?.lifetime_value?.net || 0).toFixed(2)}</span>
+                    <span className="text-sm text-slate-600">Inbound:</span>
+                    <span className="font-medium text-green-600">{(wallet.volume_metrics?.lifetime_value?.inbound || 0).toFixed(4)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-600">Outbound:</span>
+                    <span className="font-medium text-red-600">{(wallet.volume_metrics?.lifetime_value?.outbound || 0).toFixed(4)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-slate-600">Avg Transaction:</span>
-                    <span className="font-medium">{(wallet.volume_metrics?.average_transaction_size || 0).toFixed(2)}</span>
+                    <span className="font-medium">{(wallet.volume_metrics?.average_transaction_size || 0).toFixed(4)}</span>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Geographic Risk */}
+              {/* Geographic & Behavioral Analysis */}
               <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center text-lg">
@@ -260,18 +308,119 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                     <span className="font-medium">{wallet.geographic_risk?.primary_region || 'Unknown'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-slate-600">Risk Score:</span>
+                    <span className="text-sm text-slate-600">Geo Risk Score:</span>
                     <span className="font-medium">{(wallet.geographic_risk?.geo_risk_score || 0).toFixed(1)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-slate-600">Risk Jurisdictions:</span>
                     <span className="font-medium">{wallet.geographic_risk?.risk_jurisdictions?.length || 0}</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-600">Behavior Type:</span>
+                    <span className="font-medium text-xs">{wallet.behavioral_classification?.primary_type || 'Unknown'}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Sanctions & Compliance */}
+              <Card className="bg-gradient-to-br from-red-50 to-orange-50 border-red-200">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center text-lg">
+                    <Target className="w-5 h-5 mr-2 text-red-600" />
+                    Sanctions Exposure
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-600">Direct Hits:</span>
+                    <span className="font-bold text-red-600">{wallet.sanctions_exposure?.direct_hits || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-600">1-Hop Exposure:</span>
+                    <span className="font-medium">{wallet.sanctions_exposure?.indirect_exposure?.one_hop || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-600">2-Hop Exposure:</span>
+                    <span className="font-medium">{wallet.sanctions_exposure?.indirect_exposure?.two_hop || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-600">Proximity Score:</span>
+                    <span className="font-medium">{(wallet.sanctions_exposure?.proximity_score || 0).toFixed(2)}</span>
+                  </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Risk Factors */}
+            {/* Transaction History & Patterns */}
+            <div className="grid lg:grid-cols-2 gap-6 mb-6">
+              {/* Largest Transactions */}
+              <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <ArrowUpDown className="w-5 h-5 mr-2 text-amber-600" />
+                    Largest Transaction
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {wallet.volume_metrics?.largest_transaction && (
+                    <div className="p-4 bg-white rounded-lg border">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-sm font-medium">Amount</span>
+                        <Badge variant={wallet.volume_metrics.largest_transaction.direction === 'inbound' ? 'default' : 'secondary'}>
+                          {wallet.volume_metrics.largest_transaction.direction}
+                        </Badge>
+                      </div>
+                      <div className="text-lg font-bold text-slate-900 mb-1">
+                        {wallet.volume_metrics.largest_transaction.amount.toFixed(6)}
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        {new Date(wallet.volume_metrics.largest_transaction.timestamp).toLocaleString()}
+                      </div>
+                      {wallet.volume_metrics.largest_transaction.counterparty && (
+                        <div className="text-xs text-slate-500 mt-2 font-mono">
+                          {wallet.volume_metrics.largest_transaction.counterparty}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Counterparty Analysis */}
+              <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 border-teal-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Users className="w-5 h-5 mr-2 text-teal-600" />
+                    Counterparty Intelligence
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {wallet.counterparty_connections && wallet.counterparty_connections.length > 0 ? (
+                    <div className="space-y-2">
+                      {wallet.counterparty_connections.slice(0, 3).map((connection, index) => (
+                        <div key={index} className="p-3 bg-white rounded-lg border">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm font-medium">{connection.entity_name || 'Unknown Entity'}</span>
+                            <Badge variant={connection.risk_level === 'High' ? 'destructive' : 'outline'} className="text-xs">
+                              {connection.risk_level}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-slate-600">
+                            {connection.transaction_count} transactions • {connection.total_volume.toFixed(4)} total
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center text-slate-500 py-4">
+                      No counterparty data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Risk Factors Analysis */}
             <Card className="mb-6 bg-gradient-to-r from-slate-50 to-slate-100">
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -292,7 +441,7 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                         <span className="text-sm capitalize">{key.replace(/_/g, ' ')}</span>
                       </div>
                       <Badge variant={value ? 'destructive' : 'outline'} className="text-xs">
-                        {value ? 'FLAGGED' : 'CLEAR'}
+                        {value ? 'DETECTED' : 'CLEAR'}
                       </Badge>
                     </div>
                   ))}
@@ -300,15 +449,15 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
               </CardContent>
             </Card>
 
-            {/* Analyst Notes - Integrated */}
-            <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+            {/* Investigation Notes */}
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <FileText className="w-5 h-5 mr-2 text-amber-600" />
-                    Analysis Notes
+                    <FileText className="w-5 h-5 mr-2 text-blue-600" />
+                    Investigation Notes
                   </div>
-                  <Button onClick={handleSaveNotes} size="sm" className="bg-amber-600 hover:bg-amber-700">
+                  <Button onClick={handleSaveNotes} size="sm" className="bg-blue-600 hover:bg-blue-700">
                     <Save className="w-4 h-4 mr-2" />
                     Save
                   </Button>
@@ -316,18 +465,17 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
               </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
-                  placeholder="Enter your analysis notes, observations, and decision rationale..."
+                  placeholder="Enter investigation notes, findings, and decision rationale..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
                   className="bg-white"
                 />
                 
-                {/* Quick Tags */}
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <Input
-                      placeholder="Add tag..."
+                      placeholder="Add investigation tag..."
                       value={newTag}
                       onChange={(e) => setNewTag(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && addTag()}
@@ -338,7 +486,6 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                     </Button>
                   </div>
                   
-                  {/* Current Tags */}
                   {tags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {tags.map((tag, index) => (
@@ -352,13 +499,12 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                     </div>
                   )}
                   
-                  {/* Quick Tag Buttons */}
                   <div className="flex flex-wrap gap-2">
                     {quickTags.filter(tag => !tags.includes(tag)).map((tag) => (
                       <button
                         key={tag}
                         onClick={() => setTags([...tags, tag])}
-                        className="text-xs px-2 py-1 border border-amber-300 rounded-md hover:bg-amber-100 transition-colors"
+                        className="text-xs px-2 py-1 border border-blue-300 rounded-md hover:bg-blue-100 transition-colors"
                       >
                         {tag}
                       </button>

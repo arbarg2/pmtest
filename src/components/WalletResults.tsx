@@ -98,7 +98,7 @@ const WalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }: WalletR
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">Wallet Risk Analysis</h1>
+                <h1 className="text-xl font-bold text-slate-900">Rìan Risk Analysis</h1>
                 <p className="text-sm text-slate-500">
                   Analyzed in {wallet.processing_time_ms}ms • {wallet.network} Network
                 </p>
@@ -125,7 +125,7 @@ const WalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }: WalletR
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-slate-900 flex items-center">
                 <Shield className="w-6 h-6 mr-3 text-blue-600" />
-                Wallet Address
+                Target Wallet Address
               </h2>
               <div className="flex items-center space-x-2">
                 <Badge className="font-mono text-xs px-4 py-2 bg-slate-100 text-slate-700 border-slate-200 shadow-sm">
@@ -242,7 +242,7 @@ const WalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }: WalletR
               <CardHeader>
                 <CardTitle className="text-lg flex items-center">
                   <Hash className="w-5 h-5 mr-2 text-blue-600" />
-                  Wallet Statistics
+                  Wallet Intelligence
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -267,7 +267,7 @@ const WalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }: WalletR
 
             <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm animate-fade-in hover:shadow-3xl transition-all duration-500" style={{ animationDelay: '400ms' }}>
               <CardHeader>
-                <CardTitle className="text-lg">Quick Actions</CardTitle>
+                <CardTitle className="text-lg">Investigation Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Button onClick={onViewFlow} variant="outline" className="w-full justify-start hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md">
@@ -276,7 +276,7 @@ const WalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }: WalletR
                 </Button>
                 <Button onClick={onGenerateReport} className="w-full justify-start bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl">
                   <FileText className="w-4 h-4 mr-2" />
-                  Generate PDF Report
+                  Generate Investigation Report
                 </Button>
               </CardContent>
             </Card>
