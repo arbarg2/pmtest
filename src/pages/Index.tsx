@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Search, Shield, Zap, Eye, BarChart3, FileText, Users, Globe, TrendingUp, AlertTriangle, Building2, Database, History } from 'lucide-react';
+import { Search, Shield, Zap, Eye, BarChart3, FileText, Users, Globe, TrendingUp, AlertTriangle, Building2, Database, History, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +14,7 @@ import { AIExplainer } from '@/components/AIExplainer';
 import { QuickStartDemo } from '@/components/QuickStartDemo';
 import { LookupRecordsTable } from '@/components/LookupRecordsTable';
 import { useLookupRecords } from '@/hooks/useLookupRecords';
+import { BulkAnalysis } from '@/components/BulkAnalysis';
 
 const Index = () => {
   const [walletAddress, setWalletAddress] = useState('');
@@ -155,10 +155,14 @@ const Index = () => {
       <section className="px-4 pb-16">
         <div className="max-w-6xl mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-white/80 backdrop-blur">
+            <TabsList className="grid w-full grid-cols-5 bg-white/80 backdrop-blur">
               <TabsTrigger value="lookup" className="flex items-center">
                 <Search className="w-4 h-4 mr-2" />
                 Quick Lookup
+              </TabsTrigger>
+              <TabsTrigger value="bulk" className="flex items-center">
+                <Upload className="w-4 h-4 mr-2" />
+                Bulk Analysis
               </TabsTrigger>
               <TabsTrigger value="records" className="flex items-center">
                 <Database className="w-4 h-4 mr-2" />
@@ -232,6 +236,10 @@ const Index = () => {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="bulk" className="mt-6">
+              <BulkAnalysis />
             </TabsContent>
 
             <TabsContent value="records" className="mt-6">
