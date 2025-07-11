@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { blockTraceAPI, WalletRiskResponse } from '@/services/api';
-import { supabaseLookupRecordService } from '@/services/supabaseLookupRecords';
+import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { useToast } from '@/hooks/use-toast';
 
 export function useWalletAnalysis() {
@@ -33,7 +33,7 @@ export function useWalletAnalysis() {
       result.processing_time_ms = endTime - startTime;
 
       // Automatically create lookup record in Supabase
-      const lookupRecord = await supabaseLookupRecordService.createLookupRecord(result);
+      const lookupRecord = await supabaseLookupRecords.createLookupRecord(result);
       if (lookupRecord) {
         setCurrentLookupRecord(lookupRecord.id);
       }

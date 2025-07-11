@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, Shield, Zap, Eye, BarChart3, FileText, Users, Globe, TrendingUp, AlertTriangle, Building2, Database, History, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +17,7 @@ import { InvestigationRecordsTable } from '@/components/InvestigationRecordsTabl
 import { BulkAnalysis } from '@/components/BulkAnalysis';
 import { UserDropdown } from '@/components/UserDropdown';
 import { HollyAIAnalysis } from '@/components/HollyAIAnalysis';
-import { supabaseLookupRecordService } from '@/services/supabaseLookupRecords';
+import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 
 const Index = () => {
   const [walletAddress, setWalletAddress] = useState('');
@@ -46,12 +45,12 @@ const Index = () => {
   }, [recordId, user]);
 
   const fetchStats = async () => {
-    const statsData = await supabaseLookupRecordService.getLookupStats();
-    setStats(statsData);
+    const statsData = await supabaseLookupRecords.getLookupRecordStats(user?.id || '');
+    setStats(statsData?.stats);
   };
 
   const loadRecordData = async (id: string) => {
-    const record = await supabaseLookupRecordService.getLookupRecord(id);
+    const { record } = await supabaseLookupRecords.getLookupRecordById(id, user?.id || '');
     if (record && record.risk_assessment) {
       // Transform record data back to WalletRiskResponse format
       const fullWalletData = record.risk_assessment as any;
@@ -259,9 +258,9 @@ const Index = () => {
               <TabsTrigger value="records" className="flex items-center">
                 <Database className="w-4 h-4 mr-2" />
                 Investigation Records
-                {stats && stats.total > 0 && (
+                {stats && stats.total_lookups > 0 && (
                   <Badge variant="secondary" className="ml-2 text-xs">
-                    {stats.total}
+                    {stats.total_lookups}
                   </Badge>
                 )}
               </TabsTrigger>
