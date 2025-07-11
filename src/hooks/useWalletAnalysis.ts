@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { blockTraceAPI, WalletRiskResponse } from '@/services/api';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useWalletAnalysis() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -10,6 +11,7 @@ export function useWalletAnalysis() {
   const [error, setError] = useState<string | null>(null);
   const [currentLookupRecord, setCurrentLookupRecord] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const analyzeWallet = async (address: string) => {
     if (!address.trim()) {
@@ -32,20 +34,22 @@ export function useWalletAnalysis() {
       // Ensure processing time is set
       result.processing_time_ms = endTime - startTime;
 
-      // Automatically create lookup record in Supabase
-      const lookupRecord = await supabaseLookupRecords.createLookupRecord(result);
-      if (lookupRecord) {
-        setCurrentLookupRecord(lookupRecord.id);
+      // Automatically save lookup record in Supabase if user is logged in
+      if (user) {
+        const lookupResult = await supabaseLookupRecords.saveLookupRecord(address, result, user.id);
+        if (lookupResult.success && lookupResult.recordId) {
+          setCurrentLookupRecord(lookupResult.recordId);
+        }
       }
 
       setAnalysisData(result);
       
-      const entityName = result.entity_attribution.name || 'Unknown Entity';
-      const behaviorType = result.behavioral_classification.primary_type;
+      const entityName = result.entity_attribution?.name || 'Unknown Entity';
+      const behaviorType = result.behavioral_classification?.primary_type || 'Unknown';
       
       toast({
         title: "Enhanced Analysis Complete",
-        description: `${entityName} (${behaviorType}) • ${result.risk_level} risk • ${endTime - startTime}ms • Record: ${lookupRecord?.id.slice(-8) || 'N/A'}`,
+        description: `${entityName} (${behaviorType}) • ${result.risk_level} risk • ${endTime - startTime}ms${currentLookupRecord ? ` • Record: ${currentLookupRecord.slice(-8)}` : ''}`,
       });
 
       return result;
