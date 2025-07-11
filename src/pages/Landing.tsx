@@ -7,11 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import EarlyAccessModal from '@/components/auth/EarlyAccessModal';
-import LoginModal from '@/components/auth/LoginModal';
+import { useNavigate } from 'react-router-dom';
 
 const Landing = () => {
   const [showEarlyAccess, setShowEarlyAccess] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -24,9 +24,8 @@ const Landing = () => {
               <h1 className="text-2xl font-bold text-slate-900">Rìan</h1>
             </div>
             <Button 
-              variant="ghost" 
-              onClick={() => setShowLogin(true)}
-              className="text-slate-600 hover:text-blue-600"
+              onClick={() => navigate('/auth')}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               Sign In
             </Button>
@@ -49,13 +48,22 @@ const Landing = () => {
               Advanced blockchain forensics with comprehensive risk assessment, entity attribution, 
               and behavioral analysis for institutional compliance and investigation teams.
             </p>
-            <Button 
-              onClick={() => setShowEarlyAccess(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              Request Early Access
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                onClick={() => setShowEarlyAccess(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                Request Early Access
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+              <Button 
+                onClick={() => navigate('/auth')}
+                variant="outline"
+                className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-4 text-lg font-semibold"
+              >
+                Sign In
+              </Button>
+            </div>
           </div>
 
           {/* Hero Visual */}
@@ -184,10 +192,6 @@ const Landing = () => {
       <EarlyAccessModal 
         isOpen={showEarlyAccess} 
         onClose={() => setShowEarlyAccess(false)} 
-      />
-      <LoginModal 
-        isOpen={showLogin} 
-        onClose={() => setShowLogin(false)} 
       />
     </div>
   );
