@@ -14,13 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      investigation_records: {
+        Row: {
+          analysis_data: Json
+          created_at: string
+          id: string
+          network: string
+          record_id: string
+          risk_level: string
+          risk_score: number
+          updated_at: string
+          user_id: string
+          wallet_address: string
+        }
+        Insert: {
+          analysis_data: Json
+          created_at?: string
+          id?: string
+          network: string
+          record_id: string
+          risk_level: string
+          risk_score: number
+          updated_at?: string
+          user_id: string
+          wallet_address: string
+        }
+        Update: {
+          analysis_data?: Json
+          created_at?: string
+          id?: string
+          network?: string
+          record_id?: string
+          risk_level?: string
+          risk_score?: number
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_record_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

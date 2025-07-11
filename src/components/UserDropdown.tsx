@@ -1,10 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
-import { User, Settings, Moon, Sun, LogOut, ChevronDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Switch } from '@/components/ui/switch';
-
+import React from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,100 +8,79 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Switch } from '@/components/ui/switch';
+import { User, Settings, LogOut, Moon, Sun } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useNavigate } from 'react-router-dom';
 
 export function UserDropdown() {
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('darkMode') === 'true' || 
-             document.documentElement.classList.contains('dark');
-    }
-    return false;
-  });
+  const { user, signOut } = useAuth();
+  const { isDarkMode, toggleDarkMode } = useTheme();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    // Apply dark mode on mount
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
+  if (!user) {
+    return (
+      <Button 
+        onClick={() => navigate('/auth')}
+        className="bg-blue-600 hover:bg-blue-700 text-white"
+      >
+        Sign In
+      </Button>
+    );
+  }
 
-  const handleDarkModeToggle = () => {
-    const newDarkMode = !isDarkMode;
-    setIsDarkMode(newDarkMode);
-    
-    // Toggle dark mode class on document
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('darkMode', 'true');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('darkMode', 'false');
-    }
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
-  const handleLogout = () => {
-    // Clear any stored auth data and redirect to landing
-    localStorage.removeItem('user_token');
-    localStorage.removeItem('user_data');
-    window.location.href = '/';
-  };
-
-  const handleProfileSettings = () => {
-    // Navigate to profile settings (placeholder)
-    console.log('Navigate to profile settings');
-  };
+  const userInitials = user.email?.charAt(0).toUpperCase() || 'U';
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-blue-100 text-blue-600 font-medium dark:bg-blue-900 dark:text-blue-300">
-              R
+          <Avatar className="h-10 w-10">
+            <AvatarFallback className="bg-blue-600 text-white dark:bg-blue-500">
+              {userInitials}
             </AvatarFallback>
           </Avatar>
-          <ChevronDown className="absolute -bottom-1 -right-1 h-3 w-3 text-slate-500 dark:text-slate-400" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Rìan User</p>
+            <p className="text-sm font-medium leading-none">Account</p>
             <p className="text-xs leading-none text-muted-foreground">
-              user@rian.ai
+              {user.email}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        
-        <DropdownMenuItem onClick={handleProfileSettings} className="cursor-pointer">
+        <DropdownMenuItem onClick={() => navigate('/profile')}>
           <Settings className="mr-2 h-4 w-4" />
           <span>Profile Settings</span>
         </DropdownMenuItem>
-        
-        <DropdownMenuItem className="cursor-pointer p-0">
-          <div className="flex items-center justify-between w-full px-2 py-1.5">
-            <div className="flex items-center">
-              {isDarkMode ? (
-                <Moon className="mr-2 h-4 w-4" />
-              ) : (
-                <Sun className="mr-2 h-4 w-4" />
-              )}
-              <span>Dark Mode</span>
-            </div>
-            <Switch
-              checked={isDarkMode}
-              onCheckedChange={handleDarkModeToggle}
-              className="ml-auto"
-            />
+        <DropdownMenuItem className="flex items-center justify-between">
+          <div className="flex items-center">
+            {isDarkMode ? (
+              <Moon className="mr-2 h-4 w-4" />
+            ) : (
+              <Sun className="mr-2 h-4 w-4" />
+            )}
+            <span>Dark Mode</span>
           </div>
+          <Switch
+            checked={isDarkMode}
+            onCheckedChange={toggleDarkMode}
+            className="ml-2"
+          />
         </DropdownMenuItem>
-        
         <DropdownMenuSeparator />
-        
-        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400">
+        <DropdownMenuItem onClick={handleSignOut} className="text-red-600 dark:text-red-400">
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log Out</span>
         </DropdownMenuItem>

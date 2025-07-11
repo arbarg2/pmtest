@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Search, Shield, Zap, Eye, BarChart3, FileText, Users, Globe, TrendingUp, AlertTriangle, Building2, Database, History, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,27 +7,70 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
+import { useAuth } from '@/contexts/AuthContext';
+import { useParams, useNavigate } from 'react-router-dom';
 import WalletResults from '@/components/WalletResults';
 import EnhancedWalletResults from '@/components/EnhancedWalletResults';
 import TransactionFlow from '@/components/TransactionFlow';
 import ReportGenerator from '@/components/ReportGenerator';
 import { QuickStartDemo } from '@/components/QuickStartDemo';
-import { LookupRecordsTable } from '@/components/LookupRecordsTable';
-import { InvestigationRecords } from '@/components/InvestigationRecords';
-import { useLookupRecords } from '@/hooks/useLookupRecords';
+import { InvestigationRecordsTable } from '@/components/InvestigationRecordsTable';
 import { BulkAnalysis } from '@/components/BulkAnalysis';
 import { UserDropdown } from '@/components/UserDropdown';
+import { HollyAIAnalysis } from '@/components/HollyAIAnalysis';
+import { supabaseLookupRecordService } from '@/services/supabaseLookupRecords';
 
 const Index = () => {
   const [walletAddress, setWalletAddress] = useState('');
   const [showFlow, setShowFlow] = useState(false);
   const [activeTab, setActiveTab] = useState('lookup');
+  const [stats, setStats] = useState<any>(null);
+  const [recordData, setRecordData] = useState<any>(null);
   const { isAnalyzing, analysisData, analyzeWallet, generateReport } = useWalletAnalysis();
-  const { stats } = useLookupRecords();
+  const { user, loading } = useAuth();
+  const { recordId } = useParams();
+  const navigate = useNavigate();
+
+  // Fetch stats when user is available
+  useEffect(() => {
+    if (user) {
+      fetchStats();
+    }
+  }, [user]);
+
+  // Handle viewing specific record from URL
+  useEffect(() => {
+    if (recordId && user) {
+      loadRecordData(recordId);
+    }
+  }, [recordId, user]);
+
+  const fetchStats = async () => {
+    const statsData = await supabaseLookupRecordService.getLookupStats();
+    setStats(statsData);
+  };
+
+  const loadRecordData = async (id: string) => {
+    const record = await supabaseLookupRecordService.getLookupRecord(id);
+    if (record && record.risk_assessment) {
+      // Transform record data back to WalletRiskResponse format
+      const fullWalletData = record.risk_assessment as any;
+      setRecordData({
+        ...fullWalletData.full_wallet_data,
+        address: record.wallet_address,
+        network: record.network,
+        risk_score: fullWalletData.risk_score,
+        risk_level: fullWalletData.risk_level,
+        risk_factors: fullWalletData.risk_factors || {},
+        processing_time_ms: record.processing_time_ms
+      });
+    }
+  };
 
   const handleAnalyze = async () => {
     if (walletAddress.trim()) {
       await analyzeWallet(walletAddress.trim());
+      await fetchStats(); // Refresh stats after analysis
     }
   };
 
@@ -38,9 +82,16 @@ const Index = () => {
     setShowFlow(false);
   };
 
+  const handleBackToMain = () => {
+    setRecordData(null);
+    setShowFlow(false);
+    navigate('/');
+  };
+
   const handleGenerateReport = async () => {
-    if (analysisData) {
-      await generateReport(analysisData.address);
+    const dataToUse = recordData || analysisData;
+    if (dataToUse) {
+      await generateReport(dataToUse.address);
     }
   };
 
@@ -49,23 +100,55 @@ const Index = () => {
     handleAnalyze();
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Show record details if viewing specific record
+  if (recordData && !showFlow) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
+        <EnhancedWalletResults
+          wallet={recordData}
+          onBack={handleBackToMain}
+          onViewFlow={handleViewFlow}
+          onGenerateReport={handleGenerateReport}
+        />
+        {/* Add Holly AI Analysis */}
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <HollyAIAnalysis walletData={recordData} />
+        </div>
+      </div>
+    );
+  }
+
   // If we have enhanced analysis data and not showing flow, show enhanced results
   if (analysisData && !showFlow) {
     return (
-      <EnhancedWalletResults
-        wallet={analysisData}
-        onBack={() => window.location.reload()}
-        onViewFlow={handleViewFlow}
-        onGenerateReport={handleGenerateReport}
-      />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
+        <EnhancedWalletResults
+          wallet={analysisData}
+          onBack={() => window.location.reload()}
+          onViewFlow={handleViewFlow}
+          onGenerateReport={handleGenerateReport}
+        />
+        {/* Add Holly AI Analysis */}
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <HollyAIAnalysis walletData={analysisData} />
+        </div>
+      </div>
     );
   }
 
   // If showing transaction flow
-  if (showFlow && analysisData) {
+  if (showFlow && (analysisData || recordData)) {
     return (
       <TransactionFlow
-        wallet={analysisData}
+        wallet={recordData || analysisData}
         onBack={handleBackToResults}
       />
     );
@@ -244,7 +327,7 @@ const Index = () => {
             </TabsContent>
 
             <TabsContent value="records" className="mt-6">
-              <InvestigationRecords />
+              <InvestigationRecordsTable />
             </TabsContent>
           </Tabs>
         </div>

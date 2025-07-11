@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { blockTraceAPI, WalletRiskResponse } from '@/services/api';
-import { lookupRecordService } from '@/services/lookupRecords';
+import { supabaseLookupRecordService } from '@/services/supabaseLookupRecords';
 import { useToast } from '@/hooks/use-toast';
 
 export function useWalletAnalysis() {
@@ -32,9 +32,11 @@ export function useWalletAnalysis() {
       // Ensure processing time is set
       result.processing_time_ms = endTime - startTime;
 
-      // Automatically create lookup record
-      const lookupRecord = await lookupRecordService.createLookupRecord(result);
-      setCurrentLookupRecord(lookupRecord.id);
+      // Automatically create lookup record in Supabase
+      const lookupRecord = await supabaseLookupRecordService.createLookupRecord(result);
+      if (lookupRecord) {
+        setCurrentLookupRecord(lookupRecord.id);
+      }
 
       setAnalysisData(result);
       
@@ -43,7 +45,7 @@ export function useWalletAnalysis() {
       
       toast({
         title: "Enhanced Analysis Complete",
-        description: `${entityName} (${behaviorType}) • ${result.risk_level} risk • ${endTime - startTime}ms • Record: ${lookupRecord.id.slice(-8)}`,
+        description: `${entityName} (${behaviorType}) • ${result.risk_level} risk • ${endTime - startTime}ms • Record: ${lookupRecord?.id.slice(-8) || 'N/A'}`,
       });
 
       return result;
