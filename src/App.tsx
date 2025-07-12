@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -101,8 +102,10 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
-          <AppRoutes />
-          <Toaster />
+          <div className="min-h-screen w-full">
+            <AppRoutes />
+            <Toaster />
+          </div>
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>
