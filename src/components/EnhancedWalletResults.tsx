@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,23 +15,72 @@ import {
 import { WalletRiskResponse } from '@/services/api';
 import { TransactionGraph } from './TransactionGraph';
 import { HollyAIAnalysis } from './HollyAIAnalysis';
+import RiskFactorsBreakdown from './RiskFactorsBreakdown';
+import SanctionsScreening from './SanctionsScreening';
+import WatchWalletButton from './WatchWalletButton';
 import { useToast } from '@/hooks/use-toast';
-import { lookupRecordService } from '@/services/lookupRecords';
+import { riskFactorsService, RiskFactor, SanctionsMatch } from '@/services/riskFactors';
+import { reportExportService } from '@/services/reportExport';
+import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 
 interface EnhancedWalletResultsProps {
   wallet: WalletRiskResponse;
   onBack: () => void;
   onViewFlow: () => void;
   onGenerateReport: () => void;
+  recordId?: string;
 }
 
-const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }: EnhancedWalletResultsProps) => {
+const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport, recordId }: EnhancedWalletResultsProps) => {
   const [notes, setNotes] = useState('');
   const [decision, setDecision] = useState('pending');
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
   const [showGraph, setShowGraph] = useState(false);
+  const [riskFactors, setRiskFactors] = useState<RiskFactor[]>([]);
+  const [sanctionsMatches, setSanctionsMatches] = useState<SanctionsMatch[]>([]);
+  const [isLoadingFactors, setIsLoadingFactors] = useState(true);
+  const [isLoadingSanctions, setIsLoadingSanctions] = useState(true);
   const { toast } = useToast();
+
+  // Load risk factors and sanctions data
+  useEffect(() => {
+    const loadAnalysisData = async () => {
+      if (!recordId) return;
+
+      try {
+        // Load existing risk factors
+        const factors = await riskFactorsService.getRiskFactors(recordId);
+        setRiskFactors(factors);
+        
+        // If no factors exist, calculate them
+        if (factors.length === 0) {
+          const newFactors = await riskFactorsService.calculateAndStoreRiskFactors(recordId, wallet);
+          setRiskFactors(newFactors);
+        }
+        
+        // Load sanctions screening
+        const sanctions = await riskFactorsService.getSanctionsScreening(recordId);
+        setSanctionsMatches(sanctions);
+        
+        // If no sanctions screening exists, perform it
+        if (sanctions.length === 0) {
+          const matches = await riskFactorsService.screenSanctions(wallet.address, wallet.network);
+          if (matches.length > 0) {
+            await riskFactorsService.storeSanctionsScreening(recordId, matches);
+            setSanctionsMatches(matches);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading analysis data:', error);
+      } finally {
+        setIsLoadingFactors(false);
+        setIsLoadingSanctions(false);
+      }
+    };
+
+    loadAnalysisData();
+  }, [recordId, wallet]);
 
   const getRiskConfig = (risk: string) => {
     switch (risk) {
@@ -68,22 +116,84 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
   };
 
   const handleSaveNotes = async () => {
+    if (!recordId) return;
+    
     try {
-      const currentLookupRecord = `temp_${Date.now()}`;
-      await lookupRecordService.updateLookupRecord(currentLookupRecord, {
-        case_notes: notes,
-        analyst_decision: decision as any,
-        tags
+      const result = await supabaseLookupRecords.updateLookupRecord(recordId, 'user-id', {
+        analyst_fields: {
+          case_notes: notes,
+          analyst_decision: decision as any,
+          tags,
+          attachments: []
+        }
       });
       
-      toast({
-        title: "Investigation Notes Saved",
-        description: "Analysis notes and decision recorded",
-      });
+      if (result.success) {
+        toast({
+          title: "Investigation Notes Saved",
+          description: "Analysis notes and decision recorded",
+        });
+      }
     } catch (error) {
       toast({
         title: "Save Failed",
         description: "Failed to save investigation notes",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (!recordId) return;
+    
+    try {
+      await reportExportService.exportToPDF({
+        wallet,
+        recordId,
+        riskFactors,
+        sanctionsMatches,
+        analystNotes: notes,
+        investigationStatus: decision,
+        tags,
+        timestamp: new Date().toISOString()
+      });
+      
+      toast({
+        title: "PDF Report Generated",
+        description: "Comprehensive compliance report exported successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate PDF report",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportCSV = async () => {
+    if (!recordId) return;
+    
+    try {
+      await reportExportService.exportToCSV({
+        wallet,
+        recordId,
+        riskFactors,
+        sanctionsMatches,
+        analystNotes: notes,
+        investigationStatus: decision,
+        tags,
+        timestamp: new Date().toISOString()
+      });
+      
+      toast({
+        title: "CSV Report Generated",
+        description: "Data exported to CSV format successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate CSV report",
         variant: "destructive",
       });
     }
@@ -131,9 +241,18 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                 <Eye className="w-4 h-4 mr-2" />
                 Flow Analysis
               </Button>
-              <Button onClick={onGenerateReport} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+              <WatchWalletButton
+                walletAddress={wallet.address}
+                network={wallet.network}
+                currentRiskScore={wallet.risk_score}
+              />
+              <Button onClick={handleExportPDF} variant="outline">
                 <Download className="w-4 h-4 mr-2" />
-                Export Report
+                Export PDF
+              </Button>
+              <Button onClick={handleExportCSV} variant="outline">
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
               </Button>
             </div>
           </div>
@@ -226,7 +345,7 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pending">Pending Review</SelectItem>
-                      <SelectItem value="approved">Cleared</SelectItem>
+                      <SelectItem value="cleared">Cleared</SelectItem>
                       <SelectItem value="blocked">Blocked</SelectItem>
                       <SelectItem value="escalated">Escalated</SelectItem>
                     </SelectContent>
@@ -240,6 +359,12 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
         {/* Holly AI Analysis Integration */}
         <div className="mb-8">
           <HollyAIAnalysis walletData={wallet} />
+        </div>
+
+        {/* New Enhanced Features Grid */}
+        <div className="grid lg:grid-cols-2 gap-6 mb-8">
+          <RiskFactorsBreakdown factors={riskFactors} isLoading={isLoadingFactors} />
+          <SanctionsScreening matches={sanctionsMatches} isLoading={isLoadingSanctions} />
         </div>
 
         {/* Enhanced Intelligence Grid */}
@@ -525,7 +650,7 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport }:
 
       {/* Transaction Graph */}
       {showGraph && (
-        <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm dark:bg-slate-900/95">
+        <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm dark:bg-slate-900/95 mx-4 mb-4">
           <CardHeader>
             <CardTitle>Transaction Graph Analysis</CardTitle>
           </CardHeader>

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { blockTraceAPI, WalletRiskResponse } from '@/services/api';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
+import { riskFactorsService } from '@/services/riskFactors';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -39,6 +40,15 @@ export function useWalletAnalysis() {
         const lookupResult = await supabaseLookupRecords.saveLookupRecord(address, result, user.id);
         if (lookupResult.success && lookupResult.recordId) {
           setCurrentLookupRecord(lookupResult.recordId);
+          
+          // Calculate and store risk factors
+          await riskFactorsService.calculateAndStoreRiskFactors(lookupResult.recordId, result);
+          
+          // Perform sanctions screening
+          const sanctionsMatches = await riskFactorsService.screenSanctions(address, result.network);
+          if (sanctionsMatches.length > 0) {
+            await riskFactorsService.storeSanctionsScreening(lookupResult.recordId, sanctionsMatches);
+          }
         }
       }
 

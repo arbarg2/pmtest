@@ -17,39 +17,228 @@ export type Database = {
       investigation_records: {
         Row: {
           analysis_data: Json
+          analyst_id: string | null
+          analyst_notes: string | null
           created_at: string
           id: string
+          investigation_status: string | null
           network: string
           record_id: string
+          reviewed_at: string | null
           risk_level: string
           risk_score: number
+          tags: string[] | null
           updated_at: string
           user_id: string
           wallet_address: string
         }
         Insert: {
           analysis_data: Json
+          analyst_id?: string | null
+          analyst_notes?: string | null
           created_at?: string
           id?: string
+          investigation_status?: string | null
           network: string
           record_id: string
+          reviewed_at?: string | null
           risk_level: string
           risk_score: number
+          tags?: string[] | null
           updated_at?: string
           user_id: string
           wallet_address: string
         }
         Update: {
           analysis_data?: Json
+          analyst_id?: string | null
+          analyst_notes?: string | null
           created_at?: string
           id?: string
+          investigation_status?: string | null
           network?: string
           record_id?: string
+          reviewed_at?: string | null
           risk_level?: string
           risk_score?: number
+          tags?: string[] | null
           updated_at?: string
           user_id?: string
           wallet_address?: string
+        }
+        Relationships: []
+      }
+      risk_factors: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          detected_at: string | null
+          factor_type: string
+          id: string
+          lookup_record_id: string | null
+          score: number
+          severity: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          detected_at?: string | null
+          factor_type: string
+          id?: string
+          lookup_record_id?: string | null
+          score: number
+          severity: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          detected_at?: string | null
+          factor_type?: string
+          id?: string
+          lookup_record_id?: string | null
+          score?: number
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_factors_lookup_record_id_fkey"
+            columns: ["lookup_record_id"]
+            isOneToOne: false
+            referencedRelation: "investigation_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sanctions_screening: {
+        Row: {
+          confidence_score: number | null
+          created_at: string | null
+          entity_name: string | null
+          entity_type: string | null
+          id: string
+          lookup_record_id: string | null
+          match_type: string | null
+          screening_date: string | null
+          source_list: string | null
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string | null
+          entity_name?: string | null
+          entity_type?: string | null
+          id?: string
+          lookup_record_id?: string | null
+          match_type?: string | null
+          screening_date?: string | null
+          source_list?: string | null
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string | null
+          entity_name?: string | null
+          entity_type?: string | null
+          id?: string
+          lookup_record_id?: string | null
+          match_type?: string | null
+          screening_date?: string | null
+          source_list?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sanctions_screening_lookup_record_id_fkey"
+            columns: ["lookup_record_id"]
+            isOneToOne: false
+            referencedRelation: "investigation_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      watch_alerts: {
+        Row: {
+          alert_message: string | null
+          alert_type: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          new_value: string | null
+          old_value: string | null
+          risk_change: number | null
+          watched_wallet_id: string | null
+        }
+        Insert: {
+          alert_message?: string | null
+          alert_type: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          new_value?: string | null
+          old_value?: string | null
+          risk_change?: number | null
+          watched_wallet_id?: string | null
+        }
+        Update: {
+          alert_message?: string | null
+          alert_type?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          new_value?: string | null
+          old_value?: string | null
+          risk_change?: number | null
+          watched_wallet_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watch_alerts_watched_wallet_id_fkey"
+            columns: ["watched_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "watched_wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      watched_wallets: {
+        Row: {
+          alert_threshold: number | null
+          created_at: string | null
+          current_risk_score: number | null
+          id: string
+          initial_risk_score: number | null
+          last_checked: string | null
+          network: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+          wallet_address: string
+          watch_reason: string | null
+        }
+        Insert: {
+          alert_threshold?: number | null
+          created_at?: string | null
+          current_risk_score?: number | null
+          id?: string
+          initial_risk_score?: number | null
+          last_checked?: string | null
+          network: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+          wallet_address: string
+          watch_reason?: string | null
+        }
+        Update: {
+          alert_threshold?: number | null
+          created_at?: string | null
+          current_risk_score?: number | null
+          id?: string
+          initial_risk_score?: number | null
+          last_checked?: string | null
+          network?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+          wallet_address?: string
+          watch_reason?: string | null
         }
         Relationships: []
       }
@@ -58,9 +247,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_risk_factors: {
+        Args: { wallet_data: Json }
+        Returns: {
+          factor_type: string
+          severity: string
+          score: number
+          description: string
+        }[]
+      }
       generate_record_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      screen_sanctions: {
+        Args: { wallet_address: string; network?: string }
+        Returns: {
+          entity_name: string
+          entity_type: string
+          match_type: string
+          confidence_score: number
+          source_list: string
+        }[]
       }
     }
     Enums: {
