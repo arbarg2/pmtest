@@ -1,0 +1,104 @@
+
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, Globe, Building2, Activity } from 'lucide-react';
+import { WalletRiskResponse } from '@/services/api';
+
+interface WalletOverviewProps {
+  wallet: WalletRiskResponse;
+}
+
+const WalletOverview = ({ wallet }: WalletOverviewProps) => {
+  const getRiskColor = (riskLevel: string) => {
+    switch (riskLevel) {
+      case 'High': return 'bg-red-100 text-red-800 border-red-200';
+      case 'Medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'Low': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  return (
+    <Card className="shadow-lg border-0 bg-white/90 backdrop-blur">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center">
+            <Building2 className="w-5 h-5 mr-2 text-primary" />
+            Wallet Overview
+          </div>
+          <Badge className={getRiskColor(wallet.risk_level)}>
+            {wallet.risk_level} Risk
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Wallet Address */}
+        <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+          <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">Wallet Address</div>
+          <div className="font-mono text-sm break-all text-slate-900 dark:text-slate-100">
+            {wallet.address}
+          </div>
+        </div>
+
+        {/* Key Metrics Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center p-3 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg">
+            <div className="text-2xl font-bold text-primary">{wallet.risk_score.toFixed(1)}</div>
+            <div className="text-xs text-slate-600 dark:text-slate-400">Risk Score</div>
+          </div>
+          
+          <div className="text-center p-3 bg-gradient-to-br from-accent/10 to-accent/5 rounded-lg">
+            <div className="text-2xl font-bold text-accent">{wallet.network.toUpperCase()}</div>
+            <div className="text-xs text-slate-600 dark:text-slate-400">Network</div>
+          </div>
+          
+          <div className="text-center p-3 bg-gradient-to-br from-purple-500/10 to-purple-400/5 rounded-lg">
+            <div className="text-2xl font-bold text-purple-600">
+              {wallet.transaction_count?.toLocaleString() || '0'}
+            </div>
+            <div className="text-xs text-slate-600 dark:text-slate-400">Transactions</div>
+          </div>
+          
+          <div className="text-center p-3 bg-gradient-to-br from-orange-500/10 to-orange-400/5 rounded-lg">
+            <div className="text-2xl font-bold text-orange-600">
+              {wallet.processing_time_ms}ms
+            </div>
+            <div className="text-xs text-slate-600 dark:text-slate-400">Analysis Time</div>
+          </div>
+        </div>
+
+        {/* Temporal Information */}
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <Calendar className="w-5 h-5 text-slate-500" />
+            <div>
+              <div className="text-sm font-medium text-slate-900 dark:text-slate-100">First Seen</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400">
+                {wallet.temporal_patterns?.first_seen 
+                  ? new Date(wallet.temporal_patterns.first_seen).toLocaleDateString()
+                  : 'Unknown'
+                }
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <Activity className="w-5 h-5 text-slate-500" />
+            <div>
+              <div className="text-sm font-medium text-slate-900 dark:text-slate-100">Last Active</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400">
+                {wallet.last_activity 
+                  ? new Date(wallet.last_activity).toLocaleDateString()
+                  : 'Unknown'
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default WalletOverview;
