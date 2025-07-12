@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, Shield, Zap, Eye, BarChart3, FileText, Users, Globe, TrendingUp, AlertTriangle, Building2, Database, History, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +16,6 @@ import { QuickStartDemo } from '@/components/QuickStartDemo';
 import { InvestigationRecordsTable } from '@/components/InvestigationRecordsTable';
 import { BulkAnalysis } from '@/components/BulkAnalysis';
 import { UserDropdown } from '@/components/UserDropdown';
-import { HollyAIAnalysis } from '@/components/HollyAIAnalysis';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 
 const Index = () => {
@@ -62,7 +60,8 @@ const Index = () => {
         risk_score: fullWalletData.risk_score,
         risk_level: fullWalletData.risk_level,
         risk_factors: fullWalletData.risk_factors || {},
-        processing_time_ms: record.processing_time_ms
+        processing_time_ms: record.processing_time_ms,
+        recordId: record.id // Add the database record ID
       });
     }
   };
@@ -117,11 +116,8 @@ const Index = () => {
           onBack={handleBackToMain}
           onViewFlow={handleViewFlow}
           onGenerateReport={handleGenerateReport}
+          recordId={recordData.recordId}
         />
-        {/* Add Holly AI Analysis */}
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <HollyAIAnalysis walletData={recordData} />
-        </div>
       </div>
     );
   }
@@ -135,11 +131,8 @@ const Index = () => {
           onBack={() => window.location.reload()}
           onViewFlow={handleViewFlow}
           onGenerateReport={handleGenerateReport}
+          recordId={analysisData.recordId}
         />
-        {/* Add Holly AI Analysis */}
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <HollyAIAnalysis walletData={analysisData} />
-        </div>
       </div>
     );
   }

@@ -46,29 +46,41 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport, r
   // Load risk factors and sanctions data
   useEffect(() => {
     const loadAnalysisData = async () => {
-      if (!recordId) return;
+      if (!recordId) {
+        setIsLoadingFactors(false);
+        setIsLoadingSanctions(false);
+        return;
+      }
 
       try {
+        console.log('Loading analysis data for record:', recordId);
+        
         // Load existing risk factors
         const factors = await riskFactorsService.getRiskFactors(recordId);
+        console.log('Loaded risk factors:', factors);
         setRiskFactors(factors);
         
         // If no factors exist, calculate them
         if (factors.length === 0) {
+          console.log('No existing factors, calculating new ones...');
           const newFactors = await riskFactorsService.calculateAndStoreRiskFactors(recordId, wallet);
+          console.log('Calculated new factors:', newFactors);
           setRiskFactors(newFactors);
         }
         
         // Load sanctions screening
         const sanctions = await riskFactorsService.getSanctionsScreening(recordId);
+        console.log('Loaded sanctions screening:', sanctions);
         setSanctionsMatches(sanctions);
         
         // If no sanctions screening exists, perform it
         if (sanctions.length === 0) {
+          console.log('No existing sanctions screening, performing new screening...');
           const matches = await riskFactorsService.screenSanctions(wallet.address, wallet.network);
           if (matches.length > 0) {
-            await riskFactorsService.storeSanctionsScreening(recordId, matches);
-            setSanctionsMatches(matches);
+            const storedMatches = await riskFactorsService.storeSanctionsScreening(recordId, matches);
+            console.log('Stored sanctions matches:', storedMatches);
+            setSanctionsMatches(storedMatches);
           }
         }
       } catch (error) {
@@ -356,7 +368,7 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport, r
           </CardContent>
         </Card>
 
-        {/* Holly AI Analysis Integration */}
+        {/* Holly AI Analysis Integration - Only show once */}
         <div className="mb-8">
           <HollyAIAnalysis walletData={wallet} />
         </div>
