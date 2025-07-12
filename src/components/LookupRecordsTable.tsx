@@ -65,6 +65,16 @@ export function LookupRecordsTable() {
     setEditingRecord(null);
   };
 
+  const handleViewDetails = (record: LookupRecord) => {
+    console.log('Viewing details for record:', record.id);
+    setSelectedRecord(record);
+  };
+
+  const handleBackToRecords = () => {
+    setSelectedRecord(null);
+    setEditingRecord(null);
+  };
+
   const filteredRecords = records.filter(record =>
     record.wallet_address.toLowerCase().includes(searchTerm.toLowerCase()) ||
     record.analyst_fields.case_notes.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -75,7 +85,7 @@ export function LookupRecordsTable() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => setSelectedRecord(null)}>
+          <Button variant="ghost" onClick={handleBackToRecords}>
             ← Back to Records
           </Button>
           <div className="flex items-center space-x-2">
@@ -95,7 +105,7 @@ export function LookupRecordsTable() {
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 {getRiskIcon(selectedRecord.risk_assessment.risk_level)}
-                <span>Lookup Record: {selectedRecord.id}</span>
+                <span>Record Details: {selectedRecord.id}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Badge className={getRiskColor(selectedRecord.risk_assessment.risk_level)}>
@@ -297,7 +307,7 @@ export function LookupRecordsTable() {
       {/* Records Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Lookup Records ({filteredRecords.length})</CardTitle>
+          <CardTitle>Investigation Records ({filteredRecords.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -306,16 +316,21 @@ export function LookupRecordsTable() {
             </div>
           ) : filteredRecords.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              No lookup records found
+              No investigation records found
             </div>
           ) : (
             <div className="space-y-3">
               {filteredRecords.map((record) => (
-                <div key={record.id} className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedRecord(record)}>
+                <div 
+                  key={record.id} 
+                  className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-3">
                       {getRiskIcon(record.risk_assessment.risk_level)}
-                      <code className="text-sm bg-gray-100 px-2 py-1 rounded">{record.wallet_address.slice(0, 8)}...{record.wallet_address.slice(-6)}</code>
+                      <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                        {record.wallet_address.slice(0, 8)}...{record.wallet_address.slice(-6)}
+                      </code>
                       <Badge className={getRiskColor(record.risk_assessment.risk_level)}>
                         {record.risk_assessment.risk_level}
                       </Badge>
@@ -325,8 +340,13 @@ export function LookupRecordsTable() {
                     </div>
                     <div className="flex items-center space-x-2 text-sm text-gray-500">
                       <span>{new Date(record.created_at).toLocaleDateString()}</span>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleViewDetails(record)}
+                      >
                         <Eye className="w-4 h-4" />
+                        View Details
                       </Button>
                     </div>
                   </div>
