@@ -68,7 +68,7 @@ const CounterpartyIntelligence = ({ wallet }: CounterpartyIntelligenceProps) => 
                     <h4 className="font-semibold text-slate-900 dark:text-slate-100">
                       {counterparty.entity_name}
                     </h4>
-                    <Badge className={getRiskColor(counterparty.risk_level)} size="sm">
+                    <Badge className={getRiskColor(counterparty.risk_level)}>
                       {counterparty.risk_level} Risk
                     </Badge>
                   </div>
