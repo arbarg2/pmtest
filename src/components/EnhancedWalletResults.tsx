@@ -42,6 +42,8 @@ const EnhancedWalletResults = ({
     if (currentRecordId) {
       loadRiskFactors();
       loadSanctionsScreening();
+    } else {
+      console.log('No record ID available for loading additional data');
     }
   }, [currentRecordId]);
 
@@ -77,13 +79,14 @@ const EnhancedWalletResults = ({
     if (!currentRecordId) {
       toast({
         title: "Export Not Available",
-        description: "Record ID is required for export",
+        description: "No record ID available for export. Please save the analysis first.",
         variant: "destructive",
       });
       return;
     }
 
     try {
+      console.log('Exporting PDF for record:', currentRecordId);
       await reportExportService.exportToPDF({
         wallet,
         recordId: currentRecordId,
@@ -110,13 +113,14 @@ const EnhancedWalletResults = ({
     if (!currentRecordId) {
       toast({
         title: "Export Not Available", 
-        description: "Record ID is required for export",
+        description: "No record ID available for export. Please save the analysis first.",
         variant: "destructive",
       });
       return;
     }
 
     try {
+      console.log('Exporting CSV for record:', currentRecordId);
       await reportExportService.exportToCSV({
         wallet,
         recordId: currentRecordId,
@@ -190,7 +194,7 @@ const EnhancedWalletResults = ({
               <div>
                 <h1 className="text-xl font-bold text-slate-900">Rìan Intelligence Report</h1>
                 <p className="text-sm text-slate-500">
-                  {wallet.processing_time_ms}ms • {wallet.network} • {currentRecordId ? `ID: ${currentRecordId.slice(0, 8)}...` : 'No Record ID'}
+                  {wallet.processing_time_ms || 0}ms • {wallet.network} • {currentRecordId ? `ID: ${currentRecordId.slice(0, 8)}...` : 'No Record ID'}
                 </p>
               </div>
             </div>
@@ -231,8 +235,63 @@ const EnhancedWalletResults = ({
                 </div>
               </div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-4">
+            <div className="bg-slate-50 rounded-lg p-4 mb-6">
               <p className="font-mono text-sm break-all">{wallet.address}</p>
+            </div>
+            
+            {/* Wallet Intelligence Grid */}
+            <div className="grid md:grid-cols-4 gap-6 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-blue-900 mb-2">Entity Attribution</h3>
+                <p className="text-sm text-blue-700">
+                  <strong>Name:</strong> {wallet.entity_attribution?.name || 'Unknown'}
+                </p>
+                <p className="text-sm text-blue-700">
+                  <strong>Type:</strong> {wallet.entity_attribution?.type || 'Unknown'}
+                </p>
+                <p className="text-sm text-blue-700">
+                  <strong>Confidence:</strong> {((wallet.entity_attribution?.confidence || 0) * 100).toFixed(0)}%
+                </p>
+              </div>
+              
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-green-900 mb-2">Volume Metrics</h3>
+                <p className="text-sm text-green-700">
+                  <strong>Lifetime Inbound:</strong> {wallet.volume_metrics?.lifetime_value?.inbound?.toFixed(2) || '0.00'}
+                </p>
+                <p className="text-sm text-green-700">
+                  <strong>USD Equivalent:</strong> ${wallet.volume_metrics?.lifetime_value?.usd_equivalent?.toFixed(2) || '0.00'}
+                </p>
+                <p className="text-sm text-green-700">
+                  <strong>Avg Transaction:</strong> {wallet.volume_metrics?.average_transaction_size?.toFixed(2) || '0.00'}
+                </p>
+              </div>
+              
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-purple-900 mb-2">Geographic Risk</h3>
+                <p className="text-sm text-purple-700">
+                  <strong>Primary Region:</strong> {wallet.geographic_risk?.primary_region || 'Unknown'}
+                </p>
+                <p className="text-sm text-purple-700">
+                  <strong>Risk Jurisdictions:</strong> {wallet.geographic_risk?.risk_jurisdictions?.length || 0}
+                </p>
+                <p className="text-sm text-purple-700">
+                  <strong>Geo Risk Score:</strong> {wallet.geographic_risk?.geo_risk_score?.toFixed(2) || '0.00'}
+                </p>
+              </div>
+              
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-orange-900 mb-2">Temporal Patterns</h3>
+                <p className="text-sm text-orange-700">
+                  <strong>First Seen:</strong> {wallet.temporal_patterns?.first_seen ? new Date(wallet.temporal_patterns.first_seen).toLocaleDateString() : 'Unknown'}
+                </p>
+                <p className="text-sm text-orange-700">
+                  <strong>Last Active:</strong> {wallet.temporal_patterns?.last_active ? new Date(wallet.temporal_patterns.last_active).toLocaleDateString() : 'Unknown'}
+                </p>
+                <p className="text-sm text-orange-700">
+                  <strong>Transaction Count:</strong> {wallet.transaction_count || 0}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

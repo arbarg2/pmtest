@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, Shield, Zap, Eye, BarChart3, FileText, Users, Globe, TrendingUp, AlertTriangle, Building2, Database, History, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,24 +44,42 @@ const Index = () => {
   }, [recordId, user]);
 
   const fetchStats = async () => {
-    const statsData = await supabaseLookupRecords.getLookupRecordStats(user?.id || '');
-    setStats(statsData?.stats);
+    try {
+      const result = await supabaseLookupRecords.getLookupRecordStats(user?.id || '');
+      if (result.success) {
+        setStats(result.stats);
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
   };
 
   const loadRecordData = async (id: string) => {
-    const { record } = await supabaseLookupRecords.getLookupRecordById(id, user?.id || '');
-    if (record && record.analysis_data) {
-      // Transform record data back to WalletRiskResponse format
-      const fullWalletData = record.analysis_data as any;
-      setRecordData({
-        ...fullWalletData,
-        address: record.wallet_address,
-        network: record.network,
-        risk_score: record.risk_score,
-        risk_level: record.risk_level,
-        processing_time_ms: 0,
-        recordId: record.id // Add the database record ID
-      });
+    try {
+      console.log('Loading record data for ID:', id);
+      const result = await supabaseLookupRecords.getLookupRecordById(id, user?.id || '');
+      
+      if (result.success && result.record) {
+        const record = result.record;
+        console.log('Loaded record:', record);
+        
+        // Transform record data back to WalletRiskResponse format
+        const fullWalletData = {
+          ...record.analysis_data,
+          address: record.wallet_address,
+          network: record.network,
+          risk_score: record.risk_score,
+          risk_level: record.risk_level,
+          processing_time_ms: record.analysis_data?.processing_time_ms || 0,
+          recordId: record.id // Add the database record ID
+        };
+        
+        setRecordData(fullWalletData);
+      } else {
+        console.error('Failed to load record:', result.error);
+      }
+    } catch (error) {
+      console.error('Error loading record data:', error);
     }
   };
 

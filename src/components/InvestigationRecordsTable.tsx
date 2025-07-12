@@ -23,10 +23,10 @@ import {
   CheckCircle,
   Shield
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 
 interface InvestigationRecord {
   id: string;
@@ -53,48 +53,51 @@ export function InvestigationRecordsTable() {
     if (user) {
       fetchRecords();
     }
-  }, [user]);
+  }, [user, searchTerm, riskLevelFilter]);
 
   const fetchRecords = async () => {
     try {
       setLoading(true);
-      let query = supabase
-        .from('investigation_records')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (searchTerm) {
-        query = query.or(`wallet_address.ilike.%${searchTerm}%,record_id.ilike.%${searchTerm}%`);
-      }
-
-      if (riskLevelFilter !== 'all') {
-        query = query.eq('risk_level', riskLevelFilter);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching records:', error);
+      const result = await supabaseLookupRecords.getLookupRecords(user?.id || '');
+      
+      if (result.success && result.records) {
+        let filteredRecords = result.records;
+        
+        // Apply search filter
+        if (searchTerm) {
+          filteredRecords = filteredRecords.filter(record => 
+            record.wallet_address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            record.record_id.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }
+        
+        // Apply risk level filter
+        if (riskLevelFilter !== 'all') {
+          filteredRecords = filteredRecords.filter(record => 
+            record.risk_level === riskLevelFilter
+          );
+        }
+        
+        setRecords(filteredRecords);
+      } else {
+        console.error('Error fetching records:', result.error);
         toast({
           title: "Error",
           description: "Failed to fetch investigation records",
           variant: "destructive",
         });
-      } else {
-        setRecords(data || []);
       }
     } catch (error) {
       console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch investigation records",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (user) {
-      fetchRecords();
-    }
-  }, [searchTerm, riskLevelFilter]);
 
   const getRiskConfig = (riskLevel: string) => {
     switch (riskLevel) {
@@ -133,8 +136,8 @@ export function InvestigationRecordsTable() {
   };
 
   const handleViewDetails = (record: InvestigationRecord) => {
-    // Store the record data for the detailed view
-    localStorage.setItem('currentRecord', JSON.stringify(record));
+    console.log('Viewing record:', record);
+    // Navigate to the analysis page with the record ID
     navigate(`/analysis/${record.record_id}`);
   };
 
