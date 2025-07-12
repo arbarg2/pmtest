@@ -35,7 +35,7 @@ class RiskFactorsService {
         const riskFactorsToInsert = factors.map((factor: any) => ({
           lookup_record_id: recordId,
           factor_type: factor.factor_type,
-          severity: factor.severity,
+          severity: factor.severity as 'low' | 'medium' | 'high',
           score: factor.score,
           description: factor.description
         }));
@@ -46,7 +46,14 @@ class RiskFactorsService {
           .select();
 
         if (insertError) throw insertError;
-        return storedFactors || [];
+        return (storedFactors || []).map(factor => ({
+          id: factor.id,
+          factor_type: factor.factor_type,
+          severity: factor.severity as 'low' | 'medium' | 'high',
+          score: factor.score,
+          description: factor.description || '',
+          detected_at: factor.detected_at || new Date().toISOString()
+        }));
       }
 
       return [];
@@ -65,7 +72,14 @@ class RiskFactorsService {
         .order('score', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(factor => ({
+        id: factor.id,
+        factor_type: factor.factor_type,
+        severity: factor.severity as 'low' | 'medium' | 'high',
+        score: factor.score,
+        description: factor.description || '',
+        detected_at: factor.detected_at || new Date().toISOString()
+      }));
     } catch (error) {
       console.error('Error fetching risk factors:', error);
       return [];
@@ -80,7 +94,15 @@ class RiskFactorsService {
       });
 
       if (error) throw error;
-      return matches || [];
+      return (matches || []).map(match => ({
+        id: crypto.randomUUID(),
+        entity_name: match.entity_name,
+        entity_type: match.entity_type,
+        match_type: match.match_type as 'direct' | '1-hop',
+        confidence_score: match.confidence_score,
+        source_list: match.source_list,
+        screening_date: new Date().toISOString()
+      }));
     } catch (error) {
       console.error('Error screening sanctions:', error);
       return [];
@@ -119,7 +141,15 @@ class RiskFactorsService {
         .order('confidence_score', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(match => ({
+        id: match.id,
+        entity_name: match.entity_name || '',
+        entity_type: match.entity_type || '',
+        match_type: (match.match_type as 'direct' | '1-hop') || 'direct',
+        confidence_score: match.confidence_score || 0,
+        source_list: match.source_list || '',
+        screening_date: match.screening_date || new Date().toISOString()
+      }));
     } catch (error) {
       console.error('Error fetching sanctions screening:', error);
       return [];

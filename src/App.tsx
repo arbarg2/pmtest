@@ -98,14 +98,14 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
           <AppRoutes />
           <Toaster />
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

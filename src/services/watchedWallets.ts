@@ -36,9 +36,13 @@ class WatchedWalletsService {
     alertThreshold: number = 0.5
   ): Promise<WatchedWallet | null> {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       const { data, error } = await supabase
         .from('watched_wallets')
         .insert({
+          user_id: user.id,
           wallet_address: walletAddress,
           network,
           watch_reason: watchReason,
@@ -50,7 +54,20 @@ class WatchedWalletsService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        id: data.id,
+        wallet_address: data.wallet_address,
+        network: data.network,
+        watch_reason: data.watch_reason,
+        initial_risk_score: data.initial_risk_score,
+        current_risk_score: data.current_risk_score,
+        last_checked: data.last_checked,
+        status: data.status as 'active' | 'paused' | 'removed',
+        alert_threshold: data.alert_threshold,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
     } catch (error) {
       console.error('Error adding watched wallet:', error);
       return null;
@@ -66,7 +83,19 @@ class WatchedWalletsService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(wallet => ({
+        id: wallet.id,
+        wallet_address: wallet.wallet_address,
+        network: wallet.network,
+        watch_reason: wallet.watch_reason,
+        initial_risk_score: wallet.initial_risk_score,
+        current_risk_score: wallet.current_risk_score,
+        last_checked: wallet.last_checked,
+        status: wallet.status as 'active' | 'paused' | 'removed',
+        alert_threshold: wallet.alert_threshold,
+        created_at: wallet.created_at,
+        updated_at: wallet.updated_at
+      }));
     } catch (error) {
       console.error('Error fetching watched wallets:', error);
       return [];
@@ -115,7 +144,29 @@ class WatchedWalletsService {
         .limit(limit);
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(alert => ({
+        id: alert.id,
+        alert_type: alert.alert_type,
+        old_value: alert.old_value,
+        new_value: alert.new_value,
+        risk_change: alert.risk_change,
+        alert_message: alert.alert_message,
+        is_read: alert.is_read,
+        created_at: alert.created_at,
+        watched_wallet: {
+          id: alert.watched_wallet.id,
+          wallet_address: alert.watched_wallet.wallet_address,
+          network: alert.watched_wallet.network,
+          watch_reason: alert.watched_wallet.watch_reason,
+          initial_risk_score: alert.watched_wallet.initial_risk_score,
+          current_risk_score: alert.watched_wallet.current_risk_score,
+          last_checked: alert.watched_wallet.last_checked,
+          status: alert.watched_wallet.status as 'active' | 'paused' | 'removed',
+          alert_threshold: alert.watched_wallet.alert_threshold,
+          created_at: alert.watched_wallet.created_at,
+          updated_at: alert.watched_wallet.updated_at
+        }
+      }));
     } catch (error) {
       console.error('Error fetching watch alerts:', error);
       return [];
