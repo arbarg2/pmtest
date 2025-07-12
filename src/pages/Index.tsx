@@ -63,15 +63,29 @@ const Index = () => {
         const record = result.record;
         console.log('Loaded record:', record);
         
+        // Safely parse analysis_data
+        let analysisData = {};
+        try {
+          if (typeof record.analysis_data === 'string') {
+            analysisData = JSON.parse(record.analysis_data);
+          } else if (typeof record.analysis_data === 'object' && record.analysis_data !== null) {
+            analysisData = record.analysis_data;
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse analysis_data:', parseError);
+          analysisData = {};
+        }
+        
         // Transform record data back to WalletRiskResponse format
         const fullWalletData = {
-          ...record.analysis_data,
           address: record.wallet_address,
           network: record.network,
           risk_score: record.risk_score,
           risk_level: record.risk_level,
-          processing_time_ms: record.analysis_data?.processing_time_ms || 0,
-          recordId: record.id // Add the database record ID
+          processing_time_ms: (analysisData as any)?.processing_time_ms || 0,
+          recordId: record.id,
+          // Spread the analysis data safely
+          ...(typeof analysisData === 'object' ? analysisData : {})
         };
         
         setRecordData(fullWalletData);

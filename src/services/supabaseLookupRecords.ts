@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface LookupRecord {
@@ -70,12 +71,32 @@ class SupabaseLookupRecordsService {
     }
   }
 
+  async getLookupRecords(userId: string) {
+    try {
+      const { data: records, error } = await supabase
+        .from('investigation_records')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching lookup records:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, records };
+    } catch (error) {
+      console.error('Error in getLookupRecords:', error);
+      return { success: false, error: 'Failed to fetch lookup records' };
+    }
+  }
+
   async getLookupRecordById(id: string, userId: string) {
     try {
       const { data: record, error } = await supabase
         .from('investigation_records')
         .select('*')
-        .eq('id', id)
+        .eq('record_id', id)
         .eq('user_id', userId)
         .single();
 
