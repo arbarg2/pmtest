@@ -39,6 +39,7 @@ export interface WalletRiskResponse {
   };
   behavioral_classification?: {
     primary_type: string;
+    confidence_level?: number;
   };
   sanctions_exposure?: {
     direct_hits: number;
@@ -104,7 +105,8 @@ export const analyzeWalletRisk = async (address: string): Promise<WalletRiskResp
       last_active: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
     },
     behavioral_classification: {
-      primary_type: 'normal'
+      primary_type: 'normal',
+      confidence_level: Math.floor(Math.random() * 100) + 1
     },
     sanctions_exposure: {
       direct_hits: 0,

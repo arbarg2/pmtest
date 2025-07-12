@@ -20,9 +20,9 @@ export function AIExplainer({ walletData }: AIExplainerProps) {
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     const explanations = {
-      Low: `This wallet demonstrates standard, low-risk behavior patterns. Analysis reveals legitimate usage characteristics including regular interactions with established exchanges like ${walletData.entity_attribution.name || 'Coinbase'}, consistent transaction timing patterns, and no flagged connections to high-risk entities. The address maintains a clean transaction history with ${walletData.transaction_count} total transactions, showing normal holding and trading behaviors typical of retail or institutional users.`,
-      Medium: `This wallet exhibits moderate risk indicators that require enhanced monitoring. While not definitively suspicious, several factors contribute to elevated risk: potential indirect exposure to higher-risk addresses, unusual transaction clustering patterns, or connections to services with mixed reputations. The ${walletData.behavioral_classification.primary_type} classification suggests active usage that may involve privacy-focused services or less regulated platforms. Additional due diligence is recommended for compliance purposes.`,
-      High: `This wallet presents significant risk indicators requiring immediate attention. Multiple red flags have been identified including direct or indirect connections to sanctioned addresses, known fraud schemes, or suspicious transaction patterns consistent with money laundering activities. The behavioral profile shows characteristics typical of ${walletData.behavioral_classification.primary_type} usage, with ${walletData.behavioral_classification.confidence_level || 85}% confidence. Manual review and potential reporting obligations should be considered.`
+      Low: `This wallet demonstrates standard, low-risk behavior patterns. Analysis reveals legitimate usage characteristics including regular interactions with established exchanges like ${walletData.entity_attribution?.name || 'Coinbase'}, consistent transaction timing patterns, and no flagged connections to high-risk entities. The address maintains a clean transaction history with ${walletData.transaction_count} total transactions, showing normal holding and trading behaviors typical of retail or institutional users.`,
+      Medium: `This wallet exhibits moderate risk indicators that require enhanced monitoring. While not definitively suspicious, several factors contribute to elevated risk: potential indirect exposure to higher-risk addresses, unusual transaction clustering patterns, or connections to services with mixed reputations. The ${walletData.behavioral_classification?.primary_type || 'Unknown'} classification suggests active usage that may involve privacy-focused services or less regulated platforms. Additional due diligence is recommended for compliance purposes.`,
+      High: `This wallet presents significant risk indicators requiring immediate attention. Multiple red flags have been identified including direct or indirect connections to sanctioned addresses, known fraud schemes, or suspicious transaction patterns consistent with money laundering activities. The behavioral profile shows characteristics typical of ${walletData.behavioral_classification?.primary_type || 'Unknown'} usage, with ${walletData.behavioral_classification?.confidence_level || 85}% confidence. Manual review and potential reporting obligations should be considered.`
     };
 
     const riskSpecificFactors = [];
@@ -42,19 +42,19 @@ export function AIExplainer({ walletData }: AIExplainerProps) {
       riskSpecificFactors.push("• Algorithmic or high-frequency trading patterns identified");
     }
 
-    let fullExplanation = explanations[walletData.risk_level];
+    let fullExplanation = explanations[walletData.risk_level as keyof typeof explanations];
     
     if (riskSpecificFactors.length > 0) {
       fullExplanation += `\n\n**Specific Risk Indicators:**\n${riskSpecificFactors.join('\n')}`;
     }
 
     // Add entity attribution details
-    if (walletData.entity_attribution.name !== 'Unknown') {
-      fullExplanation += `\n\n**Entity Attribution:**\nPrimary classification identifies this wallet as associated with ${walletData.entity_attribution.name} (${walletData.entity_attribution.type}), with ${walletData.entity_attribution.confidence}% confidence based on transaction pattern analysis.`;
+    if (walletData.entity_attribution?.name && walletData.entity_attribution.name !== 'Unknown') {
+      fullExplanation += `\n\n**Entity Attribution:**\nPrimary classification identifies this wallet as associated with ${walletData.entity_attribution.name} (${walletData.entity_attribution.type}), with ${walletData.entity_attribution.confidence * 100}% confidence based on transaction pattern analysis.`;
     }
 
     // Add transaction intelligence
-    fullExplanation += `\n\n**Transaction Intelligence:**\nAnalysis processed ${walletData.transaction_count} total transactions with last activity on ${walletData.last_activity}. Volume analysis shows patterns consistent with ${walletData.behavioral_classification.primary_type} usage. Processing completed in ${walletData.processing_time_ms}ms using advanced blockchain forensics.`;
+    fullExplanation += `\n\n**Transaction Intelligence:**\nAnalysis processed ${walletData.transaction_count} total transactions with last activity on ${walletData.last_activity}. Volume analysis shows patterns consistent with ${walletData.behavioral_classification?.primary_type || 'standard'} usage. Processing completed in ${walletData.processing_time_ms}ms using advanced blockchain forensics.`;
 
     setExplanation(fullExplanation);
     setIsExplaining(false);
