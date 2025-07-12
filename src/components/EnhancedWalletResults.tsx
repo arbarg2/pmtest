@@ -222,7 +222,7 @@ const EnhancedWalletResults = ({
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold flex items-center">
                 {riskConfig.icon}
-                <span className="ml-3">Wallet Analysis</span>
+                <span className="ml-3">Wallet Intelligence Analysis</span>
               </h2>
               <div className="flex items-center space-x-4">
                 <Badge className={`${riskConfig.color} border-2 px-6 py-2 text-lg font-bold`}>
@@ -234,70 +234,259 @@ const EnhancedWalletResults = ({
                 </div>
               </div>
             </div>
-            <div className="bg-slate-50 rounded-lg p-4 mb-6">
-              <p className="font-mono text-sm break-all">{wallet.address}</p>
+
+            {/* Target Address */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-slate-600">Target Address:</span>
+                <span className="text-sm text-slate-500">{wallet.network} Network</span>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-4">
+                <p className="font-mono text-sm break-all">{wallet.address}</p>
+              </div>
             </div>
-            
-            {/* Wallet Intelligence Grid */}
-            <div className="grid md:grid-cols-4 gap-6 mb-6">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-blue-900 mb-2">Entity Attribution</h3>
-                <p className="text-sm text-blue-700">
-                  <strong>Name:</strong> {wallet.entity_attribution?.name || 'Unknown'}
-                </p>
-                <p className="text-sm text-blue-700">
-                  <strong>Type:</strong> {wallet.entity_attribution?.type || 'Unknown'}
-                </p>
-                <p className="text-sm text-blue-700">
-                  <strong>Confidence:</strong> {((wallet.entity_attribution?.confidence || 0) * 100).toFixed(0)}%
+
+            {/* Key Metrics Row */}
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-1">
+                  <span className="text-xs text-slate-500">First Seen</span>
+                </div>
+                <p className="text-sm font-medium">
+                  {wallet.temporal_patterns?.first_seen ? new Date(wallet.temporal_patterns.first_seen).toLocaleDateString() : 'Unknown'}
                 </p>
               </div>
-              
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-green-900 mb-2">Volume Metrics</h3>
-                <p className="text-sm text-green-700">
-                  <strong>Lifetime Inbound:</strong> {wallet.volume_metrics?.lifetime_value?.inbound?.toFixed(2) || '0.00'}
-                </p>
-                <p className="text-sm text-green-700">
-                  <strong>USD Equivalent:</strong> ${wallet.volume_metrics?.lifetime_value?.usd_equivalent?.toFixed(2) || '0.00'}
-                </p>
-                <p className="text-sm text-green-700">
-                  <strong>Avg Transaction:</strong> {wallet.volume_metrics?.average_transaction_size?.toFixed(2) || '0.00'}
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-1">
+                  <span className="text-xs text-slate-500">Total Transactions</span>
+                </div>
+                <p className="text-sm font-medium">{wallet.transaction_count || 0}</p>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-1">
+                  <span className="text-xs text-slate-500">Last Active</span>
+                </div>
+                <p className="text-sm font-medium">
+                  {wallet.temporal_patterns?.last_active ? new Date(wallet.temporal_patterns.last_active).toLocaleDateString() : 'Unknown'}
                 </p>
               </div>
-              
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-purple-900 mb-2">Geographic Risk</h3>
-                <p className="text-sm text-purple-700">
-                  <strong>Primary Region:</strong> {wallet.geographic_risk?.primary_region || 'Unknown'}
-                </p>
-                <p className="text-sm text-purple-700">
-                  <strong>Risk Jurisdictions:</strong> {wallet.geographic_risk?.risk_jurisdictions?.length || 0}
-                </p>
-                <p className="text-sm text-purple-700">
-                  <strong>Geo Risk Score:</strong> {wallet.geographic_risk?.geo_risk_score?.toFixed(2) || '0.00'}
-                </p>
-              </div>
-              
-              <div className="bg-orange-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-orange-900 mb-2">Temporal Patterns</h3>
-                <p className="text-sm text-orange-700">
-                  <strong>First Seen:</strong> {wallet.temporal_patterns?.first_seen ? new Date(wallet.temporal_patterns.first_seen).toLocaleDateString() : 'Unknown'}
-                </p>
-                <p className="text-sm text-orange-700">
-                  <strong>Last Active:</strong> {wallet.temporal_patterns?.last_active ? new Date(wallet.temporal_patterns.last_active).toLocaleDateString() : 'Unknown'}
-                </p>
-                <p className="text-sm text-orange-700">
-                  <strong>Transaction Count:</strong> {wallet.transaction_count || 0}
-                </p>
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-1">
+                  <span className="text-xs text-slate-500">Address Type</span>
+                </div>
+                <p className="text-sm font-medium">{wallet.entity_attribution?.type || 'Private Wallet'}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Overview Section */}
+        {/* AI Analysis Section */}
         <div className="mb-8">
           <AIExplainer walletData={wallet} />
+        </div>
+
+        {/* Intelligence Grid - 4 sections in 2x2 layout */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          {/* Entity Attribution */}
+          <Card className="shadow-lg border-0 bg-white/95">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                  <Shield className="w-4 h-4 text-blue-600" />
+                </div>
+                Entity Attribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Entity:</span>
+                <span className="text-sm font-medium">{wallet.entity_attribution?.name || 'Unknown Private Wallet'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Type:</span>
+                <span className="text-sm font-medium">{wallet.entity_attribution?.type || 'Private Wallet'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Confidence:</span>
+                <span className="text-sm font-medium">{((wallet.entity_attribution?.confidence || 0) * 100).toFixed(0)}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Entity Risk:</span>
+                <span className="text-sm font-medium">{wallet.entity_attribution?.risk_level || 'Low'}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Volume Intelligence */}
+          <Card className="shadow-lg border-0 bg-white/95">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center">
+                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                  <div className="w-4 h-4 bg-green-600 rounded"></div>
+                </div>
+                Volume Intelligence
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Total Volume:</span>
+                <span className="text-sm font-medium">${wallet.volume_metrics?.lifetime_value?.usd_equivalent?.toFixed(2) || '0.00'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Inbound:</span>
+                <span className="text-sm font-medium">{wallet.volume_metrics?.lifetime_value?.inbound?.toFixed(4) || '0.0000'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Outbound:</span>
+                <span className="text-sm font-medium">{wallet.volume_metrics?.lifetime_value?.outbound?.toFixed(4) || '0.0000'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Avg Transaction:</span>
+                <span className="text-sm font-medium">{wallet.volume_metrics?.average_transaction_size?.toFixed(4) || '0.0000'}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Geographic Risk */}
+          <Card className="shadow-lg border-0 bg-white/95">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center">
+                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                  <div className="w-4 h-4 bg-purple-600 rounded-full"></div>
+                </div>
+                Geographic Risk
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Primary Region:</span>
+                <span className="text-sm font-medium">{wallet.geographic_risk?.primary_region || 'Unknown'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Geo Risk Score:</span>
+                <span className="text-sm font-medium">{wallet.geographic_risk?.geo_risk_score?.toFixed(1) || '0.0'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Risk Jurisdictions:</span>
+                <span className="text-sm font-medium">{wallet.geographic_risk?.risk_jurisdictions?.length || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Behavior Type:</span>
+                <span className="text-sm font-medium">{wallet.behavioral_classification?.primary_type || 'Unknown'}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Sanctions Exposure */}
+          <Card className="shadow-lg border-0 bg-white/95">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center">
+                <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                  <div className="w-4 h-4 bg-red-600 rounded"></div>
+                </div>
+                Sanctions Exposure
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Direct Hits:</span>
+                <span className="text-sm font-medium">{wallet.sanctions_exposure?.direct_hits || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">1-Hop Exposure:</span>
+                <span className="text-sm font-medium">{wallet.sanctions_exposure?.indirect_exposure?.one_hop || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">2-Hop Exposure:</span>
+                <span className="text-sm font-medium">{wallet.sanctions_exposure?.indirect_exposure?.two_hop || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Proximity Score:</span>
+                <span className="text-sm font-medium">{wallet.sanctions_exposure?.proximity_score?.toFixed(2) || '0.00'}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Largest Transaction & Counterparty Intelligence */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          {/* Largest Transaction */}
+          <Card className="shadow-lg border-0 bg-white/95">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center">
+                <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                  <div className="w-4 h-4 bg-yellow-600"></div>
+                </div>
+                Largest Transaction
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Amount:</span>
+                <span className="text-sm font-medium">
+                  {wallet.volume_metrics?.largest_transaction?.amount?.toFixed(4) || 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Direction:</span>
+                <span className="text-sm font-medium">
+                  {wallet.volume_metrics?.largest_transaction?.direction || 'outbound'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Timestamp:</span>
+                <span className="text-sm font-medium">
+                  {wallet.volume_metrics?.largest_transaction?.timestamp ? 
+                    new Date(wallet.volume_metrics.largest_transaction.timestamp).toLocaleDateString() : 
+                    'Unknown'
+                  }
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-slate-600">Counterparty:</span>
+                <span className="text-sm font-medium">
+                  {wallet.volume_metrics?.largest_transaction?.counterparty || 'Unknown'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Counterparty Intelligence */}
+          <Card className="shadow-lg border-0 bg-white/95">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center">
+                <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center mr-3">
+                  <div className="w-4 h-4 bg-teal-600 rounded-full"></div>
+                </div>
+                Counterparty Intelligence
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {wallet.top_counterparties && wallet.top_counterparties.length > 0 ? (
+                wallet.top_counterparties.slice(0, 3).map((counterparty, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm font-medium">{counterparty.entity_name}</p>
+                      <p className="text-xs text-slate-500">
+                        {counterparty.transaction_count} transactions • {counterparty.total_volume.toFixed(2)} total
+                      </p>
+                    </div>
+                    <Badge 
+                      variant={counterparty.risk_level === 'High' ? 'destructive' : 
+                               counterparty.risk_level === 'Medium' ? 'secondary' : 'outline'}
+                      className="text-xs"
+                    >
+                      {counterparty.risk_level}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-slate-500">No counterparty data available</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Risk Factors Section */}
