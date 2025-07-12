@@ -4,7 +4,6 @@ import { ArrowLeft, Shield, Eye, FileText, Download, Edit3 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WalletRiskResponse } from '@/services/api';
 import { AIExplainer } from '@/components/AIExplainer';
 import RiskFactorsBreakdown from '@/components/RiskFactorsBreakdown';
@@ -296,46 +295,48 @@ const EnhancedWalletResults = ({
           </CardContent>
         </Card>
 
-        {/* Analysis Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-white/80">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="risk-factors">Risk Factors</TabsTrigger>
-            <TabsTrigger value="sanctions">Sanctions</TabsTrigger>
-            <TabsTrigger value="notes">Analyst Notes</TabsTrigger>
-          </TabsList>
+        {/* Overview Section */}
+        <div className="mb-8">
+          <AIExplainer walletData={wallet} />
+        </div>
 
-          <TabsContent value="overview" className="space-y-6">
-            <AIExplainer walletData={wallet} />
-          </TabsContent>
+        {/* Risk Factors Section */}
+        <div className="mb-8">
+          <RiskFactorsBreakdown 
+            factors={riskFactors} 
+            isLoading={isLoadingFactors}
+          />
+        </div>
 
-          <TabsContent value="risk-factors">
-            <RiskFactorsBreakdown 
-              factors={riskFactors} 
-              isLoading={isLoadingFactors}
-            />
-          </TabsContent>
+        {/* Sanctions Section */}
+        <div className="mb-8">
+          <SanctionsScreening 
+            matches={sanctionsMatches} 
+            isLoading={isLoadingSanctions}
+          />
+        </div>
 
-          <TabsContent value="sanctions">
-            <SanctionsScreening 
-              matches={sanctionsMatches} 
-              isLoading={isLoadingSanctions}
-            />
-          </TabsContent>
-
-          <TabsContent value="notes">
-            {currentRecordId ? (
-              <AnalystNotesPanel recordId={currentRecordId} />
-            ) : (
-              <Card>
-                <CardContent className="p-8 text-center">
+        {/* Analyst Notes Section */}
+        <div className="mb-8">
+          <Card className="shadow-lg border-0 bg-white/95">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Edit3 className="w-5 h-5 mr-2" />
+                Analyst Case Notes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {currentRecordId ? (
+                <AnalystNotesPanel recordId={currentRecordId} />
+              ) : (
+                <div className="p-8 text-center">
                   <Edit3 className="w-12 h-12 mx-auto mb-4 text-slate-400" />
                   <p className="text-slate-600">Record ID required for analyst notes</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
