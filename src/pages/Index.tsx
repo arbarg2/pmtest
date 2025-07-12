@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Search, Shield, Zap, Eye, BarChart3, FileText, Users, Globe, TrendingUp, AlertTriangle, Building2, Database, History, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,17 +51,16 @@ const Index = () => {
 
   const loadRecordData = async (id: string) => {
     const { record } = await supabaseLookupRecords.getLookupRecordById(id, user?.id || '');
-    if (record && record.risk_assessment) {
+    if (record && record.analysis_data) {
       // Transform record data back to WalletRiskResponse format
-      const fullWalletData = record.risk_assessment as any;
+      const fullWalletData = record.analysis_data as any;
       setRecordData({
-        ...fullWalletData.full_wallet_data,
+        ...fullWalletData,
         address: record.wallet_address,
         network: record.network,
-        risk_score: fullWalletData.risk_score,
-        risk_level: fullWalletData.risk_level,
-        risk_factors: fullWalletData.risk_factors || {},
-        processing_time_ms: record.processing_time_ms,
+        risk_score: record.risk_score,
+        risk_level: record.risk_level,
+        processing_time_ms: 0,
         recordId: record.id // Add the database record ID
       });
     }

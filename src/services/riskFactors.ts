@@ -39,7 +39,11 @@ class RiskFactorsService {
         return [];
       }
 
-      return data || [];
+      // Type assertion with proper validation
+      return (data || []).map(item => ({
+        ...item,
+        severity: ['low', 'medium', 'high'].includes(item.severity) ? item.severity as 'low' | 'medium' | 'high' : 'low'
+      }));
     } catch (error) {
       console.error('Error in getRiskFactors:', error);
       return [];
@@ -74,7 +78,7 @@ class RiskFactorsService {
       const factorsToInsert = calculatedFactors?.map((factor: any) => ({
         lookup_record_id: lookupRecordId,
         factor_type: factor.factor_type,
-        severity: factor.severity,
+        severity: ['low', 'medium', 'high'].includes(factor.severity) ? factor.severity : 'low',
         score: factor.score,
         description: factor.description
       })) || [];
@@ -91,7 +95,10 @@ class RiskFactorsService {
         }
 
         console.log('Successfully stored risk factors:', insertedFactors);
-        return insertedFactors || [];
+        return (insertedFactors || []).map(item => ({
+          ...item,
+          severity: ['low', 'medium', 'high'].includes(item.severity) ? item.severity as 'low' | 'medium' | 'high' : 'low'
+        }));
       }
 
       return [];
@@ -114,14 +121,18 @@ class RiskFactorsService {
         return [];
       }
 
-      return data || [];
+      // Type assertion with proper validation
+      return (data || []).map(item => ({
+        ...item,
+        match_type: ['direct', '1-hop'].includes(item.match_type) ? item.match_type as 'direct' | '1-hop' : 'direct'
+      }));
     } catch (error) {
       console.error('Error in getSanctionsScreening:', error);
       return [];
     }
   }
 
-  async screenSanctions(walletAddress: string, network: string): Promise<SanctionsMatch[]> {
+  async screenSanctions(walletAddress: string, network: string): Promise<any[]> {
     try {
       console.log('Screening sanctions for:', walletAddress, network);
       
@@ -158,7 +169,7 @@ class RiskFactorsService {
         lookup_record_id: lookupRecordId,
         entity_name: match.entity_name,
         entity_type: match.entity_type,
-        match_type: match.match_type,
+        match_type: ['direct', '1-hop'].includes(match.match_type) ? match.match_type : 'direct',
         confidence_score: match.confidence_score,
         source_list: match.source_list
       }));
@@ -173,7 +184,10 @@ class RiskFactorsService {
         return [];
       }
 
-      return insertedMatches || [];
+      return (insertedMatches || []).map(item => ({
+        ...item,
+        match_type: ['direct', '1-hop'].includes(item.match_type) ? item.match_type as 'direct' | '1-hop' : 'direct'
+      }));
     } catch (error) {
       console.error('Error in storeSanctionsScreening:', error);
       return [];

@@ -156,7 +156,14 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport, r
   };
 
   const handleExportPDF = async () => {
-    if (!recordId) return;
+    if (!recordId) {
+      toast({
+        title: "Export Not Available",
+        description: "Record ID is required for export",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
       await reportExportService.exportToPDF({
@@ -184,7 +191,14 @@ const EnhancedWalletResults = ({ wallet, onBack, onViewFlow, onGenerateReport, r
   };
 
   const handleExportCSV = async () => {
-    if (!recordId) return;
+    if (!recordId) {
+      toast({
+        title: "Export Not Available",
+        description: "Record ID is required for export",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
       await reportExportService.exportToCSV({
