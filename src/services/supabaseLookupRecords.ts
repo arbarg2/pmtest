@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface LookupRecord {
@@ -39,9 +38,13 @@ export interface CreateLookupRecordData {
 class SupabaseLookupRecordsService {
   async createLookupRecord(data: CreateLookupRecordData, userId: string) {
     try {
+      // Generate a record ID
+      const recordId = `LR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
       const { data: record, error } = await supabase
         .from('investigation_records')
         .insert({
+          record_id: recordId,
           wallet_address: data.wallet_address,
           network: data.network,
           risk_score: data.risk_score,

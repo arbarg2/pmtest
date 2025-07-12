@@ -1,3 +1,4 @@
+
 import { LookupRecord, LookupRecordFilters } from '@/types/lookupRecords';
 import { WalletRiskResponse } from './api';
 
@@ -74,11 +75,14 @@ class LookupRecordService {
       .filter(tx => tx.direction === 'outbound')
       .reduce((sum, tx) => sum + tx.amount, 0);
 
+    // Ensure network is either BTC or ETH
+    const network = (walletData.network === 'bitcoin' || walletData.network === 'BTC') ? 'BTC' as const : 'ETH' as const;
+
     const record: LookupRecord = {
       id: `LR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date().toISOString(),
       wallet_address: walletData.address,
-      network: walletData.network,
+      network: network,
       
       risk_assessment: {
         risk_score: walletData.risk_score,
@@ -139,7 +143,6 @@ class LookupRecordService {
     return this.records[recordIndex];
   }
 
-  // Get all lookup records with optional filtering
   async getLookupRecords(filters?: LookupRecordFilters): Promise<LookupRecord[]> {
     let filteredRecords = [...this.records];
 
@@ -182,12 +185,10 @@ class LookupRecordService {
     return filteredRecords;
   }
 
-  // Get a single lookup record by ID
   async getLookupRecord(id: string): Promise<LookupRecord | null> {
     return this.records.find(record => record.id === id) || null;
   }
 
-  // Get lookup statistics
   async getLookupStats() {
     const total = this.records.length;
     const riskLevelCounts = this.records.reduce((acc, record) => {
