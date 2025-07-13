@@ -133,14 +133,14 @@ const EnhancedWalletResults = ({
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Top Row - Overview and AI Summary */}
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2">
-            <WalletOverview wallet={wallet} />
-          </div>
-          <div>
-            <AIAnalysisSummary wallet={wallet} />
-          </div>
+        {/* Top Row - Wallet Overview */}
+        <div className="mb-8">
+          <WalletOverview wallet={wallet} />
+        </div>
+
+        {/* AI Analysis Section - Collapsible */}
+        <div className="mb-8">
+          <AIAnalysisSummary wallet={wallet} />
         </div>
 
         {/* Second Row - Entity Attribution and Geographic Risk */}

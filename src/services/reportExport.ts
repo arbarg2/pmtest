@@ -16,181 +16,224 @@ export interface ExportData {
 
 class ReportExportService {
   async exportToPDF(data: ExportData): Promise<void> {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
-    const margin = 20;
-    let yPosition = 30;
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      const margin = 20;
+      let yPosition = 30;
 
-    // Header with logo placeholder
-    doc.setFontSize(20);
-    doc.setTextColor(59, 130, 246); // Blue color
-    doc.text('Rìan Intelligence Report', margin, yPosition);
-    
-    // Add timestamp and record ID
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Generated: ${new Date(data.timestamp).toLocaleString()}`, margin, yPosition + 10);
-    doc.text(`Record ID: ${data.recordId}`, margin, yPosition + 18);
-    
-    yPosition += 40;
+      // Header with logo placeholder
+      doc.setFontSize(20);
+      doc.setTextColor(59, 130, 246); // Blue color
+      doc.text('Rìan Intelligence Report', margin, yPosition);
+      
+      // Add timestamp and record ID
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generated: ${new Date(data.timestamp).toLocaleString()}`, margin, yPosition + 10);
+      doc.text(`Record ID: ${data.recordId}`, margin, yPosition + 18);
+      
+      yPosition += 40;
 
-    // Wallet Information
-    doc.setFontSize(16);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Wallet Analysis Summary', margin, yPosition);
-    yPosition += 15;
-
-    doc.setFontSize(12);
-    doc.text(`Address: ${data.wallet.address}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`Network: ${data.wallet.network}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`Risk Score: ${data.wallet.risk_score.toFixed(1)}/10`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`Risk Level: ${data.wallet.risk_level}`, margin, yPosition);
-    yPosition += 15;
-
-    // Risk Factors
-    if (data.riskFactors.length > 0) {
-      doc.setFontSize(14);
-      doc.text('Risk Factors Breakdown', margin, yPosition);
-      yPosition += 10;
-
-      data.riskFactors.forEach(factor => {
-        doc.setFontSize(10);
-        doc.text(`• ${factor.factor_type.replace(/_/g, ' ').toUpperCase()}`, margin + 5, yPosition);
-        doc.text(`Severity: ${factor.severity.toUpperCase()}`, margin + 100, yPosition);
-        doc.text(`Score: ${factor.score.toFixed(1)}`, margin + 150, yPosition);
-        yPosition += 6;
-        
-        if (factor.description) {
-          doc.setFontSize(9);
-          doc.setTextColor(100, 100, 100);
-          const lines = doc.splitTextToSize(factor.description, pageWidth - margin * 2 - 10);
-          doc.text(lines, margin + 10, yPosition);
-          yPosition += lines.length * 4 + 2;
-          doc.setTextColor(0, 0, 0);
-        }
-        yPosition += 5;
-      });
-    }
-
-    // Sanctions Screening
-    if (data.sanctionsMatches.length > 0) {
-      yPosition += 10;
-      doc.setFontSize(14);
-      doc.setTextColor(220, 38, 38); // Red color for sanctions
-      doc.text('⚠️ SANCTIONS EXPOSURE DETECTED', margin, yPosition);
-      yPosition += 10;
-
-      data.sanctionsMatches.forEach(match => {
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.text(`Entity: ${match.entity_name}`, margin + 5, yPosition);
-        doc.text(`Type: ${match.entity_type}`, margin + 100, yPosition);
-        yPosition += 6;
-        doc.text(`Match: ${match.match_type}`, margin + 5, yPosition);
-        doc.text(`Confidence: ${(match.confidence_score * 100).toFixed(0)}%`, margin + 100, yPosition);
-        yPosition += 8;
-      });
-    }
-
-    // Analyst Notes
-    if (data.analystNotes) {
-      yPosition += 15;
-      doc.setFontSize(14);
+      // Wallet Information
+      doc.setFontSize(16);
       doc.setTextColor(0, 0, 0);
-      doc.text('Investigation Notes', margin, yPosition);
-      yPosition += 10;
-
-      doc.setFontSize(10);
-      const noteLines = doc.splitTextToSize(data.analystNotes, pageWidth - margin * 2);
-      doc.text(noteLines, margin, yPosition);
-      yPosition += noteLines.length * 5;
-    }
-
-    // Investigation Status
-    if (data.investigationStatus) {
-      yPosition += 10;
-      doc.setFontSize(12);
-      doc.text(`Status: ${data.investigationStatus.toUpperCase()}`, margin, yPosition);
-    }
-
-    // Tags
-    if (data.tags && data.tags.length > 0) {
+      doc.text('Wallet Analysis Summary', margin, yPosition);
       yPosition += 15;
+
       doc.setFontSize(12);
-      doc.text('Tags:', margin, yPosition);
+      doc.text(`Address: ${data.wallet.address}`, margin, yPosition);
       yPosition += 8;
-      doc.setFontSize(10);
-      doc.text(data.tags.join(', '), margin, yPosition);
+      doc.text(`Network: ${data.wallet.network || 'Unknown'}`, margin, yPosition);
+      yPosition += 8;
+      doc.text(`Risk Score: ${data.wallet.risk_score?.toFixed(1) || 'N/A'}/10`, margin, yPosition);
+      yPosition += 8;
+      doc.text(`Risk Level: ${data.wallet.risk_level || 'Unknown'}`, margin, yPosition);
+      yPosition += 15;
+
+      // Entity Attribution
+      if (data.wallet.entity_attribution) {
+        doc.setFontSize(14);
+        doc.text('Entity Attribution', margin, yPosition);
+        yPosition += 10;
+        doc.setFontSize(12);
+        doc.text(`Name: ${data.wallet.entity_attribution.name || 'Unknown'}`, margin, yPosition);
+        yPosition += 8;
+        doc.text(`Type: ${data.wallet.entity_attribution.type || 'Unknown'}`, margin, yPosition);
+        yPosition += 8;
+        doc.text(`Confidence: ${(data.wallet.entity_attribution.confidence * 100).toFixed(1)}%`, margin, yPosition);
+        yPosition += 15;
+      }
+
+      // Volume Metrics
+      if (data.wallet.volume_metrics) {
+        doc.setFontSize(14);
+        doc.text('Volume Intelligence', margin, yPosition);
+        yPosition += 10;
+        doc.setFontSize(12);
+        doc.text(`Total Inbound: ${data.wallet.volume_metrics.lifetime_value?.inbound?.toFixed(4) || 'N/A'} BTC`, margin, yPosition);
+        yPosition += 8;
+        doc.text(`Total Outbound: ${data.wallet.volume_metrics.lifetime_value?.outbound?.toFixed(4) || 'N/A'} BTC`, margin, yPosition);
+        yPosition += 8;
+        doc.text(`USD Equivalent: $${data.wallet.volume_metrics.lifetime_value?.usd_equivalent?.toLocaleString() || 'N/A'}`, margin, yPosition);
+        yPosition += 15;
+      }
+
+      // Risk Factors
+      if (data.riskFactors.length > 0) {
+        doc.setFontSize(14);
+        doc.text('Risk Factors Breakdown', margin, yPosition);
+        yPosition += 10;
+
+        data.riskFactors.forEach(factor => {
+          doc.setFontSize(10);
+          doc.text(`• ${factor.factor_type.replace(/_/g, ' ').toUpperCase()}`, margin + 5, yPosition);
+          doc.text(`Severity: ${factor.severity.toUpperCase()}`, margin + 100, yPosition);
+          doc.text(`Score: ${factor.score.toFixed(1)}`, margin + 150, yPosition);
+          yPosition += 6;
+          
+          if (factor.description) {
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            const lines = doc.splitTextToSize(factor.description, pageWidth - margin * 2 - 10);
+            doc.text(lines, margin + 10, yPosition);
+            yPosition += lines.length * 4 + 2;
+            doc.setTextColor(0, 0, 0);
+          }
+          yPosition += 5;
+        });
+      }
+
+      // Sanctions Screening
+      if (data.sanctionsMatches.length > 0) {
+        yPosition += 10;
+        doc.setFontSize(14);
+        doc.setTextColor(220, 38, 38); // Red color for sanctions
+        doc.text('⚠️ SANCTIONS EXPOSURE DETECTED', margin, yPosition);
+        yPosition += 10;
+
+        data.sanctionsMatches.forEach(match => {
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+          doc.text(`Entity: ${match.entity_name}`, margin + 5, yPosition);
+          doc.text(`Type: ${match.entity_type}`, margin + 100, yPosition);
+          yPosition += 6;
+          doc.text(`Match: ${match.match_type}`, margin + 5, yPosition);
+          doc.text(`Confidence: ${(match.confidence_score * 100).toFixed(0)}%`, margin + 100, yPosition);
+          yPosition += 8;
+        });
+      }
+
+      // Analyst Notes
+      if (data.analystNotes) {
+        yPosition += 15;
+        doc.setFontSize(14);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Investigation Notes', margin, yPosition);
+        yPosition += 10;
+
+        doc.setFontSize(10);
+        const noteLines = doc.splitTextToSize(data.analystNotes, pageWidth - margin * 2);
+        doc.text(noteLines, margin, yPosition);
+        yPosition += noteLines.length * 5;
+      }
+
+      // Investigation Status
+      if (data.investigationStatus) {
+        yPosition += 10;
+        doc.setFontSize(12);
+        doc.text(`Status: ${data.investigationStatus.toUpperCase()}`, margin, yPosition);
+      }
+
+      // Tags
+      if (data.tags && data.tags.length > 0) {
+        yPosition += 15;
+        doc.setFontSize(12);
+        doc.text('Tags:', margin, yPosition);
+        yPosition += 8;
+        doc.setFontSize(10);
+        doc.text(data.tags.join(', '), margin, yPosition);
+      }
+
+      // Footer
+      const pageHeight = doc.internal.pageSize.height;
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text('Generated by Rìan Compliance Platform', margin, pageHeight - 15);
+      doc.text(`© ${new Date().getFullYear()} Rìan. Confidential & Proprietary.`, margin, pageHeight - 8);
+
+      // Save the PDF with proper filename
+      const filename = `rian-report-${data.recordId || 'unknown'}-${Date.now()}.pdf`;
+      doc.save(filename);
+
+      console.log('PDF generated successfully:', filename);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      throw new Error('Failed to generate PDF report');
     }
-
-    // Footer
-    const pageHeight = doc.internal.pageSize.height;
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text('Generated by Rìan Compliance Platform', margin, pageHeight - 15);
-    doc.text(`© ${new Date().getFullYear()} Rìan. Confidential & Proprietary.`, margin, pageHeight - 8);
-
-    // Save the PDF
-    doc.save(`rian-report-${data.recordId}-${Date.now()}.pdf`);
   }
 
   async exportToCSV(data: ExportData): Promise<void> {
-    const csvRows = [
-      ['Field', 'Value'],
-      ['Record ID', data.recordId],
-      ['Timestamp', data.timestamp],
-      ['Wallet Address', data.wallet.address],
-      ['Network', data.wallet.network],
-      ['Risk Score', data.wallet.risk_score.toString()],
-      ['Risk Level', data.wallet.risk_level],
-      ['Entity Type', data.wallet.entity_attribution?.type || 'Unknown'],
-      ['Entity Name', data.wallet.entity_attribution?.name || 'Unknown'],
-      ['Transaction Count', data.wallet.transaction_count?.toString() || '0'],
-      ['Investigation Status', data.investigationStatus || 'Pending'],
-      ['Analyst Notes', data.analystNotes || ''],
-      ['Tags', data.tags?.join('; ') || ''],
-      [''],
-      ['Risk Factors'],
-      ['Factor Type', 'Severity', 'Score', 'Description']
-    ];
+    try {
+      const csvRows = [
+        ['Field', 'Value'],
+        ['Record ID', data.recordId || 'Unknown'],
+        ['Timestamp', data.timestamp],
+        ['Wallet Address', data.wallet.address],
+        ['Network', data.wallet.network || 'Unknown'],
+        ['Risk Score', data.wallet.risk_score?.toString() || 'N/A'],
+        ['Risk Level', data.wallet.risk_level || 'Unknown'],
+        ['Entity Type', data.wallet.entity_attribution?.type || 'Unknown'],
+        ['Entity Name', data.wallet.entity_attribution?.name || 'Unknown'],
+        ['Transaction Count', data.wallet.transaction_count?.toString() || '0'],
+        ['Investigation Status', data.investigationStatus || 'Pending'],
+        ['Analyst Notes', data.analystNotes || ''],
+        ['Tags', data.tags?.join('; ') || ''],
+        [''],
+        ['Risk Factors'],
+        ['Factor Type', 'Severity', 'Score', 'Description']
+      ];
 
-    data.riskFactors.forEach(factor => {
-      csvRows.push([
-        factor.factor_type,
-        factor.severity,
-        factor.score.toString(),
-        factor.description || ''
-      ]);
-    });
-
-    if (data.sanctionsMatches.length > 0) {
-      csvRows.push([''], ['Sanctions Matches']);
-      csvRows.push(['Entity Name', 'Entity Type', 'Match Type', 'Confidence Score']);
-      
-      data.sanctionsMatches.forEach(match => {
+      data.riskFactors.forEach(factor => {
         csvRows.push([
-          match.entity_name,
-          match.entity_type,
-          match.match_type,
-          (match.confidence_score * 100).toFixed(0) + '%'
+          factor.factor_type,
+          factor.severity,
+          factor.score.toString(),
+          factor.description || ''
         ]);
       });
+
+      if (data.sanctionsMatches.length > 0) {
+        csvRows.push([''], ['Sanctions Matches']);
+        csvRows.push(['Entity Name', 'Entity Type', 'Match Type', 'Confidence Score']);
+        
+        data.sanctionsMatches.forEach(match => {
+          csvRows.push([
+            match.entity_name,
+            match.entity_type,
+            match.match_type,
+            (match.confidence_score * 100).toFixed(0) + '%'
+          ]);
+        });
+      }
+
+      const csvContent = csvRows.map(row => 
+        row.map(field => `"${field.replace(/"/g, '""')}"`)
+          .join(',')
+      ).join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `rian-report-${data.recordId || 'unknown'}-${Date.now()}.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      
+      console.log('CSV exported successfully');
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      throw new Error('Failed to export CSV data');
     }
-
-    const csvContent = csvRows.map(row => 
-      row.map(field => `"${field.replace(/"/g, '""')}"`)
-        .join(',')
-    ).join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `rian-report-${data.recordId}-${Date.now()}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
   }
 }
 

@@ -28,10 +28,13 @@ export const useWalletAnalysis = () => {
       const result = await analyzeWalletRisk(address);
       console.log('Analysis result:', result);
       
+      // Normalize network field to match database constraints
+      const normalizedNetwork = result.network?.toLowerCase() === 'bitcoin' ? 'bitcoin' : 'ethereum';
+      
       // Store in database with proper error handling
       const dbResult = await supabaseLookupRecords.createLookupRecord({
         wallet_address: address,
-        network: result.network || 'bitcoin',
+        network: normalizedNetwork,
         risk_score: result.risk_score,
         risk_level: result.risk_level,
         processing_time_ms: result.processing_time_ms || 0,
@@ -61,12 +64,13 @@ export const useWalletAnalysis = () => {
       }, user.id);
 
       if (dbResult.success && dbResult.record) {
-        console.log('Successfully created database record with ID:', dbResult.record.id);
+        console.log('Successfully created database record with ID:', dbResult.record.record_id);
         
         // Add the database record ID to the result for future reference
         const enhancedResult = {
           ...result,
-          recordId: dbResult.record.id
+          recordId: dbResult.record.record_id,
+          network: normalizedNetwork
         };
         
         setAnalysisData(enhancedResult);
@@ -77,7 +81,7 @@ export const useWalletAnalysis = () => {
           await riskFactorsService.calculateAndStoreRiskFactors(dbResult.record.id, result);
           
           // Screen for sanctions
-          const sanctionsResults = await riskFactorsService.screenSanctions(address, result.network || 'bitcoin');
+          const sanctionsResults = await riskFactorsService.screenSanctions(address, normalizedNetwork);
           if (sanctionsResults.length > 0) {
             await riskFactorsService.storeSanctionsScreening(dbResult.record.id, sanctionsResults);
           }
@@ -88,7 +92,10 @@ export const useWalletAnalysis = () => {
       } else {
         console.error('Failed to store analysis result:', dbResult.error);
         // Still show the analysis even if DB storage fails
-        setAnalysisData(result);
+        setAnalysisData({
+          ...result,
+          network: normalizedNetwork
+        });
         toast({
           title: "Analysis Complete",
           description: "Analysis completed but may not be saved. Please try again.",

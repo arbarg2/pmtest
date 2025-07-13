@@ -1,10 +1,12 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, Download, AlertTriangle, CheckCircle, Clock, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { analyzeWalletRisk } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
+import { riskFactorsService } from '@/services/riskFactors';
 
 interface AnalysisResult {
   address: string;
@@ -13,6 +15,7 @@ interface AnalysisResult {
   status: string;
   entity_type?: string;
   processing_time?: number;
+  recordId?: string;
 }
 
 export const BulkAnalysis = () => {
@@ -20,6 +23,7 @@ export const BulkAnalysis = () => {
   const [results, setResults] = useState<AnalysisResult[]>([]);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -29,6 +33,15 @@ export const BulkAnalysis = () => {
       toast({
         title: "Invalid File Type",
         description: "Please upload a CSV file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to perform bulk analysis",
         variant: "destructive",
       });
       return;
@@ -73,15 +86,70 @@ export const BulkAnalysis = () => {
             const result = await analyzeWalletRisk(address);
             const processingTime = Date.now() - startTime;
             
+            // Normalize network field
+            const normalizedNetwork = result.network?.toLowerCase() === 'bitcoin' ? 'bitcoin' : 'ethereum';
+            
+            // Store in database
+            const dbResult = await supabaseLookupRecords.createLookupRecord({
+              wallet_address: address,
+              network: normalizedNetwork,
+              risk_score: result.risk_score,
+              risk_level: result.risk_level,
+              processing_time_ms: processingTime,
+              risk_assessment: {
+                risk_score: result.risk_score,
+                risk_level: result.risk_level,
+                risk_factors: result.risk_factors || {},
+                explanation: result.explanation || '',
+                entity_attribution: result.entity_attribution,
+                volume_metrics: result.volume_metrics,
+                geographic_risk: result.geographic_risk,
+                sanctions_exposure: result.sanctions_exposure,
+                top_counterparties: result.top_counterparties,
+                temporal_patterns: result.temporal_patterns,
+                behavioral_classification: result.behavioral_classification,
+                transaction_count: result.transaction_count,
+                last_activity: result.last_activity,
+                processing_time_ms: processingTime,
+                full_wallet_data: result
+              },
+              analyst_fields: {
+                case_notes: '',
+                analyst_decision: 'pending',
+                tags: [],
+                attachments: []
+              }
+            }, user.id);
+
+            let recordId = undefined;
+            if (dbResult.success && dbResult.record) {
+              recordId = dbResult.record.record_id;
+              
+              // Calculate and store risk factors in background
+              try {
+                await riskFactorsService.calculateAndStoreRiskFactors(dbResult.record.id, result);
+                
+                // Screen for sanctions
+                const sanctionsResults = await riskFactorsService.screenSanctions(address, normalizedNetwork);
+                if (sanctionsResults.length > 0) {
+                  await riskFactorsService.storeSanctionsScreening(dbResult.record.id, sanctionsResults);
+                }
+              } catch (error) {
+                console.error('Error calculating risk factors for bulk analysis:', error);
+              }
+            }
+            
             return {
               address,
               risk_level: result.risk_level,
               risk_score: result.risk_score,
               status: 'Complete',
               entity_type: result.entity_attribution?.type || 'Unknown',
-              processing_time: processingTime
+              processing_time: processingTime,
+              recordId
             };
           } catch (error) {
+            console.error('Error analyzing address:', address, error);
             return {
               address,
               risk_level: 'Unknown',
@@ -106,7 +174,7 @@ export const BulkAnalysis = () => {
       
       toast({
         title: "Bulk Analysis Complete",
-        description: `Successfully processed ${analysisResults.length} addresses`,
+        description: `Successfully processed ${analysisResults.length} addresses and stored in database`,
       });
     } catch (error) {
       console.error('Bulk analysis error:', error);
@@ -123,7 +191,7 @@ export const BulkAnalysis = () => {
   const downloadResults = () => {
     if (results.length === 0) return;
     
-    const headers = ['Address', 'Risk Level', 'Risk Score', 'Entity Type', 'Status', 'Processing Time (ms)'];
+    const headers = ['Address', 'Risk Level', 'Risk Score', 'Entity Type', 'Status', 'Processing Time (ms)', 'Record ID'];
     const csvContent = [
       headers,
       ...results.map(result => [
@@ -132,7 +200,8 @@ export const BulkAnalysis = () => {
         result.risk_score.toString(),
         result.entity_type || 'Unknown',
         result.status,
-        result.processing_time?.toString() || 'N/A'
+        result.processing_time?.toString() || 'N/A',
+        result.recordId || 'N/A'
       ])
     ].map(row => row.map(field => `"${field}"`).join(',')).join('\n');
 
@@ -208,15 +277,16 @@ export const BulkAnalysis = () => {
             </div>
             
             <div className="bg-slate-50 rounded-lg p-4">
-              <div className="grid grid-cols-4 gap-4 text-sm font-medium text-slate-600 mb-2">
+              <div className="grid grid-cols-5 gap-4 text-sm font-medium text-slate-600 mb-2">
                 <div>Address</div>
                 <div>Risk Level</div>
                 <div>Entity Type</div>
                 <div>Status</div>
+                <div>Record ID</div>
               </div>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {results.map((result, index) => (
-                  <div key={index} className="grid grid-cols-4 gap-4 items-center p-3 bg-white rounded border text-sm">
+                  <div key={index} className="grid grid-cols-5 gap-4 items-center p-3 bg-white rounded border text-sm">
                     <div className="font-mono text-xs truncate" title={result.address}>
                       {result.address.length > 20 ? `${result.address.slice(0, 10)}...${result.address.slice(-8)}` : result.address}
                     </div>
@@ -250,6 +320,9 @@ export const BulkAnalysis = () => {
                         <Clock className="w-4 h-4 text-yellow-500" />
                       )}
                       <span className="text-xs">{result.status}</span>
+                    </div>
+                    <div className="font-mono text-xs">
+                      {result.recordId ? result.recordId.slice(0, 10) + '...' : 'N/A'}
                     </div>
                   </div>
                 ))}
