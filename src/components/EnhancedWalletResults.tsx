@@ -2,13 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 import { WalletRiskResponse } from '@/services/api';
-import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
-import { useAuth } from '@/contexts/AuthContext';
 
 // Import all dashboard components
 import WalletOverview from '@/components/dashboard/WalletOverview';
@@ -21,6 +15,7 @@ import AIAnalysisSummary from '@/components/dashboard/AIAnalysisSummary';
 import ExportActions from '@/components/dashboard/ExportActions';
 import RiskFactorsBreakdown from '@/components/RiskFactorsBreakdown';
 import SanctionsScreening from '@/components/SanctionsScreening';
+import AnalystNotesThread from '@/components/AnalystNotesThread';
 
 interface EnhancedWalletResultsProps {
   wallet: WalletRiskResponse;
@@ -41,67 +36,14 @@ const EnhancedWalletResults = ({
   riskFactors = [],
   sanctionsMatches = []
 }: EnhancedWalletResultsProps) => {
+  const [investigationStatus, setInvestigationStatus] = useState('pending');
   const [analystNotes, setAnalystNotes] = useState('');
-  const [investigationStatus, setInvestigationStatus] = useState<'pending' | 'cleared' | 'blocked' | 'escalated'>('pending');
-  const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
-  const { user } = useAuth();
 
-  // Load existing analyst data
-  useEffect(() => {
-    if (recordId && user) {
-      loadAnalystData();
-    }
-  }, [recordId, user]);
-
-  const loadAnalystData = async () => {
-    try {
-      const result = await supabaseLookupRecords.getLookupRecordById(recordId!, user?.id || '');
-      if (result.success && result.record) {
-        setAnalystNotes(result.record.analyst_notes || '');
-        setInvestigationStatus(result.record.investigation_status as any || 'pending');
-      }
-    } catch (error) {
-      console.error('Error loading analyst data:', error);
-    }
-  };
-
-  const handleSaveNotes = async () => {
-    if (!recordId || !user) return;
-
-    setIsSaving(true);
-    try {
-      const result = await supabaseLookupRecords.updateLookupRecord(
-        recordId,
-        user.id,
-        {
-          analyst_fields: {
-            case_notes: analystNotes,
-            analyst_decision: investigationStatus,
-            tags: [],
-            attachments: []
-          }
-        }
-      );
-
-      if (result.success) {
-        toast({
-          title: "Notes Saved",
-          description: "Analyst notes and status have been updated successfully.",
-        });
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      console.error('Error saving notes:', error);
-      toast({
-        title: "Save Failed",
-        description: "Failed to save analyst notes. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
+  const handleNotesUpdate = (notes: any[], status: string) => {
+    setInvestigationStatus(status);
+    // Convert notes thread back to simple string for export compatibility
+    const latestNote = notes.length > 0 ? notes[notes.length - 1].content : '';
+    setAnalystNotes(latestNote);
   };
 
   return (
@@ -138,7 +80,7 @@ const EnhancedWalletResults = ({
           <WalletOverview wallet={wallet} />
         </div>
 
-        {/* AI Analysis Section - Collapsible */}
+        {/* AI Analysis Section - Collapsible (moved under Wallet Overview) */}
         <div className="mb-8">
           <AIAnalysisSummary wallet={wallet} />
         </div>
@@ -166,50 +108,13 @@ const EnhancedWalletResults = ({
           <CounterpartyIntelligence wallet={wallet} />
         </div>
 
-        {/* Bottom Row - Analyst Notes and Export Actions */}
+        {/* Bottom Row - Analyst Notes Thread and Export Actions */}
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* Analyst Notes Panel */}
-          <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur rounded-lg shadow-lg border-0 p-6">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-              Analyst Notes & Status
-            </h3>
-            
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="status" className="text-sm font-medium">Investigation Status</Label>
-                <Select value={investigationStatus} onValueChange={(value: any) => setInvestigationStatus(value)}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending Review</SelectItem>
-                    <SelectItem value="cleared">Cleared</SelectItem>
-                    <SelectItem value="blocked">Blocked</SelectItem>
-                    <SelectItem value="escalated">Escalated</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="notes" className="text-sm font-medium">Case Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Enter your investigation notes, findings, and recommendations..."
-                  value={analystNotes}
-                  onChange={(e) => setAnalystNotes(e.target.value)}
-                  className="mt-1 min-h-[120px]"
-                />
-              </div>
-
-              <Button 
-                onClick={handleSaveNotes}
-                disabled={isSaving}
-                className="w-full bg-primary hover:bg-primary/90"
-              >
-                {isSaving ? 'Saving...' : 'Save Notes & Status'}
-              </Button>
-            </div>
-          </div>
+          {/* Analyst Notes Thread */}
+          <AnalystNotesThread
+            recordId={recordId}
+            onNotesUpdate={handleNotesUpdate}
+          />
 
           {/* Export Actions */}
           <ExportActions

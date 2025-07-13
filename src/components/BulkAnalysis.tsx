@@ -82,34 +82,40 @@ export const BulkAnalysis = () => {
         const batch = addresses.slice(i, i + 5);
         const batchPromises = batch.map(async (address) => {
           try {
+            console.log(`Processing address: ${address}`);
             const startTime = Date.now();
             const result = await analyzeWalletRisk(address);
             const processingTime = Date.now() - startTime;
             
-            // Normalize network field
-            const normalizedNetwork = result.network?.toLowerCase() === 'bitcoin' ? 'bitcoin' : 'ethereum';
+            // Normalize network field - ensure proper values
+            let normalizedNetwork = 'ethereum'; // default to ethereum
+            if (result.network) {
+              normalizedNetwork = result.network.toLowerCase() === 'bitcoin' ? 'bitcoin' : 'ethereum';
+            }
             
-            // Store in database
+            console.log(`Creating database record for ${address} with network: ${normalizedNetwork}`);
+            
+            // Store in database with explicit user ID
             const dbResult = await supabaseLookupRecords.createLookupRecord({
               wallet_address: address,
               network: normalizedNetwork,
-              risk_score: result.risk_score,
-              risk_level: result.risk_level,
+              risk_score: result.risk_score || 0,
+              risk_level: result.risk_level || 'Low',
               processing_time_ms: processingTime,
               risk_assessment: {
-                risk_score: result.risk_score,
-                risk_level: result.risk_level,
+                risk_score: result.risk_score || 0,
+                risk_level: result.risk_level || 'Low',
                 risk_factors: result.risk_factors || {},
                 explanation: result.explanation || '',
-                entity_attribution: result.entity_attribution,
-                volume_metrics: result.volume_metrics,
-                geographic_risk: result.geographic_risk,
-                sanctions_exposure: result.sanctions_exposure,
-                top_counterparties: result.top_counterparties,
-                temporal_patterns: result.temporal_patterns,
-                behavioral_classification: result.behavioral_classification,
-                transaction_count: result.transaction_count,
-                last_activity: result.last_activity,
+                entity_attribution: result.entity_attribution || null,
+                volume_metrics: result.volume_metrics || null,
+                geographic_risk: result.geographic_risk || null,
+                sanctions_exposure: result.sanctions_exposure || null,
+                top_counterparties: result.top_counterparties || [],
+                temporal_patterns: result.temporal_patterns || null,
+                behavioral_classification: result.behavioral_classification || null,
+                transaction_count: result.transaction_count || 0,
+                last_activity: result.last_activity || null,
                 processing_time_ms: processingTime,
                 full_wallet_data: result
               },
@@ -121,9 +127,12 @@ export const BulkAnalysis = () => {
               }
             }, user.id);
 
+            console.log(`Database result for ${address}:`, dbResult);
+
             let recordId = undefined;
             if (dbResult.success && dbResult.record) {
               recordId = dbResult.record.record_id;
+              console.log(`Generated record ID: ${recordId}`);
               
               // Calculate and store risk factors in background
               try {
@@ -137,13 +146,15 @@ export const BulkAnalysis = () => {
               } catch (error) {
                 console.error('Error calculating risk factors for bulk analysis:', error);
               }
+            } else {
+              console.error(`Failed to create database record for ${address}:`, dbResult.error);
             }
             
             return {
               address,
-              risk_level: result.risk_level,
-              risk_score: result.risk_score,
-              status: 'Complete',
+              risk_level: result.risk_level || 'Low',
+              risk_score: result.risk_score || 0,
+              status: recordId ? 'Complete' : 'Error - No Record ID',
               entity_type: result.entity_attribution?.type || 'Unknown',
               processing_time: processingTime,
               recordId
@@ -172,9 +183,11 @@ export const BulkAnalysis = () => {
       
       setResults(analysisResults);
       
+      const successfulRecords = analysisResults.filter(r => r.recordId);
+      
       toast({
         title: "Bulk Analysis Complete",
-        description: `Successfully processed ${analysisResults.length} addresses and stored in database`,
+        description: `Successfully processed ${analysisResults.length} addresses. ${successfulRecords.length} records created in database.`,
       });
     } catch (error) {
       console.error('Bulk analysis error:', error);
@@ -314,7 +327,7 @@ export const BulkAnalysis = () => {
                     <div className="flex items-center space-x-1">
                       {result.status === 'Complete' ? (
                         <CheckCircle className="w-4 h-4 text-green-500" />
-                      ) : result.status === 'Error' ? (
+                      ) : result.status.includes('Error') ? (
                         <AlertTriangle className="w-4 h-4 text-red-500" />
                       ) : (
                         <Clock className="w-4 h-4 text-yellow-500" />

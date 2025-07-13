@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { WalletRiskResponse, analyzeWalletRisk } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
@@ -29,30 +28,35 @@ export const useWalletAnalysis = () => {
       console.log('Analysis result:', result);
       
       // Normalize network field to match database constraints
-      const normalizedNetwork = result.network?.toLowerCase() === 'bitcoin' ? 'bitcoin' : 'ethereum';
+      let normalizedNetwork = 'ethereum'; // default to ethereum
+      if (result.network) {
+        normalizedNetwork = result.network.toLowerCase() === 'bitcoin' ? 'bitcoin' : 'ethereum';
+      }
       
-      // Store in database with proper error handling
+      console.log(`Creating database record for ${address} with network: ${normalizedNetwork}, user: ${user.id}`);
+      
+      // Store in database with proper error handling and explicit user ID
       const dbResult = await supabaseLookupRecords.createLookupRecord({
         wallet_address: address,
         network: normalizedNetwork,
-        risk_score: result.risk_score,
-        risk_level: result.risk_level,
+        risk_score: result.risk_score || 0,
+        risk_level: result.risk_level || 'Low',
         processing_time_ms: result.processing_time_ms || 0,
         risk_assessment: {
-          risk_score: result.risk_score,
-          risk_level: result.risk_level,
+          risk_score: result.risk_score || 0,
+          risk_level: result.risk_level || 'Low',
           risk_factors: result.risk_factors || {},
           explanation: result.explanation || '',
-          entity_attribution: result.entity_attribution,
-          volume_metrics: result.volume_metrics,
-          geographic_risk: result.geographic_risk,
-          sanctions_exposure: result.sanctions_exposure,
-          top_counterparties: result.top_counterparties,
-          temporal_patterns: result.temporal_patterns,
-          behavioral_classification: result.behavioral_classification,
-          transaction_count: result.transaction_count,
-          last_activity: result.last_activity,
-          processing_time_ms: result.processing_time_ms,
+          entity_attribution: result.entity_attribution || null,
+          volume_metrics: result.volume_metrics || null,
+          geographic_risk: result.geographic_risk || null,
+          sanctions_exposure: result.sanctions_exposure || null,
+          top_counterparties: result.top_counterparties || [],
+          temporal_patterns: result.temporal_patterns || null,
+          behavioral_classification: result.behavioral_classification || null,
+          transaction_count: result.transaction_count || 0,
+          last_activity: result.last_activity || null,
+          processing_time_ms: result.processing_time_ms || 0,
           full_wallet_data: result
         },
         analyst_fields: {
@@ -62,6 +66,8 @@ export const useWalletAnalysis = () => {
           attachments: []
         }
       }, user.id);
+
+      console.log('Database creation result:', dbResult);
 
       if (dbResult.success && dbResult.record) {
         console.log('Successfully created database record with ID:', dbResult.record.record_id);
@@ -89,6 +95,11 @@ export const useWalletAnalysis = () => {
           console.error('Error calculating risk factors:', error);
           // Don't fail the main analysis if risk factors fail
         }
+        
+        toast({
+          title: "Analysis Complete",
+          description: `${result.entity_attribution?.name || 'Unknown Entity'} (${result.entity_attribution?.type || 'Unknown'}) • ${result.risk_level} risk • Record: ${dbResult.record.record_id}`,
+        });
       } else {
         console.error('Failed to store analysis result:', dbResult.error);
         // Still show the analysis even if DB storage fails
@@ -97,17 +108,12 @@ export const useWalletAnalysis = () => {
           network: normalizedNetwork
         });
         toast({
-          title: "Analysis Complete",
-          description: "Analysis completed but may not be saved. Please try again.",
+          title: "Analysis Complete - Warning",
+          description: "Analysis completed but database record creation failed. Please try again.",
           variant: "destructive",
         });
         return;
       }
-      
-      toast({
-        title: "Analysis Complete",
-        description: `${result.entity_attribution?.name || 'Unknown Entity'} (${result.entity_attribution?.type || 'Unknown'}) • ${result.risk_level} risk • ${result.processing_time_ms || 0}ms`,
-      });
     } catch (error) {
       console.error('Analysis failed:', error);
       toast({
