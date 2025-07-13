@@ -16,6 +16,7 @@ interface AnalysisResult {
   entity_type?: string;
   processing_time?: number;
   recordId?: string;
+  error?: string;
 }
 
 export const BulkAnalysis = () => {
@@ -87,10 +88,15 @@ export const BulkAnalysis = () => {
             const result = await analyzeWalletRisk(address);
             const processingTime = Date.now() - startTime;
             
-            // Normalize network field - ensure proper values
-            let normalizedNetwork = 'ethereum'; // default to ethereum
+            // Fix network normalization to match database constraint
+            let normalizedNetwork = 'ethereum'; // default
             if (result.network) {
-              normalizedNetwork = result.network.toLowerCase() === 'bitcoin' ? 'bitcoin' : 'ethereum';
+              const networkLower = result.network.toLowerCase();
+              if (networkLower === 'bitcoin' || networkLower === 'btc') {
+                normalizedNetwork = 'bitcoin';
+              } else if (networkLower === 'ethereum' || networkLower === 'eth') {
+                normalizedNetwork = 'ethereum';
+              }
             }
             
             console.log(`Creating database record for ${address} with network: ${normalizedNetwork}`);
@@ -130,8 +136,12 @@ export const BulkAnalysis = () => {
             console.log(`Database result for ${address}:`, dbResult);
 
             let recordId = undefined;
+            let status = 'Error';
+            let errorMessage = '';
+
             if (dbResult.success && dbResult.record) {
               recordId = dbResult.record.record_id;
+              status = 'Complete';
               console.log(`Generated record ID: ${recordId}`);
               
               // Calculate and store risk factors in background
@@ -148,25 +158,30 @@ export const BulkAnalysis = () => {
               }
             } else {
               console.error(`Failed to create database record for ${address}:`, dbResult.error);
+              errorMessage = dbResult.error || 'Unknown database error';
+              status = `Error: ${errorMessage}`;
             }
             
             return {
               address,
               risk_level: result.risk_level || 'Low',
               risk_score: result.risk_score || 0,
-              status: recordId ? 'Complete' : 'Error - No Record ID',
+              status,
               entity_type: result.entity_attribution?.type || 'Unknown',
               processing_time: processingTime,
-              recordId
+              recordId,
+              error: errorMessage
             };
           } catch (error) {
             console.error('Error analyzing address:', address, error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             return {
               address,
               risk_level: 'Unknown',
               risk_score: 0,
-              status: 'Error',
-              entity_type: 'Unknown'
+              status: `Error: ${errorMessage}`,
+              entity_type: 'Unknown',
+              error: errorMessage
             };
           }
         });
@@ -184,16 +199,18 @@ export const BulkAnalysis = () => {
       setResults(analysisResults);
       
       const successfulRecords = analysisResults.filter(r => r.recordId);
+      const failedRecords = analysisResults.filter(r => !r.recordId);
       
       toast({
         title: "Bulk Analysis Complete",
-        description: `Successfully processed ${analysisResults.length} addresses. ${successfulRecords.length} records created in database.`,
+        description: `Processed ${analysisResults.length} addresses. ${successfulRecords.length} successful, ${failedRecords.length} failed.`,
+        variant: failedRecords.length > 0 ? "destructive" : "default",
       });
     } catch (error) {
       console.error('Bulk analysis error:', error);
       toast({
         title: "Processing Failed",
-        description: "Failed to process bulk analysis",
+        description: `Failed to process bulk analysis: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
@@ -204,7 +221,7 @@ export const BulkAnalysis = () => {
   const downloadResults = () => {
     if (results.length === 0) return;
     
-    const headers = ['Address', 'Risk Level', 'Risk Score', 'Entity Type', 'Status', 'Processing Time (ms)', 'Record ID'];
+    const headers = ['Address', 'Risk Level', 'Risk Score', 'Entity Type', 'Status', 'Processing Time (ms)', 'Record ID', 'Error'];
     const csvContent = [
       headers,
       ...results.map(result => [
@@ -214,7 +231,8 @@ export const BulkAnalysis = () => {
         result.entity_type || 'Unknown',
         result.status,
         result.processing_time?.toString() || 'N/A',
-        result.recordId || 'N/A'
+        result.recordId || 'N/A',
+        result.error || ''
       ])
     ].map(row => row.map(field => `"${field}"`).join(',')).join('\n');
 
@@ -290,16 +308,17 @@ export const BulkAnalysis = () => {
             </div>
             
             <div className="bg-slate-50 rounded-lg p-4">
-              <div className="grid grid-cols-5 gap-4 text-sm font-medium text-slate-600 mb-2">
+              <div className="grid grid-cols-6 gap-4 text-sm font-medium text-slate-600 mb-2">
                 <div>Address</div>
                 <div>Risk Level</div>
                 <div>Entity Type</div>
                 <div>Status</div>
                 <div>Record ID</div>
+                <div>Error</div>
               </div>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {results.map((result, index) => (
-                  <div key={index} className="grid grid-cols-5 gap-4 items-center p-3 bg-white rounded border text-sm">
+                  <div key={index} className="grid grid-cols-6 gap-4 items-center p-3 bg-white rounded border text-sm">
                     <div className="font-mono text-xs truncate" title={result.address}>
                       {result.address.length > 20 ? `${result.address.slice(0, 10)}...${result.address.slice(-8)}` : result.address}
                     </div>
@@ -336,6 +355,9 @@ export const BulkAnalysis = () => {
                     </div>
                     <div className="font-mono text-xs">
                       {result.recordId ? result.recordId.slice(0, 10) + '...' : 'N/A'}
+                    </div>
+                    <div className="text-xs text-red-600 truncate" title={result.error}>
+                      {result.error || '-'}
                     </div>
                   </div>
                 ))}

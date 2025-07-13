@@ -27,10 +27,15 @@ export const useWalletAnalysis = () => {
       const result = await analyzeWalletRisk(address);
       console.log('Analysis result:', result);
       
-      // Normalize network field to match database constraints
-      let normalizedNetwork = 'ethereum'; // default to ethereum
+      // Fix network normalization to match database constraint
+      let normalizedNetwork = 'ethereum'; // default
       if (result.network) {
-        normalizedNetwork = result.network.toLowerCase() === 'bitcoin' ? 'bitcoin' : 'ethereum';
+        const networkLower = result.network.toLowerCase();
+        if (networkLower === 'bitcoin' || networkLower === 'btc') {
+          normalizedNetwork = 'bitcoin';
+        } else if (networkLower === 'ethereum' || networkLower === 'eth') {
+          normalizedNetwork = 'ethereum';
+        }
       }
       
       console.log(`Creating database record for ${address} with network: ${normalizedNetwork}, user: ${user.id}`);
@@ -109,7 +114,7 @@ export const useWalletAnalysis = () => {
         });
         toast({
           title: "Analysis Complete - Warning",
-          description: "Analysis completed but database record creation failed. Please try again.",
+          description: `Analysis completed but database record creation failed: ${dbResult.error}. Please try again.`,
           variant: "destructive",
         });
         return;
@@ -118,7 +123,7 @@ export const useWalletAnalysis = () => {
       console.error('Analysis failed:', error);
       toast({
         title: "Analysis Failed",
-        description: "Failed to analyze wallet. Please try again.",
+        description: `Failed to analyze wallet: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
         variant: "destructive",
       });
     } finally {
