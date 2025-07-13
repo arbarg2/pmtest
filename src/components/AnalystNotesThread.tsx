@@ -36,12 +36,14 @@ const AnalystNotesThread = ({
   const [currentStatus, setCurrentStatus] = useState<'pending' | 'cleared' | 'blocked' | 'escalated'>(initialStatus as any);
   const [noteHistory, setNoteHistory] = useState<AnalystNote[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
   // Load existing notes when component mounts
   useEffect(() => {
     if (recordId && user) {
+      console.log('Loading note history for record:', recordId);
       loadNoteHistory();
     } else if (initialNotes) {
       // If we have initial notes but no record ID, show them as a single note
@@ -58,9 +60,14 @@ const AnalystNotesThread = ({
   const loadNoteHistory = async () => {
     if (!recordId || !user) return;
     
+    setIsLoading(true);
     try {
+      console.log('Fetching record for notes:', recordId);
       const result = await supabaseLookupRecords.getLookupRecordById(recordId, user.id);
+      
       if (result.success && result.record) {
+        console.log('Loaded record for notes:', result.record);
+        
         // Parse existing notes into thread format
         const existingNotes = result.record.analyst_notes || '';
         const status = result.record.investigation_status || 'pending';
@@ -94,14 +101,44 @@ const AnalystNotesThread = ({
             }]);
           }
         }
+      } else {
+        console.log('Failed to load record for notes:', result.error);
+        toast({
+          title: "Loading Failed",
+          description: result.error || "Failed to load investigation notes",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error loading note history:', error);
+      toast({
+        title: "Loading Error",
+        description: "Failed to load investigation history",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleAddNote = async () => {
-    if (!currentNote.trim() || !recordId || !user) return;
+    if (!currentNote.trim()) {
+      toast({
+        title: "Empty Note",
+        description: "Please enter a note before saving",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!recordId || !user) {
+      toast({
+        title: "Missing Information",
+        description: "Record ID or user information is missing",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -114,6 +151,8 @@ const AnalystNotesThread = ({
       };
 
       const updatedHistory = [...noteHistory, newNote];
+      
+      console.log('Saving note to record:', recordId, 'Note:', newNote);
       
       // Save to database
       const result = await supabaseLookupRecords.updateLookupRecord(
@@ -130,6 +169,7 @@ const AnalystNotesThread = ({
       );
 
       if (result.success) {
+        console.log('Successfully saved note');
         setNoteHistory(updatedHistory);
         setCurrentNote('');
         
@@ -143,6 +183,7 @@ const AnalystNotesThread = ({
           description: "Your analyst note has been saved successfully.",
         });
       } else {
+        console.error('Failed to save note:', result.error);
         throw new Error(result.error);
       }
     } catch (error) {
@@ -164,6 +205,8 @@ const AnalystNotesThread = ({
     }
 
     try {
+      console.log('Updating status to:', newStatus);
+      
       const result = await supabaseLookupRecords.updateLookupRecord(
         recordId,
         user.id,
@@ -188,6 +231,9 @@ const AnalystNotesThread = ({
           title: "Status Updated",
           description: `Investigation status changed to ${newStatus}`,
         });
+      } else {
+        console.error('Failed to update status:', result.error);
+        throw new Error(result.error);
       }
     } catch (error) {
       console.error('Error updating status:', error);
@@ -207,6 +253,16 @@ const AnalystNotesThread = ({
       default: return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     }
   };
+
+  if (!user) {
+    return (
+      <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur shadow-lg border-0">
+        <CardContent className="p-6">
+          <p className="text-slate-500 text-center">Please log in to add analyst notes</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur shadow-lg border-0">
@@ -239,7 +295,12 @@ const AnalystNotesThread = ({
         </div>
 
         {/* Note History Thread */}
-        {noteHistory.length > 0 && (
+        {isLoading ? (
+          <div className="flex items-center justify-center p-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <span className="ml-2">Loading notes...</span>
+          </div>
+        ) : noteHistory.length > 0 ? (
           <div className="space-y-3">
             <Label className="text-sm font-medium">Investigation History</Label>
             <div className="max-h-60 overflow-y-auto space-y-3 border rounded-lg p-3 bg-slate-50 dark:bg-slate-900">
@@ -271,6 +332,10 @@ const AnalystNotesThread = ({
               ))}
             </div>
           </div>
+        ) : (
+          <div className="text-center text-slate-500 py-4">
+            No investigation notes yet
+          </div>
         )}
 
         {/* New Note Input */}
@@ -292,6 +357,14 @@ const AnalystNotesThread = ({
         >
           {isSaving ? 'Saving...' : 'Add Note'}
         </Button>
+
+        {!recordId && (
+          <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-400">
+            <p className="text-sm text-yellow-800 dark:text-yellow-300">
+              ⚠️ No record ID found. Notes will not be saved to the database.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
