@@ -23,12 +23,42 @@ export const useWalletAnalysis = () => {
       return;
     }
 
+    // Validate address format early
+    const trimmedAddress = address.trim();
+    if (!trimmedAddress) {
+      toast({
+        title: "Invalid Address",
+        description: "Please enter a valid wallet address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Basic format validation
+    const isValidBitcoin = trimmedAddress.match(/^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/) || trimmedAddress.startsWith('bc1');
+    const isValidEthereum = trimmedAddress.match(/^0x[a-fA-F0-9]{40}$/);
+    
+    if (!isValidBitcoin && !isValidEthereum) {
+      toast({
+        title: "Invalid Address Format",
+        description: "Please enter a valid Bitcoin or Ethereum address",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsAnalyzing(true);
     try {
-      console.log('Starting enhanced wallet analysis with real-time sanctions screening for:', address);
+      console.log('Starting enhanced wallet analysis with real-time data for:', trimmedAddress);
       
-      // Use enhanced API with real blockchain data and sanctions screening
-      const result = await analyzeWalletWithRealData(address);
+      // Show progress toast
+      toast({
+        title: "Analysis Starting",
+        description: "Fetching real-time blockchain data...",
+      });
+      
+      // Use enhanced API with real blockchain data
+      const result = await analyzeWalletWithRealData(trimmedAddress);
       console.log('Enhanced analysis result:', result);
       
       // Fix network normalization to match database constraint
@@ -42,11 +72,11 @@ export const useWalletAnalysis = () => {
         }
       }
       
-      console.log(`Creating database record for ${address} with network: ${normalizedNetwork}, user: ${user.id}`);
+      console.log(`Creating database record for ${trimmedAddress} with network: ${normalizedNetwork}, user: ${user.id}`);
       
-      // Store in database with proper error handling and explicit user ID
+      // Store in database with proper error handling
       const dbResult = await supabaseLookupRecords.createLookupRecord({
-        wallet_address: address,
+        wallet_address: trimmedAddress,
         network: normalizedNetwork,
         risk_score: result.risk_score || 0,
         risk_level: result.risk_level || 'Low',
@@ -81,7 +111,7 @@ export const useWalletAnalysis = () => {
       if (dbResult.success && dbResult.record) {
         console.log('Successfully created database record with ID:', dbResult.record.record_id);
         
-        // Add the database record ID to the result for future reference
+        // Add the database record ID to the result
         const enhancedResult = {
           ...result,
           recordId: dbResult.record.record_id,
@@ -90,22 +120,28 @@ export const useWalletAnalysis = () => {
         
         setAnalysisData(enhancedResult);
         
-        // Calculate and store risk factors in background
+        // Calculate and store risk factors in background (don't block UI)
         try {
           console.log('Calculating risk factors for record:', dbResult.record.id);
-          await riskFactorsService.calculateAndStoreRiskFactors(dbResult.record.id, result);
+          await Promise.race([
+            riskFactorsService.calculateAndStoreRiskFactors(dbResult.record.id, result),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Risk factors timeout')), 10000))
+          ]);
           
-          // Enhanced sanctions screening with entity attribution
+          // Enhanced sanctions screening
           console.log('🔍 Performing enhanced sanctions screening...');
           let sanctionsResults = [];
           
           if (result.entity_attribution?.name) {
-            sanctionsResults = await riskFactorsService.screenEntityByName(
-              result.entity_attribution.name, 
-              address
-            );
+            sanctionsResults = await Promise.race([
+              riskFactorsService.screenEntityByName(result.entity_attribution.name, trimmedAddress),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Sanctions timeout')), 10000))
+            ]);
           } else {
-            sanctionsResults = await riskFactorsService.screenSanctions(address, normalizedNetwork);
+            sanctionsResults = await Promise.race([
+              riskFactorsService.screenSanctions(trimmedAddress, normalizedNetwork),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Sanctions timeout')), 10000))
+            ]);
           }
           
           if (sanctionsResults.length > 0) {
@@ -116,16 +152,16 @@ export const useWalletAnalysis = () => {
           }
         } catch (error) {
           console.error('Error calculating risk factors or sanctions screening:', error);
-          // Don't fail the main analysis if risk factors fail
+          // Don't fail the main analysis if background tasks fail
         }
         
         // Determine if real data was used
-        const isRealData = result.explanation?.includes('[REAL DATA: YES]');
-        const hasSanctionsData = result.explanation?.includes('[SANCTIONS:');
+        const isRealData = result.explanation?.includes('REAL-TIME ANALYSIS');
+        const hasSanctionsData = result.explanation?.includes('SANCTIONS:');
         
         toast({
-          title: isRealData ? "Real-Time Analysis Complete" : "Analysis Complete (Mock Data)",
-          description: `${result.entity_attribution?.name || 'Unknown Entity'} (${result.entity_attribution?.type || 'Unknown'}) • ${result.risk_level} risk • Record: ${dbResult.record.record_id}${isRealData ? ' • Live blockchain data' : ' • Fallback data'}${hasSanctionsData ? ' • Sanctions screened' : ''}`,
+          title: isRealData ? "✅ Real-Time Analysis Complete" : "⚠️ Analysis Complete (Limited Data)",
+          description: `${result.entity_attribution?.name || 'Unknown Entity'} • ${result.risk_level} risk • Processing: ${result.processing_time_ms}ms${isRealData ? ' • Live blockchain data' : ' • Please configure API keys for real-time data'}${hasSanctionsData ? ' • Sanctions screened' : ''}`,
         });
       } else {
         console.error('Failed to store analysis result:', dbResult.error);
@@ -135,17 +171,35 @@ export const useWalletAnalysis = () => {
           network: normalizedNetwork
         });
         toast({
-          title: "Analysis Complete - Warning",
-          description: `Analysis completed but database record creation failed: ${dbResult.error}. Please try again.`,
+          title: "Analysis Complete - Storage Warning",
+          description: `Analysis completed but record storage failed. Data is temporary only.`,
           variant: "destructive",
         });
-        return;
       }
     } catch (error) {
       console.error('Analysis failed:', error);
+      
+      let errorTitle = "Analysis Failed";
+      let errorMessage = "Unknown error occurred. Please try again.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('API key')) {
+          errorTitle = "API Configuration Required";
+          errorMessage = error.message + " Please configure your API keys in settings.";
+        } else if (error.message.includes('Network error')) {
+          errorTitle = "Network Error";
+          errorMessage = error.message;
+        } else if (error.message.includes('Invalid')) {
+          errorTitle = "Invalid Address";
+          errorMessage = error.message;
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
-        title: "Analysis Failed",
-        description: `Failed to analyze wallet: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        title: errorTitle,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

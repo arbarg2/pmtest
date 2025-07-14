@@ -3,7 +3,7 @@ import { WalletRiskResponse, analyzeWalletRisk } from './api';
 import { realBlockchainAPI } from './realBlockchainAPI';
 import { sanctionsScreeningService } from './sanctionsApi';
 
-// Enhanced API service that PRIORITIZES real blockchain data
+// Enhanced API service that PRIORITIZES real blockchain data with better error handling
 export const analyzeWalletWithRealData = async (address: string): Promise<WalletRiskResponse> => {
   const startTime = Date.now();
   
@@ -16,7 +16,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
     let useRealData = false;
     let apiError = null;
     
-    // FORCE attempt to fetch real blockchain data - don't fallback easily
+    // Attempt to fetch real blockchain data with better error handling
     try {
       if (network === 'bitcoin') {
         console.log('📡 Attempting Bitcoin real-time data from Blockstream API...');
@@ -38,27 +38,36 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       }
     } catch (error) {
       apiError = error;
-      console.error('❌ CRITICAL: Real API failed - this should be investigated:', error);
+      console.error('❌ Real API failed:', error);
       
-      // For production, we should NOT fallback to mock data easily
-      // Instead, throw error to alert user that real data is unavailable
-      if (error instanceof Error && error.message.includes('API key')) {
-        throw new Error(`Real-time data unavailable: ${error.message}. Please configure API keys in settings.`);
+      // For API key errors, throw immediately to alert user
+      if (error instanceof Error && (
+        error.message.includes('API key') || 
+        error.message.includes('initialization') ||
+        error.message.includes('configure')
+      )) {
+        throw new Error(`Real-time data unavailable: ${error.message}`);
       }
       
-      // Only fallback to mock if it's a temporary network issue
-      console.warn('⚠️ FALLBACK WARNING: Using mock data due to API failure. Results may not be accurate.');
+      // For network/timeout errors, provide clearer feedback
+      if (error instanceof Error && (
+        error.message.includes('timeout') ||
+        error.message.includes('Failed to fetch') ||
+        error.message.includes('network')
+      )) {
+        throw new Error(`Network error: Unable to fetch real-time blockchain data. Please check your connection and try again.`);
+      }
+      
+      // For address format errors, throw immediately
+      if (error instanceof Error && error.message.includes('Invalid')) {
+        throw error;
+      }
+      
+      // For other errors, throw with context
+      throw new Error(`Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
     }
     
-    // If we don't have real data, clearly indicate this is mock/fallback data
-    if (!useRealData) {
-      console.log('📊 USING MOCK DATA - Results will be simulated');
-      const mockResult = await analyzeWalletRisk(address);
-      mockResult.explanation = `⚠️ MOCK DATA FALLBACK: Real blockchain APIs unavailable. This analysis uses simulated data and should not be used for compliance decisions. API Error: ${apiError?.message || 'Unknown error'}`;
-      return mockResult;
-    }
-    
-    // Generate analysis based on REAL data
+    // If we reach here, we have real data - proceed with real analysis
     console.log('🚀 Generating analysis from REAL blockchain data...');
     const riskAnalysis = realBlockchainAPI.calculateRealRiskScore(realData, network);
     const entityAttribution = realBlockchainAPI.deriveEntityAttribution(realData, network);
@@ -188,18 +197,14 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
     return enhancedResponse;
     
   } catch (error) {
-    console.error('❌ CRITICAL FAILURE in enhanced analysis:', error);
+    console.error('❌ ANALYSIS FAILED:', error);
     
-    // Don't hide errors - surface them to the user
-    if (error instanceof Error && error.message.includes('API key')) {
-      throw error; // Re-throw API key errors
+    // Re-throw the error with clear messaging for the user
+    if (error instanceof Error) {
+      throw error;
     }
     
-    // For other errors, provide fallback but clearly indicate it's not real data
-    console.warn('🔄 EMERGENCY FALLBACK: Using mock data due to critical failure');
-    const fallbackResult = await analyzeWalletRisk(address);
-    fallbackResult.explanation = `❌ SYSTEM ERROR: Real-time analysis failed (${error instanceof Error ? error.message : 'Unknown error'}). This is simulated data only - DO NOT use for compliance decisions. Contact support to resolve API connectivity issues.`;
-    return fallbackResult;
+    throw new Error('Analysis failed due to an unknown error. Please try again.');
   }
 };
 
