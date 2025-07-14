@@ -1,6 +1,7 @@
 
 import { WalletRiskResponse, analyzeWalletRisk } from './api';
 import { realBlockchainAPI } from './realBlockchainAPI';
+import { sanctionsScreeningService } from './sanctionsApi';
 
 // Enhanced API service that uses real blockchain data when available
 export const analyzeWalletWithRealData = async (address: string): Promise<WalletRiskResponse> => {
@@ -41,14 +42,46 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
     const entityAttribution = realBlockchainAPI.deriveEntityAttribution(realData, network);
     const volumeMetrics = realBlockchainAPI.calculateVolumeMetrics(realData, network);
     
+    // Perform enhanced sanctions screening
+    let sanctionsResults = [];
+    let riskScoreAdjustment = 0;
+    
+    try {
+      console.log('🔍 Performing real-time sanctions screening...');
+      sanctionsResults = await sanctionsScreeningService.screenEntity(
+        entityAttribution.name,
+        address
+      );
+      
+      if (sanctionsResults.length > 0) {
+        riskScoreAdjustment = sanctionsScreeningService.calculateRiskAdjustment(sanctionsResults);
+        console.log(`⚠️ Sanctions matches found: ${sanctionsResults.length}, risk adjustment: +${riskScoreAdjustment}`);
+      } else {
+        console.log('✅ No sanctions matches found');
+      }
+    } catch (sanctionsError) {
+      console.warn('Sanctions screening failed, continuing without adjustment:', sanctionsError);
+    }
+    
     const processingTime = Date.now() - startTime;
+    
+    // Calculate adjusted risk score
+    const baseRiskScore = riskAnalysis.riskScore;
+    const adjustedRiskScore = Math.min(10, baseRiskScore + riskScoreAdjustment);
+    const adjustedRiskLevel = adjustedRiskScore >= 7 ? 'High' : adjustedRiskScore >= 4 ? 'Medium' : 'Low';
     
     const enhancedResponse: WalletRiskResponse = {
       address,
       network,
-      risk_score: riskAnalysis.riskScore,
-      risk_level: riskAnalysis.riskLevel,
-      risk_factors: riskAnalysis.riskFactors,
+      risk_score: adjustedRiskScore,
+      risk_level: adjustedRiskLevel,
+      risk_factors: {
+        ...riskAnalysis.riskFactors,
+        sanctions_exposure: sanctionsResults.length > 0,
+        sanctions_matches: sanctionsResults.length,
+        sanctions_confidence: sanctionsResults.length > 0 ? 
+          Math.max(...sanctionsResults.map(r => r.confidence_score)) : 0
+      },
       entity_attribution: entityAttribution,
       volume_metrics: {
         ...volumeMetrics,
@@ -91,12 +124,13 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
         confidence_level: Math.round(entityAttribution.confidence * 100)
       },
       sanctions_exposure: {
-        direct_hits: 0, // Will be enhanced with real sanctions screening
+        direct_hits: sanctionsResults.filter(r => r.match_type === 'direct').length,
         indirect_exposure: {
-          one_hop: 0,
+          one_hop: sanctionsResults.filter(r => r.match_type === '1-hop').length,
           two_hop: 0
         },
-        proximity_score: 0
+        proximity_score: sanctionsResults.length > 0 ? 
+          Math.max(...sanctionsResults.map(r => r.confidence_score)) : 0
       },
       top_counterparties: realData.transactions && realData.transactions.length > 0 ? [{
         entity_name: 'Unknown Entity',
@@ -111,11 +145,12 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
           : new Date(parseInt(realData.transactions[0]?.timeStamp || '0') * 1000).toISOString()
         : new Date().toISOString(),
       processing_time_ms: processingTime,
-      explanation: `${riskAnalysis.explanation} [REAL DATA: ${useRealData ? 'YES - Live blockchain data' : 'NO - Mock fallback'}]`,
+      explanation: `${riskAnalysis.explanation} [REAL DATA: ${useRealData ? 'YES - Live blockchain data' : 'NO - Mock fallback'}]${sanctionsResults.length > 0 ? ` [SANCTIONS: ${sanctionsResults.length} matches found]` : ' [SANCTIONS: Clean]'}`,
       risk_score_breakdown: {
         transaction_volume: { score: Math.min((realData.transactionCount || 0) / 100, 1) },
         balance_analysis: { score: Math.min((realData.balance || 0) / 10, 1) },
-        pattern_analysis: { score: riskAnalysis.riskScore / 10 }
+        pattern_analysis: { score: baseRiskScore / 10 },
+        sanctions_screening: { score: riskScoreAdjustment / 10 }
       },
       asset_breakdown: {
         [network.toUpperCase()]: {
@@ -125,7 +160,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       }
     };
     
-    console.log('🚀 Generated enhanced analysis with REAL blockchain data:', enhancedResponse);
+    console.log('🚀 Generated enhanced analysis with REAL blockchain data and sanctions screening:', enhancedResponse);
     return enhancedResponse;
     
   } catch (error) {

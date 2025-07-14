@@ -25,9 +25,9 @@ export const useWalletAnalysis = () => {
 
     setIsAnalyzing(true);
     try {
-      console.log('Starting enhanced wallet analysis for:', address);
+      console.log('Starting enhanced wallet analysis with real-time sanctions screening for:', address);
       
-      // Use enhanced API with real blockchain data
+      // Use enhanced API with real blockchain data and sanctions screening
       const result = await analyzeWalletWithRealData(address);
       console.log('Enhanced analysis result:', result);
       
@@ -95,22 +95,37 @@ export const useWalletAnalysis = () => {
           console.log('Calculating risk factors for record:', dbResult.record.id);
           await riskFactorsService.calculateAndStoreRiskFactors(dbResult.record.id, result);
           
-          // Screen for sanctions
-          const sanctionsResults = await riskFactorsService.screenSanctions(address, normalizedNetwork);
+          // Enhanced sanctions screening with entity attribution
+          console.log('🔍 Performing enhanced sanctions screening...');
+          let sanctionsResults = [];
+          
+          if (result.entity_attribution?.name) {
+            sanctionsResults = await riskFactorsService.screenEntityByName(
+              result.entity_attribution.name, 
+              address
+            );
+          } else {
+            sanctionsResults = await riskFactorsService.screenSanctions(address, normalizedNetwork);
+          }
+          
           if (sanctionsResults.length > 0) {
+            console.log(`⚠️ Found ${sanctionsResults.length} sanctions matches, storing in database...`);
             await riskFactorsService.storeSanctionsScreening(dbResult.record.id, sanctionsResults);
+          } else {
+            console.log('✅ No sanctions matches found');
           }
         } catch (error) {
-          console.error('Error calculating risk factors:', error);
+          console.error('Error calculating risk factors or sanctions screening:', error);
           // Don't fail the main analysis if risk factors fail
         }
         
         // Determine if real data was used
         const isRealData = result.explanation?.includes('[REAL DATA: YES]');
+        const hasSanctionsData = result.explanation?.includes('[SANCTIONS:');
         
         toast({
           title: isRealData ? "Real-Time Analysis Complete" : "Analysis Complete (Mock Data)",
-          description: `${result.entity_attribution?.name || 'Unknown Entity'} (${result.entity_attribution?.type || 'Unknown'}) • ${result.risk_level} risk • Record: ${dbResult.record.record_id}${isRealData ? ' • Live blockchain data' : ' • Fallback data'}`,
+          description: `${result.entity_attribution?.name || 'Unknown Entity'} (${result.entity_attribution?.type || 'Unknown'}) • ${result.risk_level} risk • Record: ${dbResult.record.record_id}${isRealData ? ' • Live blockchain data' : ' • Fallback data'}${hasSanctionsData ? ' • Sanctions screened' : ''}`,
         });
       } else {
         console.error('Failed to store analysis result:', dbResult.error);
