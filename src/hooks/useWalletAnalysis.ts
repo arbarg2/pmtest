@@ -130,7 +130,7 @@ export const useWalletAnalysis = () => {
           
           // Enhanced sanctions screening
           console.log('🔍 Performing enhanced sanctions screening...');
-          let sanctionsResults = [];
+          let sanctionsResults: any[] = [];
           
           if (result.entity_attribution?.name) {
             sanctionsResults = await Promise.race([

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Real-time blockchain API integration service - PRODUCTION GRADE
@@ -12,7 +13,6 @@ interface BlockstreamAddressInfo {
   chain_stats: {
     funded_txo_count: number;
     funded_txo_sum: number;
-    spent_txo_count: number;
     spent_txo_count: number;
     spent_txo_sum: number;
     tx_count: number;
@@ -107,14 +107,7 @@ class RealBlockchainAPI {
     try {
       console.log('🔑 Initializing API keys from Supabase...');
       
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
-      
-      const { data, error } = await supabase.functions.invoke('get-api-keys', {
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeout);
+      const { data, error } = await supabase.functions.invoke('get-api-keys');
       
       if (error) {
         console.error('❌ Failed to load API keys from Supabase:', error);
@@ -135,9 +128,6 @@ class RealBlockchainAPI {
       this.apiKeyInitialized = false;
       this.initializationPromise = null; // Reset to allow retry
       
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('API key initialization timed out. Please try again.');
-      }
       throw error;
     }
   }
