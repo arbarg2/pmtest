@@ -1,5 +1,7 @@
+
 import { useState } from 'react';
-import { WalletRiskResponse, analyzeWalletRisk } from '@/services/api';
+import { WalletRiskResponse } from '@/services/api';
+import { analyzeWalletWithRealData } from '@/services/enhancedApi';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
@@ -23,9 +25,11 @@ export const useWalletAnalysis = () => {
 
     setIsAnalyzing(true);
     try {
-      console.log('Starting wallet analysis for:', address);
-      const result = await analyzeWalletRisk(address);
-      console.log('Analysis result:', result);
+      console.log('Starting enhanced wallet analysis for:', address);
+      
+      // Use enhanced API with real blockchain data
+      const result = await analyzeWalletWithRealData(address);
+      console.log('Enhanced analysis result:', result);
       
       // Fix network normalization to match database constraint
       let normalizedNetwork = 'ethereum'; // default
@@ -101,9 +105,12 @@ export const useWalletAnalysis = () => {
           // Don't fail the main analysis if risk factors fail
         }
         
+        // Determine if real data was used
+        const isRealData = result.explanation?.includes('[REAL DATA: YES]');
+        
         toast({
-          title: "Analysis Complete",
-          description: `${result.entity_attribution?.name || 'Unknown Entity'} (${result.entity_attribution?.type || 'Unknown'}) • ${result.risk_level} risk • Record: ${dbResult.record.record_id}`,
+          title: isRealData ? "Real-Time Analysis Complete" : "Analysis Complete (Mock Data)",
+          description: `${result.entity_attribution?.name || 'Unknown Entity'} (${result.entity_attribution?.type || 'Unknown'}) • ${result.risk_level} risk • Record: ${dbResult.record.record_id}${isRealData ? ' • Live blockchain data' : ' • Fallback data'}`,
         });
       } else {
         console.error('Failed to store analysis result:', dbResult.error);

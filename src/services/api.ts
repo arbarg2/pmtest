@@ -64,9 +64,11 @@ export interface WalletRiskResponse {
   recordId?: string;
 }
 
-// Fast wallet risk analysis with realistic but varied data
+// MOCK DATA FALLBACK - Used when real APIs are unavailable or in development mode
 export const analyzeWalletRisk = async (address: string): Promise<WalletRiskResponse> => {
   const startTime = Date.now();
+  
+  console.log('[MOCK DATA] Generating fallback analysis for:', address);
   
   // Generate more realistic risk factors based on address characteristics
   const addressHash = address.split('').reduce((a, b) => {
@@ -167,12 +169,12 @@ export const analyzeWalletRisk = async (address: string): Promise<WalletRiskResp
     transaction_count: Math.floor(10 + (riskSeed * 1000)),
     last_activity: new Date(Date.now() - (riskSeed * 7 * 24 * 60 * 60 * 1000)).toISOString(),
     processing_time_ms: processingTime,
-    explanation: `Analysis shows ${riskLevel.toLowerCase()} risk indicators for this ${entityType} wallet.`,
+    explanation: `[MOCK DATA] Analysis shows ${riskLevel.toLowerCase()} risk indicators for this ${entityType} wallet.`,
     risk_score_breakdown: {},
     asset_breakdown: {}
   };
 
-  // Simulate realistic API delay without the slow setTimeout
+  // Simulate realistic API delay
   await new Promise(resolve => setTimeout(resolve, processingTime));
   
   return mockResponse;
