@@ -136,12 +136,12 @@ export const useWalletAnalysis = () => {
             sanctionsResults = await Promise.race([
               riskFactorsService.screenEntityByName(result.entity_attribution.name, trimmedAddress),
               new Promise((_, reject) => setTimeout(() => reject(new Error('Sanctions timeout')), 10000))
-            ]);
+            ]) as any[];
           } else {
             sanctionsResults = await Promise.race([
               riskFactorsService.screenSanctions(trimmedAddress, normalizedNetwork),
               new Promise((_, reject) => setTimeout(() => reject(new Error('Sanctions timeout')), 10000))
-            ]);
+            ]) as any[];
           }
           
           if (sanctionsResults.length > 0) {
