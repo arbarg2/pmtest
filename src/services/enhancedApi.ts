@@ -9,7 +9,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
   try {
     // Detect network from address format
     const network = detectNetworkFromAddress(address);
-    console.log(`Analyzing ${network} address: ${address}`);
+    console.log(`Analyzing ${network} address: ${address} [REAL API MODE]`);
     
     let realData = null;
     let useRealData = false;
@@ -19,20 +19,20 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       if (network === 'bitcoin') {
         realData = await realBlockchainAPI.getBitcoinAddressData(address);
         useRealData = true;
-        console.log('Successfully fetched Bitcoin data:', realData);
+        console.log('✅ Successfully fetched Bitcoin data from Blockstream:', realData);
       } else if (network === 'ethereum') {
         realData = await realBlockchainAPI.getEthereumAddressData(address);
         useRealData = true;
-        console.log('Successfully fetched Ethereum data:', realData);
+        console.log('✅ Successfully fetched Ethereum data from Etherscan:', realData);
       }
     } catch (error) {
-      console.warn('Real API failed, falling back to mock data:', error);
+      console.warn('⚠️ Real API failed, falling back to mock data:', error);
       // Fall back to mock data
       return await analyzeWalletRisk(address);
     }
     
     if (!useRealData) {
-      console.log('Using mock data fallback');
+      console.log('📊 Using mock data fallback');
       return await analyzeWalletRisk(address);
     }
     
@@ -111,25 +111,25 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
           : new Date(parseInt(realData.transactions[0]?.timeStamp || '0') * 1000).toISOString()
         : new Date().toISOString(),
       processing_time_ms: processingTime,
-      explanation: `${riskAnalysis.explanation} [REAL DATA: ${useRealData ? 'YES' : 'NO'}]`,
+      explanation: `${riskAnalysis.explanation} [REAL DATA: ${useRealData ? 'YES - Live blockchain data' : 'NO - Mock fallback'}]`,
       risk_score_breakdown: {
-        transaction_volume: { score: Math.min(realData.transactionCount / 100, 1) },
-        balance_analysis: { score: Math.min(realData.balance / 10, 1) },
+        transaction_volume: { score: Math.min((realData.transactionCount || 0) / 100, 1) },
+        balance_analysis: { score: Math.min((realData.balance || 0) / 10, 1) },
         pattern_analysis: { score: riskAnalysis.riskScore / 10 }
       },
       asset_breakdown: {
         [network.toUpperCase()]: {
-          balance: realData.balance,
-          usd_value: realData.balance * (network === 'bitcoin' ? 45000 : 2500)
+          balance: realData.balance || 0,
+          usd_value: (realData.balance || 0) * (network === 'bitcoin' ? 45000 : 2500)
         }
       }
     };
     
-    console.log('Generated enhanced analysis with real data:', enhancedResponse);
+    console.log('🚀 Generated enhanced analysis with REAL blockchain data:', enhancedResponse);
     return enhancedResponse;
     
   } catch (error) {
-    console.error('Enhanced analysis failed, using fallback:', error);
+    console.error('❌ Enhanced analysis failed, using fallback:', error);
     // Final fallback to original mock analysis
     return await analyzeWalletRisk(address);
   }

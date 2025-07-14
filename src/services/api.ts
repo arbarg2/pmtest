@@ -68,7 +68,7 @@ export interface WalletRiskResponse {
 export const analyzeWalletRisk = async (address: string): Promise<WalletRiskResponse> => {
   const startTime = Date.now();
   
-  console.log('[MOCK DATA] Generating fallback analysis for:', address);
+  console.log('📊 [MOCK DATA] Generating fallback analysis for:', address);
   
   // Generate more realistic risk factors based on address characteristics
   const addressHash = address.split('').reduce((a, b) => {
@@ -107,8 +107,8 @@ export const analyzeWalletRisk = async (address: string): Promise<WalletRiskResp
   const entityType = entityTypes[Math.floor(riskSeed * entityTypes.length)];
   const entityName = entityNames[entityType][Math.floor((riskSeed * 10) % entityNames[entityType].length)];
 
-  // Fast processing time (200-400ms)
-  const processingTime = 200 + Math.floor(Math.random() * 200);
+  // Realistic processing time for mock (faster than real API)
+  const processingTime = 150 + Math.floor(Math.random() * 100);
   
   const mockResponse: WalletRiskResponse = {
     address,
@@ -169,7 +169,7 @@ export const analyzeWalletRisk = async (address: string): Promise<WalletRiskResp
     transaction_count: Math.floor(10 + (riskSeed * 1000)),
     last_activity: new Date(Date.now() - (riskSeed * 7 * 24 * 60 * 60 * 1000)).toISOString(),
     processing_time_ms: processingTime,
-    explanation: `[MOCK DATA] Analysis shows ${riskLevel.toLowerCase()} risk indicators for this ${entityType} wallet.`,
+    explanation: `[MOCK DATA - FALLBACK] Simulated analysis shows ${riskLevel.toLowerCase()} risk indicators for this ${entityType} wallet. This is fallback data - real blockchain APIs unavailable.`,
     risk_score_breakdown: {},
     asset_breakdown: {}
   };
@@ -177,5 +177,6 @@ export const analyzeWalletRisk = async (address: string): Promise<WalletRiskResp
   // Simulate realistic API delay
   await new Promise(resolve => setTimeout(resolve, processingTime));
   
+  console.log('📊 [MOCK DATA] Generated fallback response:', mockResponse);
   return mockResponse;
 };

@@ -1,4 +1,6 @@
 
+import { supabase } from '@/integrations/supabase/client';
+
 // Real-time blockchain API integration service
 interface EtherscanResponse {
   status: string;
@@ -81,13 +83,25 @@ interface EthereumTransaction {
 class RealBlockchainAPI {
   private readonly ETHERSCAN_BASE_URL = 'https://api.etherscan.io/api';
   private readonly BLOCKSTREAM_BASE_URL = 'https://blockstream.info/api';
-  private readonly etherscanApiKey: string | null;
-  private readonly isMockMode: boolean;
+  private etherscanApiKey: string | null = null;
 
   constructor() {
-    // In production, this would come from environment/secrets
-    this.etherscanApiKey = 'YourEtherscanAPIKey'; // Will be replaced with real key from secrets
-    this.isMockMode = process.env.NODE_ENV === 'development' && !this.etherscanApiKey;
+    this.initializeApiKey();
+  }
+
+  private async initializeApiKey() {
+    try {
+      // Get API key from Supabase Edge Function secrets
+      const { data, error } = await supabase.functions.invoke('get-api-keys');
+      if (data?.etherscanApiKey) {
+        this.etherscanApiKey = data.etherscanApiKey;
+        console.log('✅ Etherscan API key loaded from secrets');
+      } else {
+        console.warn('⚠️ Etherscan API key not found in secrets');
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not load API keys from secrets:', error);
+    }
   }
 
   // Bitcoin API integration using Blockstream (free, no API key needed)
@@ -99,17 +113,17 @@ class RealBlockchainAPI {
     transactions: any[];
   }> {
     try {
-      console.log(`Fetching Bitcoin data for address: ${address}`);
+      console.log(`🔍 [BITCOIN] Fetching real data for address: ${address}`);
       
-      // Get address info
+      // Get address info from Blockstream API
       const addressResponse = await fetch(`${this.BLOCKSTREAM_BASE_URL}/address/${address}`);
       if (!addressResponse.ok) {
-        throw new Error(`Blockstream API error: ${addressResponse.status}`);
+        throw new Error(`Blockstream API error: ${addressResponse.status} - ${addressResponse.statusText}`);
       }
       
       const addressInfo: BlockstreamAddressInfo = await addressResponse.json();
       
-      // Get transactions
+      // Get transactions from Blockstream API
       const txResponse = await fetch(`${this.BLOCKSTREAM_BASE_URL}/address/${address}/txs`);
       const transactions: BlockstreamTransaction[] = txResponse.ok ? await txResponse.json() : [];
       
@@ -119,16 +133,19 @@ class RealBlockchainAPI {
         txCount: addressInfo.chain_stats.tx_count + addressInfo.mempool_stats.tx_count
       };
 
-      return {
+      const result = {
         balance: (totalStats.funded - totalStats.spent) / 100000000, // Convert satoshis to BTC
         totalReceived: totalStats.funded / 100000000,
         totalSent: totalStats.spent / 100000000,
         transactionCount: totalStats.txCount,
-        transactions: transactions.slice(0, 10) // Latest 10 transactions
+        transactions: transactions.slice(0, 50) // Latest 50 transactions
       };
+
+      console.log(`✅ [BITCOIN] Successfully fetched real data:`, result);
+      return result;
     } catch (error) {
-      console.error('Bitcoin API error:', error);
-      throw new Error('Failed to fetch Bitcoin address data');
+      console.error('❌ [BITCOIN] API error:', error);
+      throw new Error(`Failed to fetch Bitcoin address data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -139,12 +156,17 @@ class RealBlockchainAPI {
     transactions: EthereumTransaction[];
     tokenTransfers: any[];
   }> {
-    if (!this.etherscanApiKey || this.etherscanApiKey === 'YourEtherscanAPIKey') {
-      throw new Error('Etherscan API key not configured');
+    // Initialize API key if not already done
+    if (!this.etherscanApiKey) {
+      await this.initializeApiKey();
+    }
+
+    if (!this.etherscanApiKey) {
+      throw new Error('Etherscan API key not configured. Please add your API key in the project settings.');
     }
 
     try {
-      console.log(`Fetching Ethereum data for address: ${address}`);
+      console.log(`🔍 [ETHEREUM] Fetching real data for address: ${address}`);
       
       // Get ETH balance
       const balanceResponse = await fetch(
@@ -158,25 +180,28 @@ class RealBlockchainAPI {
 
       // Get transaction history
       const txResponse = await fetch(
-        `${this.ETHERSCAN_BASE_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${this.etherscanApiKey}`
+        `${this.ETHERSCAN_BASE_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=50&sort=desc&apikey=${this.etherscanApiKey}`
       );
       const txData: EtherscanResponse = await txResponse.json();
       
       // Get token transfers
       const tokenResponse = await fetch(
-        `${this.ETHERSCAN_BASE_URL}?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${this.etherscanApiKey}`
+        `${this.ETHERSCAN_BASE_URL}?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=50&sort=desc&apikey=${this.etherscanApiKey}`
       );
       const tokenData: EtherscanResponse = await tokenResponse.json();
 
-      return {
+      const result = {
         balance: parseInt(balanceData.result) / 1e18, // Convert wei to ETH
         transactionCount: txData.status === '1' ? txData.result.length : 0,
         transactions: txData.status === '1' ? txData.result.slice(0, 50) : [],
         tokenTransfers: tokenData.status === '1' ? tokenData.result.slice(0, 50) : []
       };
+
+      console.log(`✅ [ETHEREUM] Successfully fetched real data:`, result);
+      return result;
     } catch (error) {
-      console.error('Ethereum API error:', error);
-      throw new Error('Failed to fetch Ethereum address data');
+      console.error('❌ [ETHEREUM] API error:', error);
+      throw new Error(`Failed to fetch Ethereum address data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -198,40 +223,69 @@ class RealBlockchainAPI {
 
     // High transaction volume risk
     const txCount = networkData.transactionCount || networkData.transactions?.length || 0;
-    if (txCount > 1000) {
-      riskScore += 3;
+    if (txCount > 10000) {
+      riskScore += 4;
+      riskFactors.high_frequency_trading = true;
+    } else if (txCount > 1000) {
+      riskScore += 2;
       riskFactors.high_frequency_trading = true;
     } else if (txCount > 100) {
       riskScore += 1;
     }
 
-    // High value risk (simplified)
+    // High value risk
     const balance = networkData.balance || 0;
-    if (network === 'bitcoin' && balance > 10) { // > 10 BTC
-      riskScore += 2;
+    if (network === 'bitcoin' && balance > 100) { // > 100 BTC
+      riskScore += 3;
+    } else if (network === 'ethereum' && balance > 1000) { // > 1000 ETH
+      riskScore += 3;
+    } else if (network === 'bitcoin' && balance > 10) { // > 10 BTC
+      riskScore += 1;
     } else if (network === 'ethereum' && balance > 100) { // > 100 ETH
-      riskScore += 2;
+      riskScore += 1;
     }
 
-    // Pattern analysis for mixing behavior
-    if (network === 'bitcoin' && networkData.transactions) {
-      const smallTxCount = networkData.transactions.filter((tx: any) => 
-        tx.vout && tx.vout.some((out: any) => out.value < 1000000) // < 0.01 BTC
-      ).length;
-      
-      if (smallTxCount > txCount * 0.7 && txCount > 20) {
-        riskScore += 4;
-        riskFactors.mixer_usage = true;
+    // Pattern analysis for potential mixing behavior
+    if (networkData.transactions && txCount > 20) {
+      // For Bitcoin: Look for many small outputs (potential mixing)
+      if (network === 'bitcoin') {
+        const smallTxCount = networkData.transactions.filter((tx: any) => 
+          tx.vout && tx.vout.some((out: any) => out.value < 1000000) // < 0.01 BTC
+        ).length;
+        
+        if (smallTxCount > txCount * 0.7) {
+          riskScore += 3;
+          riskFactors.mixer_usage = true;
+        }
       }
+      
+      // For Ethereum: Look for round number transactions (potential mixing)
+      if (network === 'ethereum') {
+        const roundTxCount = networkData.transactions.filter((tx: any) => {
+          const value = parseInt(tx.value) / 1e18;
+          return value === Math.round(value) && value > 0; // Round numbers
+        }).length;
+        
+        if (roundTxCount > txCount * 0.5) {
+          riskScore += 2;
+          riskFactors.mixer_usage = true;
+        }
+      }
+    }
+
+    // Very high frequency trading pattern
+    if (txCount > 50000) {
+      riskScore += 2;
+      riskFactors.dark_market_exposure = true; // High volume could indicate exchange or marketplace
     }
 
     // Determine risk level
     let riskLevel: 'Low' | 'Medium' | 'High';
-    if (riskScore >= 5) riskLevel = 'High';
-    else if (riskScore >= 2) riskLevel = 'Medium';
+    if (riskScore >= 6) riskLevel = 'High';
+    else if (riskScore >= 3) riskLevel = 'Medium';
     else riskLevel = 'Low';
 
-    const explanation = `Real-time analysis of ${network} blockchain data shows ${riskLevel.toLowerCase()} risk indicators based on ${txCount} transactions and current balance of ${balance.toFixed(4)} ${network.toUpperCase()}.`;
+    const explanation = `Real-time blockchain analysis of ${network} address shows ${riskLevel.toLowerCase()} risk indicators. Analyzed ${txCount} transactions with current balance of ${balance.toFixed(6)} ${network.toUpperCase()}. Risk factors include transaction patterns, volume analysis, and behavioral indicators.`;
 
     return {
       riskScore: Math.min(riskScore, 10),
@@ -251,34 +305,48 @@ class RealBlockchainAPI {
     const txCount = networkData.transactionCount || networkData.transactions?.length || 0;
     const balance = networkData.balance || 0;
 
-    // Basic entity classification based on transaction patterns
-    if (txCount > 10000) {
+    // Enhanced entity classification based on real transaction patterns
+    if (txCount > 100000) {
       return {
-        name: 'High-Volume Entity',
+        name: 'Major Exchange or Service',
         type: 'exchange',
         risk_level: 'Medium',
-        confidence: 0.7
+        confidence: 0.85
       };
-    } else if (txCount > 1000) {
+    } else if (txCount > 10000) {
       return {
-        name: 'Commercial Service',
+        name: 'Commercial Exchange',
+        type: 'exchange',
+        risk_level: 'Medium',
+        confidence: 0.75
+      };
+    } else if (txCount > 1000 && balance > (network === 'bitcoin' ? 10 : 100)) {
+      return {
+        name: 'Institutional Wallet',
         type: 'custodial',
         risk_level: 'Low',
-        confidence: 0.6
+        confidence: 0.65
       };
     } else if (balance > (network === 'bitcoin' ? 100 : 1000)) {
       return {
         name: 'High-Value Wallet',
         type: 'private',
         risk_level: 'Medium',
-        confidence: 0.5
+        confidence: 0.6
+      };
+    } else if (txCount > 500) {
+      return {
+        name: 'Active Trading Wallet',
+        type: 'private',
+        risk_level: 'Low',
+        confidence: 0.55
       };
     } else {
       return {
         name: 'Personal Wallet',
         type: 'private',
         risk_level: 'Low',
-        confidence: 0.4
+        confidence: 0.45
       };
     }
   }
@@ -287,18 +355,24 @@ class RealBlockchainAPI {
   calculateVolumeMetrics(networkData: any, network: 'bitcoin' | 'ethereum') {
     const balance = networkData.balance || 0;
     const txCount = networkData.transactionCount || networkData.transactions?.length || 0;
+    const totalReceived = networkData.totalReceived || 0;
+    const totalSent = networkData.totalSent || 0;
     
-    // Estimate volumes based on available data
-    const estimatedVolume = balance * (txCount > 0 ? Math.log(txCount + 1) : 1);
+    // Use real received/sent data if available, otherwise estimate
+    const inboundVolume = totalReceived || (balance * (txCount > 0 ? Math.log(txCount + 1) * 0.6 : 1));
+    const outboundVolume = totalSent || (balance * (txCount > 0 ? Math.log(txCount + 1) * 0.5 : 0.8));
+    
+    // Current market prices (rough estimates - in production, fetch from price API)
+    const usdPrice = network === 'bitcoin' ? 45000 : 2500;
     
     return {
       lifetime_value: {
-        inbound: networkData.totalReceived || estimatedVolume * 0.6,
-        outbound: networkData.totalSent || estimatedVolume * 0.5,
+        inbound: inboundVolume,
+        outbound: outboundVolume,
         net: balance,
-        usd_equivalent: balance * (network === 'bitcoin' ? 45000 : 2500) // Rough USD estimates
+        usd_equivalent: balance * usdPrice
       },
-      average_transaction_size: txCount > 0 ? balance / txCount : balance
+      average_transaction_size: txCount > 0 ? (inboundVolume + outboundVolume) / (txCount * 2) : balance
     };
   }
 }
