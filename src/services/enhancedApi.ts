@@ -78,9 +78,9 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       risk_factors: {
         ...riskAnalysis.riskFactors,
         sanctions_exposure: sanctionsResults.length > 0,
-        sanctions_matches: sanctionsResults.length,
-        sanctions_confidence: sanctionsResults.length > 0 ? 
-          Math.max(...sanctionsResults.map(r => r.confidence_score)) : 0
+        sanctions_matches: sanctionsResults.length > 0,
+        sanctions_confidence: sanctionsResults.length > 0 && 
+          Math.max(...sanctionsResults.map(r => r.confidence_score)) > 0.7
       },
       entity_attribution: entityAttribution,
       volume_metrics: {
