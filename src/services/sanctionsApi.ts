@@ -1,4 +1,3 @@
-
 interface OpenSanctionsMatch {
   id: string;
   caption: string;
@@ -35,7 +34,7 @@ interface SanctionsResult {
 
 class SanctionsScreeningService {
   private readonly OPENSANCTIONS_API = 'https://api.opensanctions.org';
-  private readonly MOCK_MODE = process.env.NODE_ENV === 'development' && process.env.USE_MOCK_SANCTIONS === 'true';
+  private readonly MOCK_MODE = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_SANCTIONS === 'true';
 
   async screenEntity(entityName: string, walletAddress?: string): Promise<SanctionsResult[]> {
     console.log(`Screening entity: ${entityName} ${walletAddress ? `(${walletAddress})` : ''}`);
