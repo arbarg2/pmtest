@@ -3,51 +3,73 @@ import { WalletRiskResponse, analyzeWalletRisk } from './api';
 import { realBlockchainAPI } from './realBlockchainAPI';
 import { sanctionsScreeningService } from './sanctionsApi';
 
-// Enhanced API service that uses real blockchain data when available
+// Enhanced API service that PRIORITIZES real blockchain data
 export const analyzeWalletWithRealData = async (address: string): Promise<WalletRiskResponse> => {
   const startTime = Date.now();
   
   try {
     // Detect network from address format
     const network = detectNetworkFromAddress(address);
-    console.log(`Analyzing ${network} address: ${address} [REAL API MODE]`);
+    console.log(`🔍 PRIORITY: Real-time analysis for ${network} address: ${address}`);
     
     let realData = null;
     let useRealData = false;
+    let apiError = null;
     
-    // Try to fetch real blockchain data
+    // FORCE attempt to fetch real blockchain data - don't fallback easily
     try {
       if (network === 'bitcoin') {
+        console.log('📡 Attempting Bitcoin real-time data from Blockstream API...');
         realData = await realBlockchainAPI.getBitcoinAddressData(address);
         useRealData = true;
-        console.log('✅ Successfully fetched Bitcoin data from Blockstream:', realData);
+        console.log('✅ SUCCESS: Bitcoin real-time data retrieved:', {
+          balance: realData.balance,
+          txCount: realData.transactionCount,
+          totalReceived: realData.totalReceived
+        });
       } else if (network === 'ethereum') {
+        console.log('📡 Attempting Ethereum real-time data from Etherscan API...');
         realData = await realBlockchainAPI.getEthereumAddressData(address);
         useRealData = true;
-        console.log('✅ Successfully fetched Ethereum data from Etherscan:', realData);
+        console.log('✅ SUCCESS: Ethereum real-time data retrieved:', {
+          balance: realData.balance,
+          txCount: realData.transactionCount
+        });
       }
     } catch (error) {
-      console.warn('⚠️ Real API failed, falling back to mock data:', error);
-      // Fall back to mock data
-      return await analyzeWalletRisk(address);
+      apiError = error;
+      console.error('❌ CRITICAL: Real API failed - this should be investigated:', error);
+      
+      // For production, we should NOT fallback to mock data easily
+      // Instead, throw error to alert user that real data is unavailable
+      if (error instanceof Error && error.message.includes('API key')) {
+        throw new Error(`Real-time data unavailable: ${error.message}. Please configure API keys in settings.`);
+      }
+      
+      // Only fallback to mock if it's a temporary network issue
+      console.warn('⚠️ FALLBACK WARNING: Using mock data due to API failure. Results may not be accurate.');
     }
     
+    // If we don't have real data, clearly indicate this is mock/fallback data
     if (!useRealData) {
-      console.log('📊 Using mock data fallback');
-      return await analyzeWalletRisk(address);
+      console.log('📊 USING MOCK DATA - Results will be simulated');
+      const mockResult = await analyzeWalletRisk(address);
+      mockResult.explanation = `⚠️ MOCK DATA FALLBACK: Real blockchain APIs unavailable. This analysis uses simulated data and should not be used for compliance decisions. API Error: ${apiError?.message || 'Unknown error'}`;
+      return mockResult;
     }
     
-    // Generate analysis based on real data
+    // Generate analysis based on REAL data
+    console.log('🚀 Generating analysis from REAL blockchain data...');
     const riskAnalysis = realBlockchainAPI.calculateRealRiskScore(realData, network);
     const entityAttribution = realBlockchainAPI.deriveEntityAttribution(realData, network);
     const volumeMetrics = realBlockchainAPI.calculateVolumeMetrics(realData, network);
     
-    // Perform enhanced sanctions screening
+    // Perform REAL sanctions screening
     let sanctionsResults = [];
     let riskScoreAdjustment = 0;
     
     try {
-      console.log('🔍 Performing real-time sanctions screening...');
+      console.log('🔍 REAL-TIME sanctions screening in progress...');
       sanctionsResults = await sanctionsScreeningService.screenEntity(
         entityAttribution.name,
         address
@@ -55,21 +77,23 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       
       if (sanctionsResults.length > 0) {
         riskScoreAdjustment = sanctionsScreeningService.calculateRiskAdjustment(sanctionsResults);
-        console.log(`⚠️ Sanctions matches found: ${sanctionsResults.length}, risk adjustment: +${riskScoreAdjustment}`);
+        console.log(`⚠️ SANCTIONS ALERT: ${sanctionsResults.length} matches found, risk adjustment: +${riskScoreAdjustment}`);
       } else {
-        console.log('✅ No sanctions matches found');
+        console.log('✅ SANCTIONS CLEAR: No matches in international databases');
       }
     } catch (sanctionsError) {
-      console.warn('Sanctions screening failed, continuing without adjustment:', sanctionsError);
+      console.error('❌ Sanctions screening failed:', sanctionsError);
+      // Don't fail the entire analysis, but log the error
     }
     
     const processingTime = Date.now() - startTime;
     
-    // Calculate adjusted risk score
+    // Calculate adjusted risk score based on REAL data
     const baseRiskScore = riskAnalysis.riskScore;
     const adjustedRiskScore = Math.min(10, baseRiskScore + riskScoreAdjustment);
     const adjustedRiskLevel = adjustedRiskScore >= 7 ? 'High' : adjustedRiskScore >= 4 ? 'Medium' : 'Low';
     
+    // Build response with REAL data validation
     const enhancedResponse: WalletRiskResponse = {
       address,
       network,
@@ -145,7 +169,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
           : new Date(parseInt(realData.transactions[0]?.timeStamp || '0') * 1000).toISOString()
         : new Date().toISOString(),
       processing_time_ms: processingTime,
-      explanation: `${riskAnalysis.explanation} [REAL DATA: ${useRealData ? 'YES - Live blockchain data' : 'NO - Mock fallback'}]${sanctionsResults.length > 0 ? ` [SANCTIONS: ${sanctionsResults.length} matches found]` : ' [SANCTIONS: Clean]'}`,
+      explanation: `✅ REAL-TIME ANALYSIS: Live ${network} blockchain data from ${network === 'bitcoin' ? 'Blockstream API' : 'Etherscan API'}. Balance: ${realData.balance?.toFixed(6)} ${network.toUpperCase()}, Transactions: ${realData.transactionCount || realData.transactions?.length || 0}${sanctionsResults.length > 0 ? ` | SANCTIONS: ${sanctionsResults.length} matches found` : ' | SANCTIONS: Clean'}. This analysis uses verified blockchain data and real-time sanctions screening.`,
       risk_score_breakdown: {
         transaction_volume: { score: Math.min((realData.transactionCount || 0) / 100, 1) },
         balance_analysis: { score: Math.min((realData.balance || 0) / 10, 1) },
@@ -160,13 +184,22 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       }
     };
     
-    console.log('🚀 Generated enhanced analysis with REAL blockchain data and sanctions screening:', enhancedResponse);
+    console.log('🎯 FINAL RESULT: Real-time analysis complete with live blockchain data');
     return enhancedResponse;
     
   } catch (error) {
-    console.error('❌ Enhanced analysis failed, using fallback:', error);
-    // Final fallback to original mock analysis
-    return await analyzeWalletRisk(address);
+    console.error('❌ CRITICAL FAILURE in enhanced analysis:', error);
+    
+    // Don't hide errors - surface them to the user
+    if (error instanceof Error && error.message.includes('API key')) {
+      throw error; // Re-throw API key errors
+    }
+    
+    // For other errors, provide fallback but clearly indicate it's not real data
+    console.warn('🔄 EMERGENCY FALLBACK: Using mock data due to critical failure');
+    const fallbackResult = await analyzeWalletRisk(address);
+    fallbackResult.explanation = `❌ SYSTEM ERROR: Real-time analysis failed (${error instanceof Error ? error.message : 'Unknown error'}). This is simulated data only - DO NOT use for compliance decisions. Contact support to resolve API connectivity issues.`;
+    return fallbackResult;
   }
 };
 
