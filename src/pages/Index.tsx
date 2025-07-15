@@ -9,15 +9,14 @@ import { UserDropdown } from '@/components/UserDropdown';
 import { WalletLookupPanel } from '@/components/WalletLookupPanel';
 import { AnalystDashboard } from '@/components/AnalystDashboard';
 import EnhancedWalletResults from '@/components/EnhancedWalletResults';
-import { analyzeWalletRisk, WalletRiskResponse } from '@/services/api';
+import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
 
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { recordId } = useParams();
   const [walletAddress, setWalletAddress] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [walletData, setWalletData] = useState<WalletRiskResponse | null>(null);
+  const { isAnalyzing, analysisData, analyzeWallet, generateReport } = useWalletAnalysis();
   const [isLoadingWalletData, setIsLoadingWalletData] = useState(false);
 
   useEffect(() => {
@@ -35,9 +34,10 @@ const Index = () => {
       const loadWalletData = async () => {
         try {
           // This is a placeholder - in reality you'd fetch from your database
-          const mockWallet = await analyzeWalletRisk('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa');
-          mockWallet.recordId = recordId;
-          setWalletData(mockWallet);
+          const mockWallet = await analyzeWallet('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa');
+          if (analysisData) {
+            analysisData.recordId = recordId;
+          }
         } catch (error) {
           console.error('Failed to load wallet data:', error);
         } finally {
@@ -46,20 +46,17 @@ const Index = () => {
       };
       loadWalletData();
     }
-  }, [recordId, user]);
+  }, [recordId, user, analyzeWallet, analysisData]);
 
   const handleAnalyze = async () => {
     if (!walletAddress.trim()) return;
     
-    setIsAnalyzing(true);
-    try {
-      const result = await analyzeWalletRisk(walletAddress);
-      // Navigate to results page with the analysis
-      navigate(`/record/${result.recordId || 'new'}`);
-    } catch (error) {
-      console.error('Analysis failed:', error);
-    } finally {
-      setIsAnalyzing(false);
+    console.log('🚀 MAIN INDEX: Starting REAL DATA analysis for:', walletAddress);
+    await analyzeWallet(walletAddress);
+    
+    // Navigate to results if we have analysis data
+    if (analysisData && analysisData.recordId) {
+      navigate(`/record/${analysisData.recordId}`);
     }
   };
 
@@ -73,8 +70,7 @@ const Index = () => {
   };
 
   const handleGenerateReport = () => {
-    // TODO: Implement report generation
-    console.log('Generate report');
+    generateReport(walletAddress);
   };
 
   // Show loading while checking auth
@@ -101,7 +97,7 @@ const Index = () => {
       );
     }
 
-    if (!walletData) {
+    if (!analysisData) {
       return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
           <div className="text-center">
@@ -122,7 +118,7 @@ const Index = () => {
 
     return (
       <EnhancedWalletResults
-        wallet={walletData}
+        wallet={analysisData}
         onBack={handleBack}
         onViewFlow={handleViewFlow}
         onGenerateReport={handleGenerateReport}
@@ -161,7 +157,7 @@ const Index = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Shield className="w-5 h-5 mr-2 text-primary" />
-                Wallet Analysis
+                Wallet Analysis - LIVE BLOCKCHAIN DATA
               </CardTitle>
             </CardHeader>
             <CardContent>

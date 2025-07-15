@@ -39,7 +39,7 @@ export const useWalletAnalysis = () => {
     setIsAnalyzing(true);
     
     try {
-      console.log('🔍 Starting enhanced wallet analysis for:', trimmedAddress);
+      console.log('🔍 Starting REAL DATA enhanced wallet analysis for:', trimmedAddress);
       console.log('🔍 Address format validation passed');
       
       // Show progress toast
@@ -48,10 +48,10 @@ export const useWalletAnalysis = () => {
         description: "Fetching real-time blockchain data...",
       });
       
-      // Use enhanced API with real blockchain data
-      console.log('📡 Calling analyzeWalletWithRealData...');
+      // Use enhanced API with REAL blockchain data - NO MOCK FALLBACK
+      console.log('📡 Calling analyzeWalletWithRealData for LIVE data...');
       const result = await analyzeWalletWithRealData(trimmedAddress);
-      console.log('✅ Enhanced analysis result received:', {
+      console.log('✅ REAL DATA analysis result received:', {
         address: result.address,
         network: result.network,
         risk_score: result.risk_score,
@@ -102,7 +102,7 @@ export const useWalletAnalysis = () => {
         });
       }
     } catch (error) {
-      console.error('❌ Analysis failed:', error);
+      console.error('❌ REAL DATA Analysis failed:', error);
       
       // More detailed error logging
       if (error instanceof Error) {
