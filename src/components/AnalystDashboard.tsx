@@ -210,10 +210,7 @@ export function AnalystDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <InvestigationRecordsTable 
-                records={records.slice(0, 10)} 
-                onRefresh={refreshData}
-              />
+              <InvestigationRecordsTable />
             </CardContent>
           </Card>
         </TabsContent>
