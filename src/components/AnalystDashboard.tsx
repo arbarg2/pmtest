@@ -280,7 +280,7 @@ export const AnalystDashboard = () => {
                       <div key={record.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
-                            <span className="font-medium text-sm">{record.record_id}</span>
+                            <span className="font-medium text-sm">{record.id}</span>
                             <Badge className={getRiskColor(record.risk_level)}>
                               {record.risk_level}
                             </Badge>
@@ -384,7 +384,7 @@ export const AnalystDashboard = () => {
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-4 mb-2">
-                            <h3 className="font-medium text-slate-900">{record.record_id}</h3>
+                            <h3 className="font-medium text-slate-900">{record.id}</h3>
                             <Badge className={getRiskColor(record.risk_level)}>
                               {record.risk_level} Risk
                             </Badge>
@@ -401,7 +401,7 @@ export const AnalystDashboard = () => {
                             </div>
                             <div className="flex items-center space-x-2">
                               <Calendar className="w-4 h-4" />
-                              <span>Created: {new Date(record.created_at).toLocaleDateString()}</span>
+                              <span>Created: {new Date(record.case_created_at).toLocaleDateString()}</span>
                               <span>Risk Score: {record.risk_score}/10</span>
                             </div>
                           </div>
