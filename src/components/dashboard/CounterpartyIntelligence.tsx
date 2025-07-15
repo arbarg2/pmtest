@@ -66,10 +66,10 @@ const CounterpartyIntelligence = ({ wallet }: CounterpartyIntelligenceProps) => 
                   </div>
                   <div>
                     <h4 className="font-semibold text-slate-900 dark:text-slate-100">
-                      {counterparty.entity_name}
+                      {counterparty.entity_name || counterparty.address}
                     </h4>
-                    <Badge className={getRiskColor(counterparty.risk_level)}>
-                      {counterparty.risk_level} Risk
+                    <Badge className={getRiskColor(counterparty.risk_level || 'Low')}>
+                      {counterparty.risk_level || 'Low'} Risk
                     </Badge>
                   </div>
                 </div>
@@ -101,9 +101,9 @@ const CounterpartyIntelligence = ({ wallet }: CounterpartyIntelligenceProps) => 
               <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-600 dark:text-slate-400">
-                    {counterparty.risk_level === 'High' 
+                    {(counterparty.risk_level || 'Low') === 'High' 
                       ? '⚠️ High-risk entity - requires enhanced monitoring'
-                      : counterparty.risk_level === 'Medium'
+                      : (counterparty.risk_level || 'Low') === 'Medium'
                       ? '⚡ Medium-risk entity - standard due diligence'
                       : '✅ Low-risk entity - standard processing'
                     }

@@ -81,17 +81,6 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
           present: sanctionsResults.length > 0,
           severity: sanctionsResults.length > 0 ? 'high' : 'low',
           description: sanctionsResults.length > 0 ? 'Sanctions matches detected' : 'No sanctions exposure'
-        },
-        sanctions_matches: {
-          present: sanctionsResults.length > 0,
-          severity: sanctionsResults.length > 0 ? 'high' : 'low',
-          description: `${sanctionsResults.length} sanctions matches found`
-        },
-        sanctions_confidence: {
-          present: sanctionsResults.length > 0 && 
-            Math.max(...sanctionsResults.map(r => r.confidence_score)) > 0.7,
-          severity: 'high',
-          description: 'High confidence sanctions match detected'
         }
       },
       entity_attribution: entityAttribution,
@@ -153,8 +142,10 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
           Math.max(...sanctionsResults.map(r => r.confidence_score)) : 0
       },
       top_counterparties: realData.transactions && realData.transactions.length > 0 ? [{
+        address: 'unknown',
         entity_name: 'Unknown Entity',
         risk_level: 'Low',
+        risk_score: 0.1,
         transaction_count: Math.min(realData.transactions.length, 10),
         total_volume: volumeMetrics.lifetime_value.outbound
       }] : [],
@@ -177,7 +168,8 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
           balance: realData.balance || 0,
           usd_value: (realData.balance || 0) * (network === 'bitcoin' ? 45000 : 2500)
         }
-      }
+      },
+      lookupId: `LR_${Date.now()}`
     };
     
     console.log('🎯 ANALYSIS COMPLETE: Real-time response generated');

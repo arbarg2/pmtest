@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, Download, AlertTriangle, CheckCircle, Clock, FileText, File, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { analyzeWalletRisk } from '@/services/api';
+import { analyzeWalletWithRealData } from '@/services/enhancedApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { riskFactorsService } from '@/services/riskFactors';
@@ -115,7 +114,7 @@ export const BulkAnalysis = () => {
           try {
             console.log(`Processing address ${globalIndex + 1}/${addresses.length}: ${address}`);
             const startTime = Date.now();
-            const result = await analyzeWalletRisk(address);
+            const result = await analyzeWalletWithRealData(address);
             const processingTime = Date.now() - startTime;
             
             // Fix network normalization
