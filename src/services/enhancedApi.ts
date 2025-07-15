@@ -3,58 +3,40 @@ import { WalletRiskResponse, analyzeWalletRisk } from './api';
 import { realBlockchainAPI } from './realBlockchainAPI';
 import { sanctionsScreeningService } from './sanctionsApi';
 
-// Enhanced API service that PRIORITIZES real blockchain data with better error handling
+// Enhanced API service that PRIORITIZES real blockchain data - NO MOCK DATA
 export const analyzeWalletWithRealData = async (address: string): Promise<WalletRiskResponse> => {
   const startTime = Date.now();
   
   try {
     // Detect network from address format with improved validation
     const network = detectNetworkFromAddress(address);
-    console.log(`🔍 ENHANCED API: Starting real-time analysis for ${network} address: ${address}`);
+    console.log(`🔍 ENHANCED API: Starting REAL-TIME analysis for ${network} address: ${address}`);
     
     let realData = null;
-    let useRealData = false;
-    let apiError = null;
     
-    // Attempt to fetch real blockchain data with better error handling
-    try {
-      if (network === 'bitcoin') {
-        console.log('🚀 Attempting Bitcoin real-time data from Blockstream API...');
-        realData = await realBlockchainAPI.getBitcoinAddressData(address);
-        useRealData = true;
-        console.log('✅ SUCCESS: Bitcoin real-time data retrieved:', {
-          balance: realData.balance,
-          txCount: realData.transactionCount,
-          totalReceived: realData.totalReceived
-        });
-      } else if (network === 'ethereum') {
-        console.log('🚀 Attempting Ethereum real-time data from Etherscan API...');
-        realData = await realBlockchainAPI.getEthereumAddressData(address);
-        useRealData = true;
-        console.log('✅ SUCCESS: Ethereum real-time data retrieved:', {
-          balance: realData.balance,
-          txCount: realData.transactionCount,
-          tokenTransfers: realData.tokenTransfers?.length || 0
-        });
-      }
-    } catch (error) {
-      apiError = error;
-      console.error(`❌ Real ${network} API failed:`, error);
-      
-      // Only fall back if it's a critical error, not just network issues
-      if (error instanceof Error && error.message.includes('API key')) {
-        console.log('🔄 API key issue - this needs to be configured');
-        throw new Error(`${network} API key not configured. Real-time data unavailable.`);
-      }
-      
-      // For other errors, create realistic fallback based on address
-      console.log('🔄 Creating address-specific fallback data...');
-      realData = createNetworkSpecificFallback(address, network);
-      useRealData = false;
+    // Fetch real blockchain data - NO FALLBACK TO MOCK
+    if (network === 'bitcoin') {
+      console.log('🚀 Fetching Bitcoin real-time data from Blockstream API...');
+      realData = await realBlockchainAPI.getBitcoinAddressData(address);
+      console.log('✅ SUCCESS: Bitcoin real-time data retrieved:', {
+        balance: realData.balance,
+        txCount: realData.transactionCount,
+        totalReceived: realData.totalReceived
+      });
+    } else if (network === 'ethereum') {
+      console.log('🚀 Fetching Ethereum real-time data from Etherscan API...');
+      realData = await realBlockchainAPI.getEthereumAddressData(address);
+      console.log('✅ SUCCESS: Ethereum real-time data retrieved:', {
+        balance: realData.balance,
+        txCount: realData.transactionCount,
+        tokenTransfers: realData.tokenTransfers?.length || 0
+      });
+    } else {
+      throw new Error(`Unsupported network: ${network}`);
     }
     
-    // Generate analysis from the data (real or fallback)
-    console.log('🔬 Generating risk analysis from blockchain data...');
+    // Generate analysis from the REAL data
+    console.log('🔬 Generating risk analysis from REAL blockchain data...');
     const riskAnalysis = realBlockchainAPI.calculateRealRiskScore(realData, network);
     const entityAttribution = realBlockchainAPI.deriveEntityAttribution(realData, network);
     const volumeMetrics = realBlockchainAPI.calculateVolumeMetrics(realData, network);
@@ -87,7 +69,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
     const adjustedRiskScore = Math.min(10, baseRiskScore + riskScoreAdjustment);
     const adjustedRiskLevel = adjustedRiskScore >= 7 ? 'High' : adjustedRiskScore >= 4 ? 'Medium' : 'Low';
     
-    // Build comprehensive response with proper network-specific data
+    // Build comprehensive response with REAL network-specific data
     const enhancedResponse: WalletRiskResponse = {
       address,
       network,
@@ -163,9 +145,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
           : new Date(parseInt(realData.transactions[0]?.timeStamp || '0') * 1000).toISOString()
         : new Date().toISOString(),
       processing_time_ms: processingTime,
-      explanation: useRealData 
-        ? `✅ REAL-TIME ANALYSIS: Live ${network} blockchain data from ${network === 'bitcoin' ? 'Blockstream API' : 'Etherscan API'}. Balance: ${realData.balance?.toFixed(6)} ${network.toUpperCase()}, Transactions: ${realData.transactionCount || realData.transactions?.length || 0}${sanctionsResults.length > 0 ? ` | SANCTIONS: ${sanctionsResults.length} matches found` : ' | SANCTIONS: Clean'}. This analysis uses verified blockchain data and real-time sanctions screening.`
-        : `⚠️ FALLBACK ANALYSIS: ${network} blockchain APIs unavailable (${apiError?.message || 'Unknown error'}). Using address-specific fallback data for ${address}. Risk analysis based on address patterns and network characteristics.`,
+      explanation: `✅ REAL-TIME ANALYSIS: Live ${network} blockchain data from ${network === 'bitcoin' ? 'Blockstream API' : 'Etherscan API'}. Balance: ${realData.balance?.toFixed(6)} ${network.toUpperCase()}, Transactions: ${realData.transactionCount || realData.transactions?.length || 0}${sanctionsResults.length > 0 ? ` | SANCTIONS: ${sanctionsResults.length} matches found` : ' | SANCTIONS: Clean'}. This analysis uses verified blockchain data and real-time sanctions screening.`,
       risk_score_breakdown: {
         transaction_volume: { score: Math.min((realData.transactionCount || 0) / 100, 1) },
         balance_analysis: { score: Math.min((realData.balance || 0) / 10, 1) },
@@ -180,26 +160,26 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       }
     };
     
-    console.log('🎯 ANALYSIS COMPLETE: Enhanced response generated');
+    console.log('🎯 ANALYSIS COMPLETE: Real-time response generated');
     console.log('📊 Final response summary:', {
       address: enhancedResponse.address,
       network: enhancedResponse.network,
       risk_score: enhancedResponse.risk_score,
       transaction_count: enhancedResponse.transaction_count,
       balance: realData.balance,
-      dataSource: useRealData ? 'REAL_API' : 'FALLBACK'
+      dataSource: 'REAL_API_DATA'
     });
     
     return enhancedResponse;
     
   } catch (error) {
-    console.error('❌ ENHANCED API FAILED:', error);
+    console.error('❌ ENHANCED API FAILED WITH REAL DATA:', error);
     
-    // Only use the old mock API as absolute last resort
-    console.log('🔄 Using mock API as absolute last resort');
-    const fallbackResult = await analyzeWalletRisk(address);
-    console.log('📊 Mock fallback result returned');
-    return fallbackResult;
+    // If real APIs fail, we MUST throw the error - no mock fallback
+    if (error instanceof Error) {
+      throw new Error(`Real blockchain API failed: ${error.message}`);
+    }
+    throw new Error('Real blockchain API failed with unknown error');
   }
 };
 
@@ -233,45 +213,5 @@ function detectNetworkFromAddress(address: string): 'bitcoin' | 'ethereum' {
     return 'bitcoin';
   }
   
-  console.log('⚠️ Unable to detect network from address format, defaulting to bitcoin');
-  return 'bitcoin';
-}
-
-function createNetworkSpecificFallback(address: string, network: 'bitcoin' | 'ethereum') {
-  console.log(`🔄 Creating ${network}-specific fallback data for address:`, address);
-  
-  // Create address-specific but still varied data
-  const addressHash = address.split('').reduce((a, b) => {
-    a = ((a << 5) - a) + b.charCodeAt(0);
-    return a & a;
-  }, 0);
-  
-  const seed = Math.abs(addressHash);
-  
-  if (network === 'ethereum') {
-    return {
-      balance: (seed % 1000) / 10, // 0.1 to 100 ETH
-      transactionCount: seed % 500 + 1, // 1 to 500 transactions
-      transactions: [{
-        hash: `0x${seed.toString(16).padStart(64, '0')}`,
-        value: ((seed % 10000) * 1e15).toString(), // In wei
-        timeStamp: (Date.now() / 1000 - (seed % 10000000)).toString(),
-        from: address,
-        to: `0x${(seed * 2).toString(16).padStart(40, '0')}`
-      }],
-      tokenTransfers: []
-    };
-  } else {
-    return {
-      balance: (seed % 10000) / 100000000, // In BTC
-      totalReceived: (seed % 50000) / 100000000,
-      totalSent: (seed % 40000) / 100000000,
-      transactionCount: seed % 300 + 1,
-      transactions: [{
-        txid: seed.toString(16).padStart(64, '0'),
-        vout: [{ value: seed % 100000000 }],
-        status: { block_time: Date.now() / 1000 - (seed % 1000000) }
-      }]
-    };
-  }
+  throw new Error(`Unable to detect network from address format: ${address}`);
 }

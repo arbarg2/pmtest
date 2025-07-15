@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Real-time blockchain API integration service - PRODUCTION GRADE
@@ -97,31 +96,28 @@ class RealBlockchainAPI {
     if (this.apiKeyInitialized) return;
     
     try {
-      console.log('🔑 Initializing Etherscan API key...');
+      console.log('🔑 Fetching real Etherscan API key from Supabase secrets...');
       
-      // Try to get from Supabase secrets first
-      try {
-        const { data, error } = await supabase.functions.invoke('get-api-keys');
-        
-        if (!error && data?.etherscanApiKey) {
-          this.etherscanApiKey = data.etherscanApiKey;
-          console.log('✅ Etherscan API key loaded from Supabase');
-        } else {
-          console.warn('⚠️ Could not load API key from Supabase, using fallback');
-          // Use a demo key for testing
-          this.etherscanApiKey = 'YourApiKey';
-        }
-      } catch (supabaseError) {
-        console.warn('⚠️ Supabase API key fetch failed, using fallback:', supabaseError);
-        this.etherscanApiKey = 'YourApiKey';
+      // Get the API key from Supabase secrets using the get-api-keys function
+      const { data, error } = await supabase.functions.invoke('get-api-keys');
+      
+      if (error) {
+        console.error('❌ Failed to fetch API keys from Supabase:', error);
+        throw new Error(`Failed to fetch API keys: ${error.message}`);
       }
       
+      if (!data || !data.etherscanApiKey) {
+        console.error('❌ No Etherscan API key found in response:', data);
+        throw new Error('Etherscan API key not found in Supabase secrets');
+      }
+      
+      this.etherscanApiKey = data.etherscanApiKey;
+      console.log('✅ Etherscan API key loaded successfully:', this.etherscanApiKey.substring(0, 8) + '...');
       this.apiKeyInitialized = true;
-      console.log('✅ API key initialization complete');
+      
     } catch (error) {
       console.error('❌ API key initialization failed:', error);
-      this.etherscanApiKey = 'YourApiKey';
-      this.apiKeyInitialized = true;
+      throw error; // Don't fall back to demo key, throw the error
     }
   }
 
@@ -143,7 +139,7 @@ class RealBlockchainAPI {
       
       // Get address info with timeout
       const addressController = new AbortController();
-      const addressTimeout = setTimeout(() => addressController.abort(), 10000);
+      const addressTimeout = setTimeout(() => addressController.abort(), 15000);
       
       const addressResponse = await fetch(`${this.BLOCKSTREAM_BASE_URL}/address/${address}`, {
         signal: addressController.signal,
@@ -167,7 +163,7 @@ class RealBlockchainAPI {
       
       // Get transactions with timeout and limit to first 25 for performance
       const txController = new AbortController();
-      const txTimeout = setTimeout(() => txController.abort(), 10000);
+      const txTimeout = setTimeout(() => txController.abort(), 15000);
       
       const txResponse = await fetch(`${this.BLOCKSTREAM_BASE_URL}/address/${address}/txs`, {
         signal: txController.signal,
@@ -205,15 +201,7 @@ class RealBlockchainAPI {
       return result;
     } catch (error) {
       console.error('❌ [BITCOIN] Live API failed:', error);
-      
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          throw new Error('Bitcoin API request timed out. Network may be slow.');
-        }
-        throw new Error(`Bitcoin API error: ${error.message}`);
-      }
-      
-      throw new Error('Unknown Bitcoin API error');
+      throw error; // Don't fall back, throw the error
     }
   }
 
@@ -228,7 +216,7 @@ class RealBlockchainAPI {
     await this.initializeApiKey();
 
     if (!this.etherscanApiKey) {
-      throw new Error('Etherscan API key not configured. Please add your API key in project settings.');
+      throw new Error('Etherscan API key not configured. Please check Supabase secrets configuration.');
     }
 
     try {
@@ -240,14 +228,14 @@ class RealBlockchainAPI {
         throw new Error(`Invalid Ethereum address format: ${address}`);
       }
       
-      const timeout = 12000; // 12 seconds timeout
+      const timeout = 15000; // 15 seconds timeout
       
       // Get ETH balance with timeout
       const balanceController = new AbortController();
       const balanceTimeout = setTimeout(() => balanceController.abort(), timeout);
       
       const balanceUrl = `${this.ETHERSCAN_BASE_URL}?module=account&action=balance&address=${address}&tag=latest&apikey=${this.etherscanApiKey}`;
-      console.log('📡 Fetching balance from:', balanceUrl.replace(this.etherscanApiKey, 'API_KEY'));
+      console.log('📡 Fetching balance from Etherscan API...');
       
       const balanceResponse = await fetch(balanceUrl, { 
         signal: balanceController.signal,
@@ -274,7 +262,7 @@ class RealBlockchainAPI {
       const txTimeout = setTimeout(() => txController.abort(), timeout);
       
       const txUrl = `${this.ETHERSCAN_BASE_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
-      console.log('📡 Fetching transactions from:', txUrl.replace(this.etherscanApiKey, 'API_KEY'));
+      console.log('📡 Fetching transactions from Etherscan API...');
       
       const txResponse = await fetch(txUrl, { 
         signal: txController.signal,
@@ -293,7 +281,7 @@ class RealBlockchainAPI {
       const tokenTimeout = setTimeout(() => tokenController.abort(), timeout);
       
       const tokenUrl = `${this.ETHERSCAN_BASE_URL}?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
-      console.log('📡 Fetching token transfers from:', tokenUrl.replace(this.etherscanApiKey, 'API_KEY'));
+      console.log('📡 Fetching token transfers from Etherscan API...');
       
       const tokenResponse = await fetch(tokenUrl, { 
         signal: tokenController.signal,
@@ -323,18 +311,7 @@ class RealBlockchainAPI {
       return result;
     } catch (error) {
       console.error('❌ [ETHEREUM] Live API failed:', error);
-      
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          throw new Error('Ethereum API request timed out. Network may be slow.');
-        }
-        if (error.message.includes('API key')) {
-          throw error; // Re-throw API key errors
-        }
-        throw new Error(`Ethereum API error: ${error.message}`);
-      }
-      
-      throw new Error('Unknown Ethereum API error');
+      throw error; // Don't fall back, throw the error
     }
   }
 
