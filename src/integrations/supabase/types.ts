@@ -14,14 +14,46 @@ export type Database = {
   }
   public: {
     Tables: {
+      case_audit_log: {
+        Row: {
+          action: string
+          case_id: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          case_id: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          case_id?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       investigation_records: {
         Row: {
           analysis_data: Json
           analyst_id: string | null
           analyst_notes: string | null
+          assigned_to: string | null
+          case_created_at: string | null
+          case_id: string | null
+          case_status: string | null
           created_at: string
           id: string
           investigation_status: string | null
+          is_case: boolean | null
           network: string
           record_id: string
           reviewed_at: string | null
@@ -36,9 +68,14 @@ export type Database = {
           analysis_data: Json
           analyst_id?: string | null
           analyst_notes?: string | null
+          assigned_to?: string | null
+          case_created_at?: string | null
+          case_id?: string | null
+          case_status?: string | null
           created_at?: string
           id?: string
           investigation_status?: string | null
+          is_case?: boolean | null
           network: string
           record_id: string
           reviewed_at?: string | null
@@ -53,9 +90,14 @@ export type Database = {
           analysis_data?: Json
           analyst_id?: string | null
           analyst_notes?: string | null
+          assigned_to?: string | null
+          case_created_at?: string | null
+          case_id?: string | null
+          case_status?: string | null
           created_at?: string
           id?: string
           investigation_status?: string | null
+          is_case?: boolean | null
           network?: string
           record_id?: string
           reviewed_at?: string | null
@@ -255,6 +297,10 @@ export type Database = {
           score: number
           description: string
         }[]
+      }
+      generate_case_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       generate_record_id: {
         Args: Record<PropertyKey, never>

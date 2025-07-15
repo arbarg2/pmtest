@@ -16,6 +16,7 @@ import ExportActions from '@/components/dashboard/ExportActions';
 import RiskFactorsBreakdown from '@/components/RiskFactorsBreakdown';
 import SanctionsScreening from '@/components/SanctionsScreening';
 import AnalystNotesThread from '@/components/AnalystNotesThread';
+import CaseManagement from '@/components/CaseManagement';
 
 interface EnhancedWalletResultsProps {
   wallet: WalletRiskResponse;
@@ -38,12 +39,39 @@ const EnhancedWalletResults = ({
 }: EnhancedWalletResultsProps) => {
   const [investigationStatus, setInvestigationStatus] = useState('pending');
   const [analystNotes, setAnalystNotes] = useState('');
+  const [isCase, setIsCase] = useState(false);
+  const [caseId, setCaseId] = useState<string | undefined>();
+  const [caseStatus, setCaseStatus] = useState('open');
+  const [caseCreatedAt, setCaseCreatedAt] = useState<string | undefined>();
+
+  // Initialize case data from wallet/record data
+  useEffect(() => {
+    if (wallet && typeof wallet === 'object') {
+      // Check if this record has case data
+      setIsCase(wallet.is_case || false);
+      setCaseId(wallet.case_id);
+      setCaseStatus(wallet.case_status || 'open');
+      setCaseCreatedAt(wallet.case_created_at);
+    }
+  }, [wallet]);
 
   const handleNotesUpdate = (notes: any[], status: string) => {
     setInvestigationStatus(status);
     // Convert notes thread back to simple string for export compatibility
     const latestNote = notes.length > 0 ? notes[notes.length - 1].content : '';
     setAnalystNotes(latestNote);
+  };
+
+  const handleCaseCreated = (newCaseId: string) => {
+    setIsCase(true);
+    setCaseId(newCaseId);
+    setCaseStatus('open');
+    setCaseCreatedAt(new Date().toISOString());
+  };
+
+  const handleStatusChanged = () => {
+    // Refresh case status - in a real app you might want to refetch the record
+    window.location.reload();
   };
 
   return (
@@ -58,10 +86,10 @@ const EnhancedWalletResults = ({
               </Button>
               <div>
                 <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                  Wallet Intelligence Report
+                  {isCase ? 'Case Investigation Report' : 'Wallet Intelligence Report'}
                 </h1>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Comprehensive blockchain forensics analysis
+                  {isCase ? `Case ID: ${caseId}` : 'Lookup Record'} • Comprehensive blockchain forensics analysis
                 </p>
               </div>
             </div>
@@ -80,7 +108,7 @@ const EnhancedWalletResults = ({
           <WalletOverview wallet={wallet} />
         </div>
 
-        {/* AI Analysis Section - Collapsible (moved under Wallet Overview) */}
+        {/* AI Analysis Section */}
         <div className="mb-8">
           <AIAnalysisSummary wallet={wallet} />
         </div>
@@ -108,24 +136,39 @@ const EnhancedWalletResults = ({
           <CounterpartyIntelligence wallet={wallet} />
         </div>
 
-        {/* Bottom Row - Analyst Notes Thread and Export Actions */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Analyst Notes Thread */}
-          <AnalystNotesThread
-            recordId={recordId}
-            onNotesUpdate={handleNotesUpdate}
-          />
-
-          {/* Export Actions */}
-          <ExportActions
-            wallet={wallet}
-            recordId={recordId}
-            riskFactors={riskFactors}
-            sanctionsMatches={sanctionsMatches}
-            analystNotes={analystNotes}
-            investigationStatus={investigationStatus}
+        {/* Case Management Section */}
+        <div className="mb-8">
+          <CaseManagement
+            recordId={recordId || 'unknown'}
+            isCase={isCase}
+            caseId={caseId}
+            caseStatus={caseStatus}
+            caseCreatedAt={caseCreatedAt}
+            onCaseCreated={handleCaseCreated}
+            onStatusChanged={handleStatusChanged}
           />
         </div>
+
+        {/* Bottom Row - Analyst Notes and Export Actions (only show if it's a case) */}
+        {isCase && (
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Analyst Notes Thread */}
+            <AnalystNotesThread
+              recordId={recordId}
+              onNotesUpdate={handleNotesUpdate}
+            />
+
+            {/* Export Actions */}
+            <ExportActions
+              wallet={wallet}
+              recordId={recordId}
+              riskFactors={riskFactors}
+              sanctionsMatches={sanctionsMatches}
+              analystNotes={analystNotes}
+              investigationStatus={investigationStatus}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

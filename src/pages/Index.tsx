@@ -222,7 +222,15 @@ const Index = () => {
                 <span className="text-primary">Rìan</span>
               </h1>
             </div>
-            <UserDropdown />
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={() => navigate('/cases')}
+                className="text-sm font-medium text-slate-600 hover:text-primary transition-colors"
+              >
+                Case Management
+              </button>
+              <UserDropdown />
+            </div>
           </div>
         </div>
       </header>
