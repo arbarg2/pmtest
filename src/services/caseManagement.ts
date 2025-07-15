@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 
 export interface CaseCreationResult {
   success: boolean;
@@ -185,6 +184,26 @@ class CaseManagementService {
     } catch (error) {
       console.error('Error in getCases:', error);
       return { success: false, error: 'Failed to fetch cases' };
+    }
+  }
+
+  async getRecords(userId: string) {
+    try {
+      const { data: records, error } = await supabase
+        .from('investigation_records')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching records:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, records: records || [] };
+    } catch (error) {
+      console.error('Error in getRecords:', error);
+      return { success: false, error: 'Failed to fetch records' };
     }
   }
 }

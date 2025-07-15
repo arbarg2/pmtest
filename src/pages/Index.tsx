@@ -11,14 +11,15 @@ import { Search, Upload, Database } from 'lucide-react';
 import { UserDropdown } from '@/components/UserDropdown';
 import { InvestigationRecordsTable } from '@/components/InvestigationRecordsTable';
 import { BulkAnalysis } from '@/components/BulkAnalysis';
+import { AnalystDashboard } from '@/components/AnalystDashboard';
+import { WalletLookupPanel } from '@/components/WalletLookupPanel';
 import EnhancedWalletResults from '@/components/EnhancedWalletResults';
 import TransactionFlow from '@/components/TransactionFlow';
-import DashboardHero from '@/components/DashboardHero';
 
 const Index = () => {
   const [walletAddress, setWalletAddress] = useState('');
   const [showFlow, setShowFlow] = useState(false);
-  const [activeTab, setActiveTab] = useState('lookup');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [stats, setStats] = useState<any>(null);
   const [recordData, setRecordData] = useState<any>(null);
   const [riskFactors, setRiskFactors] = useState<any[]>([]);
@@ -109,6 +110,10 @@ const Index = () => {
           risk_level: record.risk_level,
           processing_time_ms: (analysisData as any)?.processing_time_ms || 0,
           recordId: record.id,
+          is_case: record.is_case,
+          case_id: record.case_id,
+          case_status: record.case_status,
+          case_created_at: record.case_created_at,
           // Spread the analysis data safely
           ...(typeof analysisData === 'object' ? analysisData : {})
         };
@@ -235,25 +240,19 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Hero Section with New Design */}
-      <DashboardHero
-        walletAddress={walletAddress}
-        setWalletAddress={setWalletAddress}
-        onAnalyze={handleAnalyze}
-        isAnalyzing={isAnalyzing}
-        userName={user?.email?.split('@')[0]}
-        stats={stats}
-      />
-
-      {/* Main Content Tabs */}
-      <section className="px-4 pb-16">
+      {/* Main Content */}
+      <section className="px-4 py-8">
         <div className="max-w-7xl mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="flex justify-center mb-8">
-              <TabsList className="grid w-full max-w-md grid-cols-3 bg-white/80 backdrop-blur dark:bg-slate-800/80 shadow-lg">
+              <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-white/80 backdrop-blur dark:bg-slate-800/80 shadow-lg">
+                <TabsTrigger value="dashboard" className="flex items-center space-x-2">
+                  <Database className="w-4 h-4" />
+                  <span className="hidden sm:inline">Dashboard</span>
+                </TabsTrigger>
                 <TabsTrigger value="lookup" className="flex items-center space-x-2">
                   <Search className="w-4 h-4" />
-                  <span className="hidden sm:inline">Intelligence</span>
+                  <span className="hidden sm:inline">Lookup</span>
                 </TabsTrigger>
                 <TabsTrigger value="bulk" className="flex items-center space-x-2">
                   <Upload className="w-4 h-4" />
@@ -261,7 +260,7 @@ const Index = () => {
                 </TabsTrigger>
                 <TabsTrigger value="records" className="flex items-center space-x-2">
                   <Database className="w-4 h-4" />
-                  <span className="hidden sm:inline">Records</span>
+                  <span className="hidden sm:inline">All Records</span>
                   {stats && stats.total_lookups > 0 && (
                     <Badge variant="secondary" className="ml-1 text-xs">
                       {stats.total_lookups}
@@ -271,41 +270,19 @@ const Index = () => {
               </TabsList>
             </div>
 
+            <TabsContent value="dashboard" className="mt-6">
+              <AnalystDashboard />
+            </TabsContent>
+
             <TabsContent value="lookup" className="mt-6">
-              <div className="text-center py-12">
-                <div className="max-w-2xl mx-auto">
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-                    Ready for Analysis
-                  </h3>
-                  <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
-                    Enter a wallet address above to begin comprehensive blockchain forensics analysis. 
-                    Our AI will analyze 20+ risk factors including sanctions, mixers, and DeFi protocols.
-                  </p>
-                  <div className="grid md:grid-cols-3 gap-6 text-center">
-                    <div className="p-4">
-                      <div className="text-3xl font-bold text-primary mb-2">
-                        {stats?.total_lookups || 0}
-                      </div>
-                      <div className="text-sm text-slate-600 dark:text-slate-400">
-                        Total Analyses
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <div className="text-3xl font-bold text-accent mb-2">
-                        {stats?.pending_review || 0}
-                      </div>
-                      <div className="text-sm text-slate-600 dark:text-slate-400">
-                        Pending Review
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <div className="text-3xl font-bold text-purple-600 mb-2">20+</div>
-                      <div className="text-sm text-slate-600 dark:text-slate-400">
-                        Risk Factors
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div className="max-w-4xl mx-auto">
+                <WalletLookupPanel
+                  walletAddress={walletAddress}
+                  setWalletAddress={setWalletAddress}
+                  onAnalyze={handleAnalyze}
+                  isAnalyzing={isAnalyzing}
+                  stats={stats}
+                />
               </div>
             </TabsContent>
 
