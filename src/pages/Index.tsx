@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,18 +8,36 @@ import { Button } from '@/components/ui/button';
 import { UserDropdown } from '@/components/UserDropdown';
 import { WalletLookupPanel } from '@/components/WalletLookupPanel';
 import { AnalystDashboard } from '@/components/AnalystDashboard';
-import { EnhancedWalletResults } from '@/components/EnhancedWalletResults';
+import EnhancedWalletResults from '@/components/EnhancedWalletResults';
 
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { recordId } = useParams();
+  const [walletAddress, setWalletAddress] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  const handleAnalyze = async () => {
+    if (!walletAddress.trim()) return;
+    
+    setIsAnalyzing(true);
+    try {
+      // TODO: Implement wallet analysis logic here
+      console.log('Analyzing wallet:', walletAddress);
+      // For now, just simulate the analysis
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } catch (error) {
+      console.error('Analysis failed:', error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   // Show loading while checking auth
   if (loading) {
@@ -106,7 +124,12 @@ const Index = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <WalletLookupPanel />
+                <WalletLookupPanel
+                  walletAddress={walletAddress}
+                  setWalletAddress={setWalletAddress}
+                  onAnalyze={handleAnalyze}
+                  isAnalyzing={isAnalyzing}
+                />
               </CardContent>
             </Card>
           </div>
