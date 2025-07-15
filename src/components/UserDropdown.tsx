@@ -60,9 +60,9 @@ export function UserDropdown() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate('/profile')}>
+        <DropdownMenuItem onClick={() => navigate('/cases')}>
           <Settings className="mr-2 h-4 w-4" />
-          <span>Profile Settings</span>
+          <span>Case Management</span>
         </DropdownMenuItem>
         <DropdownMenuItem className="flex items-center justify-between">
           <div className="flex items-center">

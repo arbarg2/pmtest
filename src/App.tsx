@@ -11,6 +11,7 @@ import Landing from "./pages/Landing";
 import CaseManagementPage from "./pages/CaseManagement";
 import NotFound from "./pages/NotFound";
 import ApiDocs from "./pages/ApiDocs";
+import { AuthPage } from "./components/auth/AuthPage";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
               <Route path="/record/:recordId" element={<Index />} />
               <Route path="/cases" element={<CaseManagementPage />} />
               <Route path="/landing" element={<Landing />} />
+              <Route path="/auth" element={<AuthPage />} />
               <Route path="/api-docs" element={<ApiDocs />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
