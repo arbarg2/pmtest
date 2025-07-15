@@ -76,12 +76,28 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       risk_score: adjustedRiskScore,
       risk_level: adjustedRiskLevel,
       risk_factors: {
-        ...riskAnalysis.riskFactors,
+        sanctioned: {
+          present: sanctionsResults.length > 0,
+          severity: sanctionsResults.length > 0 ? 'high' : 'low',
+          description: sanctionsResults.length > 0 ? 'Sanctions matches detected' : 'No sanctions exposure'
+        },
+        fraud_reports: {
+          present: false,
+          severity: 'low',
+          description: 'No fraud reports found'
+        },
+        dark_market_exposure: {
+          present: false,
+          severity: 'low',
+          description: 'No dark market connections'
+        },
         sanctions_exposure: {
           present: sanctionsResults.length > 0,
           severity: sanctionsResults.length > 0 ? 'high' : 'low',
           description: sanctionsResults.length > 0 ? 'Sanctions matches detected' : 'No sanctions exposure'
-        }
+        },
+        mixer_usage: riskAnalysis.riskFactors?.mixer_usage || false,
+        high_frequency_trading: riskAnalysis.riskFactors?.high_frequency_trading || false
       },
       entity_attribution: entityAttribution,
       volume_metrics: {
