@@ -17,7 +17,6 @@ import {
   Filter
 } from 'lucide-react';
 import { InvestigationRecordsTable } from '@/components/InvestigationRecordsTable';
-import CaseManagement from '@/components/CaseManagement';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { useNavigate } from 'react-router-dom';
@@ -222,7 +221,7 @@ export function AnalystDashboard() {
                 <CardTitle>Active Cases</CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{cases.length} cases</Badge>
-                  <Button variant="outline" size="sm" onClick={() => navigate('/case-management')}>
+                  <Button variant="outline" size="sm" onClick={() => navigate('/all-cases')}>
                     <Eye className="w-4 h-4 mr-2" />
                     View All Cases
                   </Button>

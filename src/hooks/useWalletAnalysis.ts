@@ -87,12 +87,12 @@ export const useWalletAnalysis = () => {
       }, user.id);
 
       if (dbResult.success && dbResult.record) {
-        console.log('✅ Database record created with ID:', dbResult.record.record_id);
+        console.log('✅ Database record created with ID:', dbResult.record.id);
         
-        // Set analysis data with record ID for immediate navigation
+        // Set analysis data with the database record ID for navigation
         const finalResult = {
           ...enhancedResult,
-          recordId: dbResult.record.record_id
+          recordId: dbResult.record.id // Use the database ID, not record_id
         };
         
         setAnalysisData(finalResult);
