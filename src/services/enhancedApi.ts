@@ -10,8 +10,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
   try {
     // Detect network from address format with improved validation
     const network = detectNetworkFromAddress(address);
-    console.log(`🔍 PRIORITY: Real-time analysis for ${network} address: ${address}`);
-    console.log(`🔧 Detected network: ${network}`);
+    console.log(`🔍 ENHANCED API: Starting real-time analysis for ${network} address: ${address}`);
     
     let realData = null;
     let useRealData = false;
@@ -20,7 +19,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
     // Attempt to fetch real blockchain data with better error handling
     try {
       if (network === 'bitcoin') {
-        console.log('📡 Attempting Bitcoin real-time data from Blockstream API...');
+        console.log('🚀 Attempting Bitcoin real-time data from Blockstream API...');
         realData = await realBlockchainAPI.getBitcoinAddressData(address);
         useRealData = true;
         console.log('✅ SUCCESS: Bitcoin real-time data retrieved:', {
@@ -29,8 +28,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
           totalReceived: realData.totalReceived
         });
       } else if (network === 'ethereum') {
-        console.log('📡 Attempting Ethereum real-time data from Etherscan API...');
-        console.log('🔍 Ethereum address detected:', address);
+        console.log('🚀 Attempting Ethereum real-time data from Etherscan API...');
         realData = await realBlockchainAPI.getEthereumAddressData(address);
         useRealData = true;
         console.log('✅ SUCCESS: Ethereum real-time data retrieved:', {
@@ -41,26 +39,22 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       }
     } catch (error) {
       apiError = error;
-      console.error('❌ Real API failed for', network, 'address:', error);
+      console.error(`❌ Real ${network} API failed:`, error);
       
-      // For API key errors, still try to provide meaningful fallback
-      if (error instanceof Error && (
-        error.message.includes('API key') || 
-        error.message.includes('initialization') ||
-        error.message.includes('configure')
-      )) {
-        console.log('🔄 API key issue - providing network-specific fallback data');
-        // Create network-specific fallback data
-        realData = createNetworkSpecificFallback(address, network);
-        useRealData = false;
-      } else {
-        // For other errors, throw to indicate genuine failure
-        throw error;
+      // Only fall back if it's a critical error, not just network issues
+      if (error instanceof Error && error.message.includes('API key')) {
+        console.log('🔄 API key issue - this needs to be configured');
+        throw new Error(`${network} API key not configured. Real-time data unavailable.`);
       }
+      
+      // For other errors, create realistic fallback based on address
+      console.log('🔄 Creating address-specific fallback data...');
+      realData = createNetworkSpecificFallback(address, network);
+      useRealData = false;
     }
     
     // Generate analysis from the data (real or fallback)
-    console.log('🚀 Generating analysis from blockchain data...');
+    console.log('🔬 Generating risk analysis from blockchain data...');
     const riskAnalysis = realBlockchainAPI.calculateRealRiskScore(realData, network);
     const entityAttribution = realBlockchainAPI.deriveEntityAttribution(realData, network);
     const volumeMetrics = realBlockchainAPI.calculateVolumeMetrics(realData, network);
@@ -70,7 +64,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
     let riskScoreAdjustment = 0;
     
     try {
-      console.log('🔍 Real-time sanctions screening in progress...');
+      console.log('🔍 Performing sanctions screening...');
       sanctionsResults = await sanctionsScreeningService.screenEntity(
         entityAttribution.name,
         address
@@ -93,7 +87,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
     const adjustedRiskScore = Math.min(10, baseRiskScore + riskScoreAdjustment);
     const adjustedRiskLevel = adjustedRiskScore >= 7 ? 'High' : adjustedRiskScore >= 4 ? 'Medium' : 'Low';
     
-    // Build response with proper network-specific data
+    // Build comprehensive response with proper network-specific data
     const enhancedResponse: WalletRiskResponse = {
       address,
       network,
@@ -171,7 +165,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       processing_time_ms: processingTime,
       explanation: useRealData 
         ? `✅ REAL-TIME ANALYSIS: Live ${network} blockchain data from ${network === 'bitcoin' ? 'Blockstream API' : 'Etherscan API'}. Balance: ${realData.balance?.toFixed(6)} ${network.toUpperCase()}, Transactions: ${realData.transactionCount || realData.transactions?.length || 0}${sanctionsResults.length > 0 ? ` | SANCTIONS: ${sanctionsResults.length} matches found` : ' | SANCTIONS: Clean'}. This analysis uses verified blockchain data and real-time sanctions screening.`
-        : `⚠️ FALLBACK ANALYSIS: ${network} blockchain APIs unavailable. Using network-specific fallback data for address ${address}. Risk analysis based on address format and known patterns.`,
+        : `⚠️ FALLBACK ANALYSIS: ${network} blockchain APIs unavailable (${apiError?.message || 'Unknown error'}). Using address-specific fallback data for ${address}. Risk analysis based on address patterns and network characteristics.`,
       risk_score_breakdown: {
         transaction_volume: { score: Math.min((realData.transactionCount || 0) / 100, 1) },
         balance_analysis: { score: Math.min((realData.balance || 0) / 10, 1) },
@@ -186,7 +180,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       }
     };
     
-    console.log('🎯 FINAL RESULT: Analysis complete');
+    console.log('🎯 ANALYSIS COMPLETE: Enhanced response generated');
     console.log('📊 Final response summary:', {
       address: enhancedResponse.address,
       network: enhancedResponse.network,
@@ -199,12 +193,12 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
     return enhancedResponse;
     
   } catch (error) {
-    console.error('❌ ANALYSIS FAILED:', error);
+    console.error('❌ ENHANCED API FAILED:', error);
     
-    // If all else fails, use the old mock API as last resort
-    console.log('🔄 Falling back to mock API as last resort');
+    // Only use the old mock API as absolute last resort
+    console.log('🔄 Using mock API as absolute last resort');
     const fallbackResult = await analyzeWalletRisk(address);
-    console.log('📊 Fallback result returned');
+    console.log('📊 Mock fallback result returned');
     return fallbackResult;
   }
 };

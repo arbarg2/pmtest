@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Real-time blockchain API integration service - PRODUCTION GRADE
@@ -84,51 +85,41 @@ class RealBlockchainAPI {
   private readonly BLOCKSTREAM_BASE_URL = 'https://blockstream.info/api';
   private etherscanApiKey: string | null = null;
   private apiKeyInitialized = false;
-  private initializationPromise: Promise<void> | null = null;
 
   constructor() {
-    // Don't initialize immediately to avoid blocking
+    // Initialize API key immediately
+    this.initializeApiKey().catch(error => {
+      console.error('Failed to initialize API key:', error);
+    });
   }
 
   private async initializeApiKey(): Promise<void> {
     if (this.apiKeyInitialized) return;
     
-    // Use singleton pattern to avoid multiple simultaneous initialization attempts
-    if (this.initializationPromise) {
-      return this.initializationPromise;
-    }
-
-    this.initializationPromise = this._performInitialization();
-    return this.initializationPromise;
-  }
-
-  private async _performInitialization(): Promise<void> {
     try {
-      console.log('🔑 Initializing API keys from Supabase...');
+      console.log('🔑 Initializing Etherscan API key...');
       
-      const { data, error } = await supabase.functions.invoke('get-api-keys');
-      
-      if (error) {
-        console.error('❌ Failed to load API keys from Supabase:', error);
-        throw new Error(`API key initialization failed: ${error.message}`);
-      }
-      
-      if (data?.etherscanApiKey) {
-        this.etherscanApiKey = data.etherscanApiKey;
-        console.log('✅ Etherscan API key loaded successfully');
-      } else {
-        console.warn('⚠️ Etherscan API key not found in response:', data);
-        // Set a default key for testing - user should configure their own
+      // Try to get from Supabase secrets first
+      try {
+        const { data, error } = await supabase.functions.invoke('get-api-keys');
+        
+        if (!error && data?.etherscanApiKey) {
+          this.etherscanApiKey = data.etherscanApiKey;
+          console.log('✅ Etherscan API key loaded from Supabase');
+        } else {
+          console.warn('⚠️ Could not load API key from Supabase, using fallback');
+          // Use a demo key for testing
+          this.etherscanApiKey = 'YourApiKey';
+        }
+      } catch (supabaseError) {
+        console.warn('⚠️ Supabase API key fetch failed, using fallback:', supabaseError);
         this.etherscanApiKey = 'YourApiKey';
       }
       
       this.apiKeyInitialized = true;
+      console.log('✅ API key initialization complete');
     } catch (error) {
       console.error('❌ API key initialization failed:', error);
-      this.apiKeyInitialized = false;
-      this.initializationPromise = null; // Reset to allow retry
-      
-      // Set a default key for testing
       this.etherscanApiKey = 'YourApiKey';
       this.apiKeyInitialized = true;
     }
@@ -152,12 +143,13 @@ class RealBlockchainAPI {
       
       // Get address info with timeout
       const addressController = new AbortController();
-      const addressTimeout = setTimeout(() => addressController.abort(), 8000);
+      const addressTimeout = setTimeout(() => addressController.abort(), 10000);
       
       const addressResponse = await fetch(`${this.BLOCKSTREAM_BASE_URL}/address/${address}`, {
         signal: addressController.signal,
         headers: {
-          'User-Agent': 'Rian-Blockchain-Intelligence/1.0'
+          'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
+          'Accept': 'application/json'
         }
       });
       
@@ -171,21 +163,24 @@ class RealBlockchainAPI {
       }
       
       const addressInfo: BlockstreamAddressInfo = await addressResponse.json();
+      console.log('📊 Bitcoin address info received:', addressInfo);
       
       // Get transactions with timeout and limit to first 25 for performance
       const txController = new AbortController();
-      const txTimeout = setTimeout(() => txController.abort(), 8000);
+      const txTimeout = setTimeout(() => txController.abort(), 10000);
       
       const txResponse = await fetch(`${this.BLOCKSTREAM_BASE_URL}/address/${address}/txs`, {
         signal: txController.signal,
         headers: {
-          'User-Agent': 'Rian-Blockchain-Intelligence/1.0'
+          'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
+          'Accept': 'application/json'
         }
       });
       
       clearTimeout(txTimeout);
       
       const transactions: BlockstreamTransaction[] = txResponse.ok ? await txResponse.json() : [];
+      console.log(`📊 Bitcoin transactions received: ${transactions.length}`);
       
       const totalStats = {
         funded: addressInfo.chain_stats.funded_txo_sum + addressInfo.mempool_stats.funded_txo_sum,
@@ -238,28 +233,37 @@ class RealBlockchainAPI {
 
     try {
       console.log(`🔍 [ETHEREUM LIVE] Fetching real-time data for: ${address}`);
+      console.log(`🔑 Using API key: ${this.etherscanApiKey.substring(0, 8)}...`);
       
       // Validate Ethereum address format
       if (!this.isValidEthereumAddress(address)) {
         throw new Error(`Invalid Ethereum address format: ${address}`);
       }
       
-      const timeout = 8000; // 8 seconds for better performance
+      const timeout = 12000; // 12 seconds timeout
       
       // Get ETH balance with timeout
       const balanceController = new AbortController();
       const balanceTimeout = setTimeout(() => balanceController.abort(), timeout);
       
-      const balanceResponse = await fetch(
-        `${this.ETHERSCAN_BASE_URL}?module=account&action=balance&address=${address}&tag=latest&apikey=${this.etherscanApiKey}`,
-        { 
-          signal: balanceController.signal,
-          headers: { 'User-Agent': 'Rian-Blockchain-Intelligence/1.0' }
+      const balanceUrl = `${this.ETHERSCAN_BASE_URL}?module=account&action=balance&address=${address}&tag=latest&apikey=${this.etherscanApiKey}`;
+      console.log('📡 Fetching balance from:', balanceUrl.replace(this.etherscanApiKey, 'API_KEY'));
+      
+      const balanceResponse = await fetch(balanceUrl, { 
+        signal: balanceController.signal,
+        headers: { 
+          'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
+          'Accept': 'application/json'
         }
-      );
+      });
       clearTimeout(balanceTimeout);
       
+      if (!balanceResponse.ok) {
+        throw new Error(`Etherscan balance API HTTP error: ${balanceResponse.status}`);
+      }
+      
       const balanceData: EtherscanResponse = await balanceResponse.json();
+      console.log('📊 Balance response:', balanceData);
       
       if (balanceData.status !== '1') {
         throw new Error(`Etherscan balance API error: ${balanceData.message}`);
@@ -269,31 +273,39 @@ class RealBlockchainAPI {
       const txController = new AbortController();
       const txTimeout = setTimeout(() => txController.abort(), timeout);
       
-      const txResponse = await fetch(
-        `${this.ETHERSCAN_BASE_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`,
-        { 
-          signal: txController.signal,
-          headers: { 'User-Agent': 'Rian-Blockchain-Intelligence/1.0' }
+      const txUrl = `${this.ETHERSCAN_BASE_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
+      console.log('📡 Fetching transactions from:', txUrl.replace(this.etherscanApiKey, 'API_KEY'));
+      
+      const txResponse = await fetch(txUrl, { 
+        signal: txController.signal,
+        headers: { 
+          'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
+          'Accept': 'application/json'
         }
-      );
+      });
       clearTimeout(txTimeout);
       
-      const txData: EtherscanResponse = await txResponse.json();
+      const txData: EtherscanResponse = txResponse.ok ? await txResponse.json() : { status: '0', message: 'Request failed', result: [] };
+      console.log('📊 Transactions response status:', txData.status, 'count:', txData.result?.length || 0);
       
       // Get token transfers with timeout and limit to 25 for performance
       const tokenController = new AbortController();
       const tokenTimeout = setTimeout(() => tokenController.abort(), timeout);
       
-      const tokenResponse = await fetch(
-        `${this.ETHERSCAN_BASE_URL}?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`,
-        { 
-          signal: tokenController.signal,
-          headers: { 'User-Agent': 'Rian-Blockchain-Intelligence/1.0' }
+      const tokenUrl = `${this.ETHERSCAN_BASE_URL}?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
+      console.log('📡 Fetching token transfers from:', tokenUrl.replace(this.etherscanApiKey, 'API_KEY'));
+      
+      const tokenResponse = await fetch(tokenUrl, { 
+        signal: tokenController.signal,
+        headers: { 
+          'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
+          'Accept': 'application/json'
         }
-      );
+      });
       clearTimeout(tokenTimeout);
       
-      const tokenData: EtherscanResponse = await tokenResponse.json();
+      const tokenData: EtherscanResponse = tokenResponse.ok ? await tokenResponse.json() : { status: '0', message: 'Request failed', result: [] };
+      console.log('📊 Token transfers response status:', tokenData.status, 'count:', tokenData.result?.length || 0);
 
       const result = {
         balance: parseInt(balanceData.result) / 1e18, // Convert wei to ETH
@@ -485,7 +497,6 @@ class RealBlockchainAPI {
     }
   }
 
-  // Calculate volume metrics from real data
   calculateVolumeMetrics(networkData: any, network: 'bitcoin' | 'ethereum') {
     const balance = networkData.balance || 0;
     const txCount = networkData.transactionCount || networkData.transactions?.length || 0;
