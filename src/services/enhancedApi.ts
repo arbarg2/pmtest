@@ -1,5 +1,5 @@
 
-import { WalletRiskResponse, analyzeWalletRisk } from './api';
+import { WalletRiskResponse } from './api';
 import { realBlockchainAPI } from './realBlockchainAPI';
 import { sanctionsScreeningService } from './sanctionsApi';
 
@@ -77,10 +77,22 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       risk_level: adjustedRiskLevel,
       risk_factors: {
         ...riskAnalysis.riskFactors,
-        sanctions_exposure: sanctionsResults.length > 0,
-        sanctions_matches: sanctionsResults.length > 0,
-        sanctions_confidence: sanctionsResults.length > 0 && 
-          Math.max(...sanctionsResults.map(r => r.confidence_score)) > 0.7
+        sanctions_exposure: {
+          present: sanctionsResults.length > 0,
+          severity: sanctionsResults.length > 0 ? 'high' : 'low',
+          description: sanctionsResults.length > 0 ? 'Sanctions matches detected' : 'No sanctions exposure'
+        },
+        sanctions_matches: {
+          present: sanctionsResults.length > 0,
+          severity: sanctionsResults.length > 0 ? 'high' : 'low',
+          description: `${sanctionsResults.length} sanctions matches found`
+        },
+        sanctions_confidence: {
+          present: sanctionsResults.length > 0 && 
+            Math.max(...sanctionsResults.map(r => r.confidence_score)) > 0.7,
+          severity: 'high',
+          description: 'High confidence sanctions match detected'
+        }
       },
       entity_attribution: entityAttribution,
       volume_metrics: {
@@ -96,10 +108,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
           direction: 'outbound',
           timestamp: network === 'bitcoin'
             ? new Date((realData.transactions[0]?.status?.block_time || Date.now() / 1000) * 1000).toISOString()
-            : new Date(parseInt(realData.transactions[0]?.timeStamp || '0') * 1000).toISOString(),
-          counterparty: network === 'bitcoin' 
-            ? realData.transactions[0]?.vout?.[0]?.scriptpubkey_address 
-            : realData.transactions[0]?.to
+            : new Date(parseInt(realData.transactions[0]?.timeStamp || '0') * 1000).toISOString()
         } : undefined
       },
       geographic_risk: {
@@ -108,6 +117,9 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
         geo_risk_score: 0.1
       },
       temporal_patterns: {
+        activity_periods: [],
+        peak_activity: 'Unknown',
+        recent_activity: true,
         first_seen: realData.transactions && realData.transactions.length > 0
           ? network === 'bitcoin'
             ? new Date((realData.transactions[realData.transactions.length - 1]?.status?.block_time || Date.now() / 1000) * 1000).toISOString()
@@ -120,15 +132,23 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
           : new Date().toISOString()
       },
       behavioral_classification: {
+        category: entityAttribution.type,
+        confidence: entityAttribution.confidence,
+        patterns: [],
         primary_type: entityAttribution.type,
         confidence_level: Math.round(entityAttribution.confidence * 100)
       },
       sanctions_exposure: {
+        direct_exposure: sanctionsResults.filter(r => r.match_type === 'direct').length > 0,
+        indirect_exposure: sanctionsResults.filter(r => r.match_type === '1-hop').length > 0,
+        risk_score: sanctionsResults.length > 0 ? 
+          Math.max(...sanctionsResults.map(r => r.confidence_score)) : 0,
+        matched_entities: sanctionsResults.map(r => ({
+          name: r.entity_name,
+          list: r.source_list,
+          confidence: r.confidence_score
+        })),
         direct_hits: sanctionsResults.filter(r => r.match_type === 'direct').length,
-        indirect_exposure: {
-          one_hop: sanctionsResults.filter(r => r.match_type === '1-hop').length,
-          two_hop: 0
-        },
         proximity_score: sanctionsResults.length > 0 ? 
           Math.max(...sanctionsResults.map(r => r.confidence_score)) : 0
       },

@@ -1,3 +1,4 @@
+
 export interface WalletRiskResponse {
   address: string;
   network: string;
@@ -38,6 +39,8 @@ export interface WalletRiskResponse {
       list: string;
       confidence: number;
     }>;
+    direct_hits?: number;
+    proximity_score?: number;
   };
   top_counterparties?: Array<{
     entity_name: string;
@@ -53,11 +56,15 @@ export interface WalletRiskResponse {
     }>;
     peak_activity: string;
     recent_activity: boolean;
+    first_seen?: string;
+    last_active?: string;
   };
   behavioral_classification?: {
     category: string;
     confidence: number;
     patterns: string[];
+    primary_type?: string;
+    confidence_level?: number;
   };
   risk_factors?: {
     [key: string]: {
@@ -71,4 +78,25 @@ export interface WalletRiskResponse {
   processing_time_ms?: number;
   recordId?: string;
   isTemporary?: boolean;
+  is_case?: boolean;
+  case_id?: string;
+  case_status?: string;
+  case_created_at?: string;
+  risk_score_breakdown?: {
+    [key: string]: {
+      score: number;
+    };
+  };
+  asset_breakdown?: {
+    [key: string]: {
+      balance: number;
+      usd_value: number;
+    };
+  };
 }
+
+// Export the analyzeWalletRisk function that other files are trying to import
+export const analyzeWalletRisk = async (address: string): Promise<WalletRiskResponse> => {
+  // This is a placeholder - the actual implementation should use enhancedApi
+  throw new Error('Use analyzeWalletWithRealData from enhancedApi instead');
+};
