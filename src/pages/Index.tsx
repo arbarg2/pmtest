@@ -15,10 +15,9 @@ import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const { recordId } = useParams();
   const [walletAddress, setWalletAddress] = useState('');
-  const { isAnalyzing, analysisData, analyzeWallet, generateReport, setAnalysisData } = useWalletAnalysis();
+  const { isAnalyzing, analyzeWallet, generateReport } = useWalletAnalysis();
   const [isLoadingWalletData, setIsLoadingWalletData] = useState(false);
   const [recordNotFound, setRecordNotFound] = useState(false);
   const [walletData, setWalletData] = useState<any>(null);
@@ -29,16 +28,7 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
-  // Handle analysis data changes and navigation
-  useEffect(() => {
-    if (analysisData && analysisData.recordId && !recordId) {
-      // Navigate to the results page immediately when we have analysis data
-      console.log('🚀 Navigating to results with recordId:', analysisData.recordId);
-      navigate(`/record/${analysisData.recordId}`, { replace: true });
-    }
-  }, [analysisData, recordId, navigate]);
-
-  // Handle navigation state data and record loading
+  // Handle record loading when recordId is present
   useEffect(() => {
     if (recordId && user) {
       console.log('🔄 Loading data for record:', recordId);
@@ -92,7 +82,16 @@ const Index = () => {
     if (!walletAddress.trim()) return;
     
     console.log('🚀 Starting analysis for:', walletAddress);
-    await analyzeWallet(walletAddress);
+    try {
+      const result = await analyzeWallet(walletAddress);
+      if (result && result.recordId) {
+        // Navigate immediately to the results page
+        console.log('🚀 Navigating to results with recordId:', result.recordId);
+        navigate(`/record/${result.recordId}`, { replace: true });
+      }
+    } catch (error) {
+      console.error('Analysis failed:', error);
+    }
   };
 
   const handleBack = () => {

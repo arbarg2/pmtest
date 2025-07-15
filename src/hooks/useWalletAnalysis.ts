@@ -40,7 +40,7 @@ export const useWalletAnalysis = () => {
     try {
       console.log('🔍 Starting wallet analysis for:', trimmedAddress);
       
-      // Get analysis result
+      // Get analysis result quickly
       const result = await analyzeWalletWithRealData(trimmedAddress);
       console.log('✅ Analysis complete:', result.address);
       
@@ -53,7 +53,7 @@ export const useWalletAnalysis = () => {
         network: normalizedNetwork
       };
       
-      // Store in database immediately
+      // Store in database and get record ID immediately
       console.log('💾 Storing analysis result in database...');
       const dbResult = await supabaseLookupRecords.createLookupRecord({
         wallet_address: trimmedAddress,
@@ -89,7 +89,7 @@ export const useWalletAnalysis = () => {
       if (dbResult.success && dbResult.record) {
         console.log('✅ Database record created with ID:', dbResult.record.record_id);
         
-        // Update the analysis data with the database record ID
+        // Set analysis data with record ID for immediate navigation
         const finalResult = {
           ...enhancedResult,
           recordId: dbResult.record.record_id
@@ -101,9 +101,10 @@ export const useWalletAnalysis = () => {
           title: "Analysis Complete",
           description: "Wallet analysis completed successfully!",
         });
+        
+        return finalResult; // Return for immediate use
       } else {
         console.error('❌ Failed to store analysis result:', dbResult.error);
-        // Still set the analysis data even if DB storage fails
         setAnalysisData(enhancedResult);
         
         toast({
@@ -111,6 +112,8 @@ export const useWalletAnalysis = () => {
           description: "Analysis completed but database storage failed.",
           variant: "destructive",
         });
+        
+        return enhancedResult;
       }
       
     } catch (error) {
@@ -121,6 +124,8 @@ export const useWalletAnalysis = () => {
         description: "Failed to analyze wallet. Please try again.",
         variant: "destructive",
       });
+      
+      throw error; // Re-throw for calling component to handle
     } finally {
       setIsAnalyzing(false);
     }
