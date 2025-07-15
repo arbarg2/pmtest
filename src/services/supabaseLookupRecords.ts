@@ -66,8 +66,9 @@ class SupabaseLookupRecordsService {
         };
       }
 
-      // Let the database trigger handle record_id generation
+      // Include record_id as empty string - the database trigger will generate it
       const insertData = {
+        record_id: '', // Database trigger will override this
         wallet_address: data.wallet_address,
         network: data.network,
         risk_score: Number(data.risk_score),
