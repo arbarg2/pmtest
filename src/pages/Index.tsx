@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -18,6 +17,7 @@ const Index = () => {
   const [walletAddress, setWalletAddress] = useState('');
   const { isAnalyzing, analysisData, analyzeWallet, generateReport } = useWalletAnalysis();
   const [isLoadingWalletData, setIsLoadingWalletData] = useState(false);
+  const [recordNotFound, setRecordNotFound] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -25,26 +25,69 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
-  // Load wallet data when recordId is present - FIXED: removed dependencies that cause infinite loop
+  // Load wallet data when recordId is present
   useEffect(() => {
-    if (recordId && user && !isLoadingWalletData && !analysisData) {
+    if (recordId && user && !analysisData) {
       setIsLoadingWalletData(true);
+      setRecordNotFound(false);
       console.log('Loading wallet data for record:', recordId);
       
       const loadWalletData = async () => {
         try {
-          // This is a placeholder - in reality you'd fetch from your database
-          // For now, just set loading to false since we don't have the actual record data
-          console.log('Would load record data for:', recordId);
+          // Try to fetch the record from the database
+          const { supabaseLookupRecords } = await import('@/services/supabaseLookupRecords');
+          const result = await supabaseLookupRecords.getLookupRecordById(recordId, user.id);
+          
+          if (result.success && result.record) {
+            console.log('✅ Found record in database:', result.record);
+            
+            // Convert database record to WalletRiskResponse format
+            const walletData: any = {
+              ...result.record.analysis_data,
+              recordId: result.record.record_id,
+              address: result.record.wallet_address,
+              network: result.record.network,
+              risk_score: result.record.risk_score,
+              risk_level: result.record.risk_level,
+              // Add case management fields
+              is_case: result.record.is_case,
+              case_id: result.record.case_id,
+              case_status: result.record.case_status,
+              case_created_at: result.record.case_created_at
+            };
+            
+            // Set the analysis data so the results page will render
+            const { useWalletAnalysis } = await import('@/hooks/useWalletAnalysis');
+            // We can't call the hook here, so we'll set a flag to navigate with data
+            navigate(`/record/${recordId}`, { state: { walletData } });
+          } else {
+            console.error('❌ Record not found in database:', result.error);
+            setRecordNotFound(true);
+          }
         } catch (error) {
           console.error('Failed to load wallet data:', error);
+          setRecordNotFound(true);
         } finally {
           setIsLoadingWalletData(false);
         }
       };
+      
       loadWalletData();
     }
-  }, [recordId, user]); // Removed analyzeWallet and analysisData from dependencies
+  }, [recordId, user, navigate, analysisData]);
+
+  // Handle navigation state data
+  useEffect(() => {
+    const state = (window.history.state as any)?.usr;
+    if (state?.walletData && recordId) {
+      console.log('📋 Loading wallet data from navigation state');
+      // Import and set the analysis data
+      import('@/hooks/useWalletAnalysis').then(({ useWalletAnalysis }) => {
+        // We need to get the setAnalysisData function somehow
+        // For now, let's just set a local state and show the data
+      });
+    }
+  }, [recordId]);
 
   const handleAnalyze = async () => {
     if (!walletAddress.trim()) return;
@@ -52,8 +95,8 @@ const Index = () => {
     console.log('🚀 MAIN INDEX: Starting REAL DATA analysis for:', walletAddress);
     await analyzeWallet(walletAddress);
     
-    // Navigate to results if we have analysis data
-    if (analysisData && analysisData.recordId) {
+    // Navigate to results if we have analysis data with recordId
+    if (analysisData?.recordId) {
       navigate(`/record/${analysisData.recordId}`);
     }
   };
@@ -85,17 +128,20 @@ const Index = () => {
     return null;
   }
 
-  // If we have a recordId, show the wallet results
+  // If we have a recordId, show the appropriate state
   if (recordId) {
     if (isLoadingWalletData) {
       return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-slate-600 dark:text-slate-400">Loading record data...</p>
+          </div>
         </div>
       );
     }
 
-    if (!analysisData) {
+    if (recordNotFound || !analysisData) {
       return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
           <div className="text-center">

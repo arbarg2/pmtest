@@ -64,7 +64,20 @@ export const useWalletAnalysis = () => {
       const normalizedNetwork = normalizeNetwork(result.network);
       console.log('🔧 Normalized network:', normalizedNetwork);
       
-      // Store in database with proper error handling
+      // Create the enhanced result with normalized network
+      const enhancedResult = {
+        ...result,
+        network: normalizedNetwork
+      };
+      
+      // Show success toast immediately
+      const { title, description } = getAnalysisToastMessages(result);
+      toast({ title, description });
+      
+      // Set analysis data immediately so user can see results
+      setAnalysisData(enhancedResult);
+      
+      // Store in database with proper error handling (don't block UI)
       console.log('💾 Storing analysis result in database...');
       const dbResult = await storeAnalysisResult(trimmedAddress, normalizedNetwork, result, user.id);
       console.log('Database storage result:', dbResult.success ? 'SUCCESS' : 'FAILED', dbResult.error || '');
@@ -72,29 +85,25 @@ export const useWalletAnalysis = () => {
       if (dbResult.success && dbResult.record) {
         console.log('✅ Successfully created database record with ID:', dbResult.record.record_id);
         
-        // Add the database record ID to the result
-        const enhancedResult = {
-          ...result,
-          recordId: dbResult.record.record_id,
-          network: normalizedNetwork
+        // Update the analysis data with the database record ID
+        const finalResult = {
+          ...enhancedResult,
+          recordId: dbResult.record.record_id
         };
         
-        setAnalysisData(enhancedResult);
+        setAnalysisData(finalResult);
         
         // Calculate and store risk factors in background (don't block UI)
         processRiskFactorsInBackground(dbResult.record.id, result, trimmedAddress, normalizedNetwork)
           .catch(error => console.error('Background risk factors processing failed:', error));
         
-        // Show success toast
-        const { title, description } = getAnalysisToastMessages(result);
-        toast({ title, description });
+        toast({
+          title: "Analysis Complete",
+          description: `Analysis completed and saved with ID: ${dbResult.record.record_id}`,
+        });
       } else {
         console.error('❌ Failed to store analysis result:', dbResult.error);
         // Still show the analysis even if DB storage fails
-        setAnalysisData({
-          ...result,
-          network: normalizedNetwork
-        });
         toast({
           title: "Analysis Complete - Storage Warning",
           description: `Analysis completed but record storage failed. Data is temporary only.`,
