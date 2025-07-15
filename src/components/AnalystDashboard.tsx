@@ -17,7 +17,7 @@ import {
   Filter
 } from 'lucide-react';
 import { InvestigationRecordsTable } from '@/components/InvestigationRecordsTable';
-import { CaseManagement } from '@/components/CaseManagement';
+import CaseManagement from '@/components/CaseManagement';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { useNavigate } from 'react-router-dom';
@@ -219,10 +219,76 @@ export function AnalystDashboard() {
         </TabsContent>
 
         <TabsContent value="cases" className="space-y-4">
-          <CaseManagement 
-            cases={cases}
-            onRefresh={refreshData}
-          />
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Active Cases</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">{cases.length} cases</Badge>
+                  <Button variant="outline" size="sm" onClick={() => navigate('/case-management')}>
+                    <Eye className="w-4 h-4 mr-2" />
+                    View All Cases
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {cases.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-600 mb-2">No Active Cases</h3>
+                  <p className="text-gray-500">
+                    Create cases from investigation records to enable full case management features.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {cases.slice(0, 5).map((caseRecord) => (
+                    <div key={caseRecord.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-4 mb-2">
+                            <h3 className="font-medium text-slate-900">{caseRecord.case_id}</h3>
+                            <Badge variant={caseRecord.case_status === 'open' ? 'default' : 
+                                         caseRecord.case_status === 'escalated' ? 'destructive' : 'secondary'}>
+                              {caseRecord.case_status}
+                            </Badge>
+                            <Badge variant={caseRecord.risk_level === 'High' ? 'destructive' : 
+                                         caseRecord.risk_level === 'Medium' ? 'secondary' : 'outline'}>
+                              {caseRecord.risk_level} Risk
+                            </Badge>
+                          </div>
+                          
+                          <div className="text-sm text-slate-600 space-y-1">
+                            <div className="flex items-center space-x-4">
+                              <span className="font-mono">{caseRecord.wallet_address}</span>
+                              <span className="uppercase text-xs bg-slate-100 px-2 py-1 rounded">
+                                {caseRecord.network}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Clock className="w-4 h-4" />
+                              <span>Created: {new Date(caseRecord.case_created_at).toLocaleDateString()}</span>
+                              <span>Risk Score: {caseRecord.risk_score}/10</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <Button 
+                          onClick={() => navigate(`/record/${caseRecord.id}`)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Case
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
