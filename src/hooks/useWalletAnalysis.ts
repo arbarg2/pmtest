@@ -5,8 +5,6 @@ import { analyzeWalletWithRealData } from '@/services/enhancedApi';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateWalletAddress, normalizeNetwork } from '@/services/walletValidation';
-import { storeAnalysisResult, processRiskFactorsInBackground } from '@/services/walletAnalysisDatabase';
-import { getAnalysisToastMessages, getErrorToastMessages } from '@/services/walletAnalysisNotifications';
 
 export const useWalletAnalysis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -44,17 +42,12 @@ export const useWalletAnalysis = () => {
       // Show progress toast
       toast({
         title: "Analysis Starting",
-        description: "Fetching real-time blockchain data...",
+        description: "Fetching blockchain data...",
       });
       
-      // Use enhanced API with REAL blockchain data
+      // Get analysis result quickly
       const result = await analyzeWalletWithRealData(trimmedAddress);
-      console.log('✅ Analysis result received:', {
-        address: result.address,
-        network: result.network,
-        risk_score: result.risk_score,
-        risk_level: result.risk_level
-      });
+      console.log('✅ Analysis complete:', result.address);
       
       // Fix network normalization
       const normalizedNetwork = normalizeNetwork(result.network);
@@ -65,52 +58,46 @@ export const useWalletAnalysis = () => {
         network: normalizedNetwork
       };
       
-      // Set analysis data immediately so user can see results
+      // Set analysis data immediately
       setAnalysisData(enhancedResult);
       
-      // Show immediate success
+      // Show success immediately
       toast({
         title: "Analysis Complete",
         description: "Wallet analysis completed successfully!",
       });
       
-      // Store in database in background (non-blocking)
-      console.log('💾 Storing analysis result in database...');
-      
-      // Use Promise.resolve to handle database storage without blocking
-      Promise.resolve().then(async () => {
-        try {
-          const dbResult = await storeAnalysisResult(trimmedAddress, normalizedNetwork, result, user.id);
-          
-          if (dbResult.success && dbResult.record) {
-            console.log('✅ Database record created with ID:', dbResult.record.record_id);
-            
-            // Update the analysis data with the database record ID
-            const finalResult = {
-              ...enhancedResult,
-              recordId: dbResult.record.record_id
-            };
-            
-            setAnalysisData(finalResult);
-            
-            // Process risk factors in background
-            processRiskFactorsInBackground(dbResult.record.id, result, trimmedAddress, normalizedNetwork)
-              .catch(error => console.error('Background risk factors processing failed:', error));
-          } else {
-            console.error('❌ Failed to store analysis result:', dbResult.error);
-          }
-        } catch (dbError) {
-          console.error('Database storage error:', dbError);
-        }
+      // Store in database in background - don't wait for this
+      import('@/services/walletAnalysisDatabase').then(({ storeAnalysisResult, processRiskFactorsInBackground }) => {
+        storeAnalysisResult(trimmedAddress, normalizedNetwork, result, user.id)
+          .then((dbResult) => {
+            if (dbResult.success && dbResult.record) {
+              console.log('✅ Database record created with ID:', dbResult.record.record_id);
+              
+              // Update the analysis data with the database record ID
+              const finalResult = {
+                ...enhancedResult,
+                recordId: dbResult.record.record_id
+              };
+              
+              setAnalysisData(finalResult);
+              
+              // Process risk factors in background
+              processRiskFactorsInBackground(dbResult.record.id, result, trimmedAddress, normalizedNetwork)
+                .catch(error => console.error('Background processing failed:', error));
+            } else {
+              console.error('❌ Failed to store analysis result:', dbResult.error);
+            }
+          })
+          .catch(dbError => console.error('Database storage error:', dbError));
       });
       
     } catch (error) {
       console.error('❌ Analysis failed:', error);
       
-      const { errorTitle, errorMessage } = getErrorToastMessages(error as Error);
       toast({
-        title: errorTitle,
-        description: errorMessage,
+        title: "Analysis Failed",
+        description: "Failed to analyze wallet. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -125,7 +112,6 @@ export const useWalletAnalysis = () => {
         description: "Creating comprehensive analysis report...",
       });
       
-      // For now, just show success - actual report generation would happen here
       setTimeout(() => {
         toast({
           title: "Report Generated",

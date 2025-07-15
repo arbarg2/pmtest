@@ -28,6 +28,18 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
+  // Handle analysis data changes and navigation
+  useEffect(() => {
+    if (analysisData && analysisData.recordId && !recordId) {
+      // Navigate to the results page immediately when we have analysis data
+      console.log('🚀 Navigating to results with recordId:', analysisData.recordId);
+      navigate(`/record/${analysisData.recordId}`, { 
+        state: { walletData: analysisData },
+        replace: true
+      });
+    }
+  }, [analysisData, recordId, navigate]);
+
   // Handle navigation state data and record loading
   useEffect(() => {
     if (recordId && user) {
@@ -54,19 +66,16 @@ const Index = () => {
           if (result.success && result.record) {
             console.log('✅ Found record in database:', result.record);
             
-            // Safely construct wallet data with proper type checking
             const loadedWalletData = {
               recordId: result.record.record_id,
               address: result.record.wallet_address,
               network: result.record.network,
               risk_score: result.record.risk_score,
               risk_level: result.record.risk_level,
-              // Add case management fields
               is_case: result.record.is_case,
               case_id: result.record.case_id,
               case_status: result.record.case_status,
               case_created_at: result.record.case_created_at,
-              // Safely spread analysis_data if it exists and is an object
               ...(result.record.analysis_data && 
                   typeof result.record.analysis_data === 'object' && 
                   result.record.analysis_data !== null 
@@ -97,13 +106,6 @@ const Index = () => {
     
     console.log('🚀 Starting analysis for:', walletAddress);
     await analyzeWallet(walletAddress);
-    
-    // Navigate to results if we have analysis data with recordId
-    if (analysisData?.recordId) {
-      navigate(`/record/${analysisData.recordId}`, { 
-        state: { walletData: analysisData }
-      });
-    }
   };
 
   const handleBack = () => {

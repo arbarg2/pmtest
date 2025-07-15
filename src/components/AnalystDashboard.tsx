@@ -4,22 +4,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Shield, 
   AlertTriangle, 
   CheckCircle, 
   Clock, 
-  Search,
   TrendingUp,
   Calendar,
   Eye,
   Folder,
   Database
 } from 'lucide-react';
-import { caseManagementService } from '@/services/caseManagement';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DashboardStats {
   totalCases: number;
@@ -32,14 +30,16 @@ interface DashboardStats {
 
 interface CaseRecord {
   id: string;
-  case_id: string;
+  record_id: string;
   wallet_address: string;
   network: string;
   risk_level: string;
   risk_score: number;
   case_status: string;
-  case_created_at: string;
+  created_at: string;
   is_case: boolean;
+  case_id?: string;
+  case_created_at?: string;
 }
 
 export const AnalystDashboard = () => {
@@ -54,7 +54,6 @@ export const AnalystDashboard = () => {
   const [recentCases, setRecentCases] = useState<CaseRecord[]>([]);
   const [recentRecords, setRecentRecords] = useState<CaseRecord[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
-  const [searchTerm, setSearchTerm] = useState('');
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -68,39 +67,50 @@ export const AnalystDashboard = () => {
     if (!user) return;
 
     try {
-      // Fetch cases
-      const casesResult = await caseManagementService.getCases(user.id);
-      const recordsResult = await caseManagementService.getRecords(user.id);
+      // Fetch all investigation records for the user
+      const { data: records, error } = await supabase
+        .from('investigation_records')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-      if (casesResult.success && recordsResult.success) {
-        const cases = casesResult.cases || [];
-        const records = recordsResult.records || [];
-
-        // Calculate stats
-        const totalCases = cases.length;
-        const openCases = cases.filter(c => c.case_status === 'open').length;
-        const escalatedCases = cases.filter(c => c.case_status === 'escalated').length;
-        const totalRecords = records.length;
-        const highRiskRecords = records.filter(r => r.risk_level === 'High').length;
-        const recentActivity = records.filter(r => {
-          const created = new Date(r.created_at);
-          const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-          return created > weekAgo;
-        }).length;
-
-        setStats({
-          totalCases,
-          openCases,
-          escalatedCases,
-          totalRecords,
-          highRiskRecords,
-          recentActivity
-        });
-
-        // Set recent data (limit to 5 for dashboard)
-        setRecentCases(cases.slice(0, 5));
-        setRecentRecords(records.slice(0, 5));
+      if (error) {
+        console.error('Error fetching records:', error);
+        return;
       }
+
+      const allRecords = records || [];
+      
+      // Filter cases (records where is_case is true)
+      const cases = allRecords.filter(r => r.is_case === true);
+      
+      // Calculate stats
+      const totalCases = cases.length;
+      const openCases = cases.filter(c => c.case_status === 'open').length;
+      const escalatedCases = cases.filter(c => c.case_status === 'escalated').length;
+      const totalRecords = allRecords.length;
+      const highRiskRecords = allRecords.filter(r => r.risk_level === 'High').length;
+      
+      // Recent activity (last 7 days)
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const recentActivity = allRecords.filter(r => {
+        const created = new Date(r.created_at);
+        return created > weekAgo;
+      }).length;
+
+      setStats({
+        totalCases,
+        openCases,
+        escalatedCases,
+        totalRecords,
+        highRiskRecords,
+        recentActivity
+      });
+
+      // Set recent data (limit to 5 for dashboard)
+      setRecentCases(cases.slice(0, 5));
+      setRecentRecords(allRecords.slice(0, 5));
+      
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     }
@@ -126,7 +136,7 @@ export const AnalystDashboard = () => {
   };
 
   const handleViewRecord = (record: CaseRecord) => {
-    navigate(`/record/${record.id}`);
+    navigate(`/record/${record.record_id}`);
   };
 
   const handleViewAllCases = () => {
@@ -251,9 +261,9 @@ export const AnalystDashboard = () => {
                       <div key={case_.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
-                            <span className="font-medium text-sm">{case_.case_id}</span>
-                            <Badge className={getStatusColor(case_.case_status)}>
-                              {case_.case_status}
+                            <span className="font-medium text-sm">{case_.case_id || case_.record_id}</span>
+                            <Badge className={getStatusColor(case_.case_status || 'open')}>
+                              {case_.case_status || 'open'}
                             </Badge>
                           </div>
                           <p className="text-xs text-slate-600 font-mono">
@@ -288,7 +298,7 @@ export const AnalystDashboard = () => {
                       <div key={record.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
-                            <span className="font-medium text-sm">ID: {record.id}</span>
+                            <span className="font-medium text-sm">{record.record_id}</span>
                             <Badge className={getRiskColor(record.risk_level)}>
                               {record.risk_level}
                             </Badge>
