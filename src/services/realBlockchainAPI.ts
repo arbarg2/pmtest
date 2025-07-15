@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Real-time blockchain API integration service - PRODUCTION GRADE
@@ -84,12 +85,30 @@ class RealBlockchainAPI {
   private readonly BLOCKSTREAM_BASE_URL = 'https://blockstream.info/api';
   private etherscanApiKey: string | null = null;
   private apiKeyInitialized = false;
+  
+  // Rate limiting
+  private lastRequestTime = 0;
+  private readonly MIN_REQUEST_INTERVAL = 1000; // 1 second between requests
 
   constructor() {
     // Initialize API key immediately
     this.initializeApiKey().catch(error => {
       console.error('Failed to initialize API key:', error);
     });
+  }
+
+  // Rate limiting helper
+  private async enforceRateLimit(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.MIN_REQUEST_INTERVAL) {
+      const waitTime = this.MIN_REQUEST_INTERVAL - timeSinceLastRequest;
+      console.log(`⏱️ Rate limiting: waiting ${waitTime}ms before next request`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    this.lastRequestTime = Date.now();
   }
 
   private async initializeApiKey(): Promise<void> {
@@ -129,6 +148,8 @@ class RealBlockchainAPI {
     transactionCount: number;
     transactions: any[];
   }> {
+    await this.enforceRateLimit();
+    
     try {
       console.log(`🔍 [BITCOIN LIVE] Fetching real-time data for: ${address}`);
       
@@ -139,7 +160,10 @@ class RealBlockchainAPI {
       
       // Get address info with timeout
       const addressController = new AbortController();
-      const addressTimeout = setTimeout(() => addressController.abort(), 15000);
+      const addressTimeout = setTimeout(() => {
+        console.log('⚠️ Bitcoin address request timeout, aborting...');
+        addressController.abort();
+      }, 20000); // Increased timeout to 20 seconds
       
       const addressResponse = await fetch(`${this.BLOCKSTREAM_BASE_URL}/address/${address}`, {
         signal: addressController.signal,
@@ -155,6 +179,9 @@ class RealBlockchainAPI {
         if (addressResponse.status === 404) {
           throw new Error(`Bitcoin address not found: ${address}`);
         }
+        if (addressResponse.status === 429) {
+          throw new Error(`Rate limited by Blockstream API. Please wait before retrying.`);
+        }
         throw new Error(`Blockstream API error: ${addressResponse.status} - ${addressResponse.statusText}`);
       }
       
@@ -162,8 +189,13 @@ class RealBlockchainAPI {
       console.log('📊 Bitcoin address info received:', addressInfo);
       
       // Get transactions with timeout and limit to first 25 for performance
+      await this.enforceRateLimit(); // Rate limit between requests
+      
       const txController = new AbortController();
-      const txTimeout = setTimeout(() => txController.abort(), 15000);
+      const txTimeout = setTimeout(() => {
+        console.log('⚠️ Bitcoin transactions request timeout, aborting...');
+        txController.abort();
+      }, 20000);
       
       const txResponse = await fetch(`${this.BLOCKSTREAM_BASE_URL}/address/${address}/txs`, {
         signal: txController.signal,
@@ -200,6 +232,9 @@ class RealBlockchainAPI {
       
       return result;
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Bitcoin API request timed out. Please try again.');
+      }
       console.error('❌ [BITCOIN] Live API failed:', error);
       throw error; // Don't fall back, throw the error
     }
@@ -214,6 +249,7 @@ class RealBlockchainAPI {
   }> {
     // Ensure API key is initialized
     await this.initializeApiKey();
+    await this.enforceRateLimit();
 
     if (!this.etherscanApiKey) {
       throw new Error('Etherscan API key not configured. Please check Supabase secrets configuration.');
@@ -228,11 +264,14 @@ class RealBlockchainAPI {
         throw new Error(`Invalid Ethereum address format: ${address}`);
       }
       
-      const timeout = 15000; // 15 seconds timeout
+      const timeout = 20000; // 20 seconds timeout
       
       // Get ETH balance with timeout
       const balanceController = new AbortController();
-      const balanceTimeout = setTimeout(() => balanceController.abort(), timeout);
+      const balanceTimeout = setTimeout(() => {
+        console.log('⚠️ Ethereum balance request timeout, aborting...');
+        balanceController.abort();
+      }, timeout);
       
       const balanceUrl = `${this.ETHERSCAN_BASE_URL}?module=account&action=balance&address=${address}&tag=latest&apikey=${this.etherscanApiKey}`;
       console.log('📡 Fetching balance from Etherscan API...');
@@ -258,8 +297,13 @@ class RealBlockchainAPI {
       }
 
       // Get transaction history with timeout and limit to 25 for performance
+      await this.enforceRateLimit();
+      
       const txController = new AbortController();
-      const txTimeout = setTimeout(() => txController.abort(), timeout);
+      const txTimeout = setTimeout(() => {
+        console.log('⚠️ Ethereum transactions request timeout, aborting...');
+        txController.abort();
+      }, timeout);
       
       const txUrl = `${this.ETHERSCAN_BASE_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
       console.log('📡 Fetching transactions from Etherscan API...');
@@ -277,8 +321,13 @@ class RealBlockchainAPI {
       console.log('📊 Transactions response status:', txData.status, 'count:', txData.result?.length || 0);
       
       // Get token transfers with timeout and limit to 25 for performance
+      await this.enforceRateLimit();
+      
       const tokenController = new AbortController();
-      const tokenTimeout = setTimeout(() => tokenController.abort(), timeout);
+      const tokenTimeout = setTimeout(() => {
+        console.log('⚠️ Ethereum token transfers request timeout, aborting...');
+        tokenController.abort();
+      }, timeout);
       
       const tokenUrl = `${this.ETHERSCAN_BASE_URL}?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
       console.log('📡 Fetching token transfers from Etherscan API...');
@@ -310,6 +359,9 @@ class RealBlockchainAPI {
       
       return result;
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Ethereum API request timed out. Please try again.');
+      }
       console.error('❌ [ETHEREUM] Live API failed:', error);
       throw error; // Don't fall back, throw the error
     }

@@ -25,19 +25,17 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
-  // Load wallet data when recordId is present
+  // Load wallet data when recordId is present - FIXED: removed dependencies that cause infinite loop
   useEffect(() => {
-    if (recordId && user) {
+    if (recordId && user && !isLoadingWalletData && !analysisData) {
       setIsLoadingWalletData(true);
-      // In a real app, you would fetch the wallet data from the database using the recordId
-      // For now, we'll simulate this by generating mock data
+      console.log('Loading wallet data for record:', recordId);
+      
       const loadWalletData = async () => {
         try {
           // This is a placeholder - in reality you'd fetch from your database
-          const mockWallet = await analyzeWallet('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa');
-          if (analysisData) {
-            analysisData.recordId = recordId;
-          }
+          // For now, just set loading to false since we don't have the actual record data
+          console.log('Would load record data for:', recordId);
         } catch (error) {
           console.error('Failed to load wallet data:', error);
         } finally {
@@ -46,7 +44,7 @@ const Index = () => {
       };
       loadWalletData();
     }
-  }, [recordId, user, analyzeWallet, analysisData]);
+  }, [recordId, user]); // Removed analyzeWallet and analysisData from dependencies
 
   const handleAnalyze = async () => {
     if (!walletAddress.trim()) return;
