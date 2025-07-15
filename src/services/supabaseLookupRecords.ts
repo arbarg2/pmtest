@@ -110,53 +110,89 @@ class SupabaseLookupRecordsService {
         analysis_data: insertData.analysis_data ? 'Present' : 'Missing'
       });
 
-      // Use a more robust insert approach with better error handling
-      const { data: record, error } = await supabase
-        .from('investigation_records')
-        .insert(insertData)
-        .select()
-        .single();
+      // Retry logic for handling race conditions
+      const maxRetries = 3;
+      let lastError = null;
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        console.log(`🔄 Database insert attempt ${attempt}/${maxRetries}`);
+        
+        try {
+          const { data: record, error } = await supabase
+            .from('investigation_records')
+            .insert(insertData)
+            .select()
+            .single();
 
-      if (error) {
-        console.error('❌ Supabase insert error details:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
+          if (error) {
+            lastError = error;
+            
+            // If it's a duplicate key error and we have retries left, try again
+            if (error.code === '23505' && error.message.includes('investigation_records_record_id_key') && attempt < maxRetries) {
+              console.log(`⚠️ Duplicate key error on attempt ${attempt}, retrying...`);
+              // Add a small delay to reduce race condition chances
+              await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+              continue;
+            }
+            
+            // For other errors or final attempt, break out of retry loop
+            break;
+          }
+
+          if (!record) {
+            console.error('❌ No record returned from insert');
+            return { success: false, error: 'No record returned from database' };
+          }
+
+          console.log('✅ Successfully created record:', {
+            id: record.id,
+            record_id: record.record_id,
+            wallet_address: record.wallet_address,
+            network: record.network,
+            risk_level: record.risk_level
+          });
+          
+          return { success: true, record };
+        } catch (networkError) {
+          console.error(`❌ Network error on attempt ${attempt}:`, networkError);
+          lastError = networkError;
+          
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 200 * attempt));
+            continue;
+          }
+        }
+      }
+
+      // If we get here, all retries failed
+      if (lastError) {
+        console.error('❌ All retry attempts failed. Last error:', {
+          code: lastError.code,
+          message: lastError.message,
+          details: lastError.details,
+          hint: lastError.hint
         });
         
-        // Check for duplicate key error specifically
-        if (error.code === '23505' && error.message.includes('investigation_records_record_id_key')) {
+        // Check for specific error types and provide helpful messages
+        if (lastError.code === '23505' && lastError.message.includes('investigation_records_record_id_key')) {
           return {
             success: false,
-            error: 'Duplicate record ID generated, please retry',
+            error: 'Unable to generate unique record ID after multiple attempts. Please try again.',
             code: '23505',
-            details: error
+            details: lastError,
+            isRetryable: true
           };
         }
         
         return { 
           success: false, 
-          error: `Database error: ${error.message}`, 
-          details: error,
-          code: error.code 
+          error: `Database error: ${lastError.message}`, 
+          details: lastError,
+          code: lastError.code 
         };
       }
-
-      if (!record) {
-        console.error('❌ No record returned from insert');
-        return { success: false, error: 'No record returned from database' };
-      }
-
-      console.log('✅ Successfully created record:', {
-        id: record.id,
-        record_id: record.record_id,
-        wallet_address: record.wallet_address,
-        network: record.network,
-        risk_level: record.risk_level
-      });
       
-      return { success: true, record };
+      return { success: false, error: 'Unknown error occurred during record creation' };
     } catch (error) {
       console.error('❌ Exception in createLookupRecord:', error);
       
@@ -166,7 +202,8 @@ class SupabaseLookupRecordsService {
           success: false, 
           error: 'Network error: Failed to connect to database',
           code: 'NETWORK_ERROR',
-          details: error
+          details: error,
+          isRetryable: true
         };
       }
       

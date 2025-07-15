@@ -115,6 +115,9 @@ export const useWalletAnalysis = () => {
           console.error('❌ Database storage failed:', dbResult?.error || 'Unknown error');
           console.error('❌ Full error details:', dbResult);
           
+          // Check if it's a retryable error
+          const isRetryable = dbResult?.isRetryable || false;
+          
           // Generate a temporary ID for navigation purposes
           const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           const finalResult = {
@@ -128,7 +131,7 @@ export const useWalletAnalysis = () => {
           
           toast({
             title: "Analysis Complete",
-            description: `Analysis completed but couldn't save to database: ${dbResult?.error || 'Unknown error'}`,
+            description: `Analysis completed but couldn't save to database${isRetryable ? ' (retryable error)' : ''}: ${dbResult?.error || 'Unknown error'}`,
             variant: "destructive",
           });
           
