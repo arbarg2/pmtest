@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
-import { User, Settings, LogOut, Moon, Sun } from 'lucide-react';
+import { User, Settings, LogOut, Moon, Sun, Database, FileSpreadsheet, Upload } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
@@ -60,10 +60,23 @@ export function UserDropdown() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+          <Database className="mr-2 h-4 w-4" />
+          <span>Dashboard</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/bulk-analysis')}>
+          <Upload className="mr-2 h-4 w-4" />
+          <span>Bulk Analysis</span>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate('/cases')}>
           <Settings className="mr-2 h-4 w-4" />
           <span>Case Management</span>
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/api-docs')}>
+          <FileSpreadsheet className="mr-2 h-4 w-4" />
+          <span>API Documentation</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem className="flex items-center justify-between">
           <div className="flex items-center">
             {isDarkMode ? (

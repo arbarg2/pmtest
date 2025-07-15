@@ -64,7 +64,7 @@ const Index = () => {
   };
 
   const handleBack = () => {
-    navigate('/');
+    navigate('/dashboard');
   };
 
   const handleViewFlow = () => {
@@ -155,32 +155,28 @@ const Index = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Wallet Lookup Panel */}
-          <div className="lg:col-span-1">
-            <Card className="bg-white/90 backdrop-blur shadow-lg border-0 sticky top-24">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Shield className="w-5 h-5 mr-2 text-primary" />
-                  Wallet Analysis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <WalletLookupPanel
-                  walletAddress={walletAddress}
-                  setWalletAddress={setWalletAddress}
-                  onAnalyze={handleAnalyze}
-                  isAnalyzing={isAnalyzing}
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Dashboard */}
-          <div className="lg:col-span-2">
-            <AnalystDashboard />
-          </div>
+        {/* Top Row - Wallet Analysis Panel */}
+        <div className="mb-8">
+          <Card className="bg-white/90 backdrop-blur shadow-lg border-0">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Shield className="w-5 h-5 mr-2 text-primary" />
+                Wallet Analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WalletLookupPanel
+                walletAddress={walletAddress}
+                setWalletAddress={setWalletAddress}
+                onAnalyze={handleAnalyze}
+                isAnalyzing={isAnalyzing}
+              />
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Main Dashboard Content */}
+        <AnalystDashboard />
       </div>
     </div>
   );
