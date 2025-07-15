@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileCase, AlertTriangle, CheckCircle, Clock, Users } from 'lucide-react';
+import { Folder, AlertTriangle, CheckCircle, Clock, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { caseManagementService } from '@/services/caseManagement';
 import { useAuth } from '@/contexts/AuthContext';
@@ -127,7 +127,7 @@ const CaseManagement = ({
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center">
-              <FileCase className="w-5 h-5 mr-2 text-primary" />
+              <Folder className="w-5 h-5 mr-2 text-primary" />
               Record Management
             </div>
             <Badge variant="outline" className="bg-slate-100 text-slate-700">
@@ -153,7 +153,7 @@ const CaseManagement = ({
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <FileCase className="w-4 h-4" />
+                  <Folder className="w-4 h-4" />
                   <span>Create Case</span>
                 </div>
               )}
@@ -175,7 +175,7 @@ const CaseManagement = ({
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center">
-            <FileCase className="w-5 h-5 mr-2 text-primary" />
+            <Folder className="w-5 h-5 mr-2 text-primary" />
             Case Management
           </div>
           <Badge className={getStatusColor(caseStatus)}>

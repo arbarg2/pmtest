@@ -62,6 +62,12 @@ export interface WalletRiskResponse {
   risk_score_breakdown?: Record<string, any>;
   asset_breakdown?: Record<string, any>;
   recordId?: string;
+  
+  // Case management fields
+  is_case?: boolean;
+  case_id?: string;
+  case_status?: string;
+  case_created_at?: string;
 }
 
 // MOCK DATA FALLBACK - Used when real APIs are unavailable or in development mode

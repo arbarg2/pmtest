@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileCase, Search, Filter, Eye, Calendar, Shield, ArrowLeft } from 'lucide-react';
+import { Folder, Search, Filter, Eye, Calendar, Shield, ArrowLeft } from 'lucide-react';
 import { caseManagementService } from '@/services/caseManagement';
 import { UserDropdown } from '@/components/UserDropdown';
 
@@ -127,7 +126,7 @@ const CaseManagementPage = () => {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div className="flex items-center">
-                <FileCase className="w-6 h-6 mr-3 text-primary" />
+                <Folder className="w-6 h-6 mr-3 text-primary" />
                 <div>
                   <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
                     Case Management Dashboard
@@ -153,7 +152,7 @@ const CaseManagementPage = () => {
                   <p className="text-sm text-slate-600">Total Cases</p>
                   <p className="text-3xl font-bold text-slate-900">{cases.length}</p>
                 </div>
-                <FileCase className="w-8 h-8 text-primary" />
+                <Folder className="w-8 h-8 text-primary" />
               </div>
             </CardContent>
           </Card>
@@ -257,7 +256,7 @@ const CaseManagementPage = () => {
           <CardContent>
             {filteredCases.length === 0 ? (
               <div className="text-center py-12">
-                <FileCase className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <Folder className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-600 mb-2">No Cases Found</h3>
                 <p className="text-gray-500">
                   {cases.length === 0 
