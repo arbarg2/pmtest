@@ -39,7 +39,7 @@ const Index = () => {
       const loadWalletData = async () => {
         try {
           // First check if this is a temporary result from current session
-          if (analysisData && analysisData.recordId === recordId && analysisData.isTemporary) {
+          if (analysisData && analysisData.recordId === recordId && analysisData.isTemporary === true) {
             console.log('✅ Using temporary analysis data from current session');
             setWalletData(analysisData);
             setRecordNotFound(false);
