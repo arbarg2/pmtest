@@ -38,18 +38,33 @@ export interface CreateLookupRecordData {
 class SupabaseLookupRecordsService {
   async createLookupRecord(data: CreateLookupRecordData, userId: string) {
     try {
-      console.log('Creating lookup record with data:', { 
+      console.log('🔄 Creating lookup record with detailed data:', { 
         wallet_address: data.wallet_address, 
         network: data.network, 
         userId,
         risk_level: data.risk_level,
-        risk_score: data.risk_score
+        risk_score: data.risk_score,
+        processing_time_ms: data.processing_time_ms
       });
+
+      // Validate required fields
+      if (!data.wallet_address || !data.network || !userId) {
+        const missingFields = [];
+        if (!data.wallet_address) missingFields.push('wallet_address');
+        if (!data.network) missingFields.push('network');
+        if (!userId) missingFields.push('userId');
+        
+        console.error('❌ Missing required fields:', missingFields);
+        return { 
+          success: false, 
+          error: `Missing required fields: ${missingFields.join(', ')}` 
+        };
+      }
 
       // Ensure network value matches database constraint
       const validNetworks = ['ethereum', 'bitcoin', 'ETH', 'BTC', 'eth', 'btc'];
       if (!validNetworks.includes(data.network)) {
-        console.error('Invalid network value:', data.network);
+        console.error('❌ Invalid network value:', data.network);
         return { 
           success: false, 
           error: `Invalid network value: ${data.network}. Must be one of: ${validNetworks.join(', ')}` 
@@ -59,19 +74,29 @@ class SupabaseLookupRecordsService {
       // Ensure risk level is valid
       const validRiskLevels = ['Low', 'Medium', 'High', 'Critical'];
       if (!validRiskLevels.includes(data.risk_level)) {
-        console.error('Invalid risk level:', data.risk_level);
+        console.error('❌ Invalid risk level:', data.risk_level);
         return { 
           success: false, 
           error: `Invalid risk level: ${data.risk_level}. Must be one of: ${validRiskLevels.join(', ')}` 
         };
       }
 
+      // Validate risk score is a number
+      const riskScore = Number(data.risk_score);
+      if (isNaN(riskScore) || riskScore < 0 || riskScore > 10) {
+        console.error('❌ Invalid risk score:', data.risk_score);
+        return { 
+          success: false, 
+          error: `Invalid risk score: ${data.risk_score}. Must be a number between 0 and 10` 
+        };
+      }
+
       // Include record_id as empty string - the database trigger will generate it
       const insertData = {
         record_id: '', // Database trigger will override this
-        wallet_address: data.wallet_address,
+        wallet_address: data.wallet_address.trim(),
         network: data.network,
-        risk_score: Number(data.risk_score),
+        risk_score: riskScore,
         risk_level: data.risk_level,
         analysis_data: data.risk_assessment,
         analyst_notes: data.analyst_fields.case_notes || '',
@@ -80,7 +105,10 @@ class SupabaseLookupRecordsService {
         user_id: userId
       };
 
-      console.log('Inserting data into database:', insertData);
+      console.log('📤 Sending insert data to database:', {
+        ...insertData,
+        analysis_data: insertData.analysis_data ? 'Present' : 'Missing'
+      });
 
       // Use a more robust insert approach with better error handling
       const { data: record, error } = await supabase
@@ -90,35 +118,47 @@ class SupabaseLookupRecordsService {
         .single();
 
       if (error) {
-        console.error('Supabase insert error:', error);
+        console.error('❌ Supabase insert error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
         
         // Check for duplicate key error specifically
         if (error.code === '23505' && error.message.includes('investigation_records_record_id_key')) {
           return {
             success: false,
             error: 'Duplicate record ID generated, please retry',
-            code: 'DUPLICATE_KEY',
+            code: '23505',
             details: error
           };
         }
         
         return { 
           success: false, 
-          error: error.message, 
+          error: `Database error: ${error.message}`, 
           details: error,
           code: error.code 
         };
       }
 
       if (!record) {
-        console.error('No record returned from insert');
+        console.error('❌ No record returned from insert');
         return { success: false, error: 'No record returned from database' };
       }
 
-      console.log('Successfully created record:', record);
+      console.log('✅ Successfully created record:', {
+        id: record.id,
+        record_id: record.record_id,
+        wallet_address: record.wallet_address,
+        network: record.network,
+        risk_level: record.risk_level
+      });
+      
       return { success: true, record };
     } catch (error) {
-      console.error('Error in createLookupRecord:', error);
+      console.error('❌ Exception in createLookupRecord:', error);
       
       // Handle network errors specifically
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {

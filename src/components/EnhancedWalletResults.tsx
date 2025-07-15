@@ -88,9 +88,21 @@ const EnhancedWalletResults = ({
                 <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
                   {isCase ? 'Case Investigation Report' : 'Wallet Intelligence Report'}
                 </h1>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {isCase ? `Case ID: ${caseId}` : 'Lookup Record'} • Comprehensive blockchain forensics analysis
-                </p>
+                <div className="flex items-center space-x-4 text-sm text-slate-500 dark:text-slate-400">
+                  <span>
+                    {isCase ? `Case ID: ${caseId}` : `Lookup ID: ${wallet.lookupId || recordId || 'N/A'}`}
+                  </span>
+                  <span>•</span>
+                  <span>Comprehensive blockchain forensics analysis</span>
+                  {wallet.isTemporary && (
+                    <>
+                      <span>•</span>
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">
+                        Temporary Record (Database Save Failed)
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
             <Button onClick={onGenerateReport} className="bg-accent hover:bg-accent/90 text-white">
