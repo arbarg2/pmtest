@@ -11,13 +11,22 @@ export const storeAnalysisResult = async (
 ) => {
   console.log(`Creating database record for ${address} with network: ${network}, user: ${userId}`);
   
-  // Add retry logic with exponential backoff
-  const maxRetries = 3;
+  // Add retry logic with exponential backoff for both API and DB issues
+  const maxRetries = 5;
   let lastError: any = null;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`Database storage attempt ${attempt}/${maxRetries}`);
+      
+      // Add a small random delay to prevent race conditions
+      if (attempt > 1) {
+        const baseDelay = Math.pow(2, attempt - 1) * 1000; // 2s, 4s, 8s, 16s
+        const jitter = Math.random() * 1000; // Add up to 1s random delay
+        const waitTime = baseDelay + jitter;
+        console.log(`Waiting ${Math.round(waitTime)}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
       
       const dbResult = await supabaseLookupRecords.createLookupRecord({
         wallet_address: address,
@@ -57,28 +66,39 @@ export const storeAnalysisResult = async (
         lastError = dbResult.error;
         console.error(`❌ Database storage failed on attempt ${attempt}:`, dbResult.error);
         
-        // If it's a duplicate key error, don't retry
-        if (typeof dbResult.error === 'string' && dbResult.error.includes('duplicate key')) {
-          console.log('Duplicate key error detected, not retrying');
-          break;
+        // Check for specific error types
+        if (typeof dbResult.error === 'string') {
+          // If it's a duplicate key error, try a few more times but don't give up immediately
+          if (dbResult.error.includes('duplicate key')) {
+            console.log('Duplicate key error detected, will retry with delay');
+            if (attempt >= maxRetries) {
+              console.log('Max retries reached for duplicate key, giving up');
+              break;
+            }
+            continue;
+          }
+          
+          // If it's a network error, retry
+          if (dbResult.error.includes('Failed to fetch') || dbResult.error.includes('network')) {
+            console.log('Network error detected, retrying...');
+            continue;
+          }
         }
         
-        // Wait before retrying (exponential backoff)
-        if (attempt < maxRetries) {
-          const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-          console.log(`Waiting ${waitTime}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
-        }
+        // For other errors, still retry but log them
+        console.log('Other database error, retrying...');
       }
     } catch (error) {
       lastError = error;
       console.error(`❌ Database storage error on attempt ${attempt}:`, error);
       
-      // Wait before retrying (exponential backoff)
-      if (attempt < maxRetries) {
-        const waitTime = Math.pow(2, attempt) * 1000;
-        console.log(`Waiting ${waitTime}ms before retry...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
+      // Check if it's a network-related error
+      if (error instanceof Error && 
+          (error.message.includes('Failed to fetch') || 
+           error.message.includes('NetworkError') ||
+           error.message.includes('net::ERR_'))) {
+        console.log('Network error in catch block, retrying...');
+        continue;
       }
     }
   }
@@ -101,7 +121,7 @@ export const processRiskFactorsInBackground = async (
     console.log('Calculating risk factors for record:', recordId);
     await Promise.race([
       riskFactorsService.calculateAndStoreRiskFactors(recordId, result),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Risk factors timeout')), 10000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Risk factors timeout')), 15000))
     ]);
     
     // Enhanced sanctions screening
@@ -111,12 +131,12 @@ export const processRiskFactorsInBackground = async (
     if (result.entity_attribution?.name) {
       sanctionsResults = await Promise.race([
         riskFactorsService.screenEntityByName(result.entity_attribution.name, address),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Sanctions timeout')), 10000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Sanctions timeout')), 15000))
       ]) as any[];
     } else {
       sanctionsResults = await Promise.race([
         riskFactorsService.screenSanctions(address, network),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Sanctions timeout')), 10000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Sanctions timeout')), 15000))
       ]) as any[];
     }
     

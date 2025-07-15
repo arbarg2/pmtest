@@ -77,36 +77,53 @@ export const useWalletAnalysis = () => {
       // Set analysis data immediately so user can see results
       setAnalysisData(enhancedResult);
       
-      // Store in database with proper error handling (don't block UI)
+      // Store in database with improved error handling (don't block UI)
       console.log('💾 Storing analysis result in database...');
-      const dbResult = await storeAnalysisResult(trimmedAddress, normalizedNetwork, result, user.id);
-      console.log('Database storage result:', dbResult.success ? 'SUCCESS' : 'FAILED', dbResult.error || '');
+      
+      // Show immediate success, then try database storage
+      toast({
+        title: "Analysis Complete",
+        description: "Processing complete! Saving to database...",
+      });
+      
+      try {
+        const dbResult = await storeAnalysisResult(trimmedAddress, normalizedNetwork, result, user.id);
+        console.log('Database storage result:', dbResult.success ? 'SUCCESS' : 'FAILED', dbResult.error || '');
 
-      if (dbResult.success && dbResult.record) {
-        console.log('✅ Successfully created database record with ID:', dbResult.record.record_id);
-        
-        // Update the analysis data with the database record ID
-        const finalResult = {
-          ...enhancedResult,
-          recordId: dbResult.record.record_id
-        };
-        
-        setAnalysisData(finalResult);
-        
-        // Calculate and store risk factors in background (don't block UI)
-        processRiskFactorsInBackground(dbResult.record.id, result, trimmedAddress, normalizedNetwork)
-          .catch(error => console.error('Background risk factors processing failed:', error));
-        
+        if (dbResult.success && dbResult.record) {
+          console.log('✅ Successfully created database record with ID:', dbResult.record.record_id);
+          
+          // Update the analysis data with the database record ID
+          const finalResult = {
+            ...enhancedResult,
+            recordId: dbResult.record.record_id
+          };
+          
+          setAnalysisData(finalResult);
+          
+          // Calculate and store risk factors in background (don't block UI)
+          processRiskFactorsInBackground(dbResult.record.id, result, trimmedAddress, normalizedNetwork)
+            .catch(error => console.error('Background risk factors processing failed:', error));
+          
+          toast({
+            title: "Analysis Saved",
+            description: `Analysis saved successfully with ID: ${dbResult.record.record_id}`,
+          });
+        } else {
+          console.error('❌ Failed to store analysis result:', dbResult.error);
+          
+          // Show warning but don't fail the analysis
+          toast({
+            title: "Analysis Complete - Storage Issue",
+            description: "Analysis completed but couldn't save to database. Results are available temporarily.",
+            variant: "destructive",
+          });
+        }
+      } catch (dbError) {
+        console.error('Database storage threw an error:', dbError);
         toast({
-          title: "Analysis Complete",
-          description: `Analysis completed and saved with ID: ${dbResult.record.record_id}`,
-        });
-      } else {
-        console.error('❌ Failed to store analysis result:', dbResult.error);
-        // Still show the analysis even if DB storage fails
-        toast({
-          title: "Analysis Complete - Storage Warning",
-          description: `Analysis completed but record storage failed. Data is temporary only.`,
+          title: "Analysis Complete - Storage Error",
+          description: "Analysis completed but database save failed. Results are temporary.",
           variant: "destructive",
         });
       }
