@@ -8,9 +8,10 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
   const startTime = Date.now();
   
   try {
-    // Detect network from address format
+    // Detect network from address format with improved validation
     const network = detectNetworkFromAddress(address);
     console.log(`🔍 PRIORITY: Real-time analysis for ${network} address: ${address}`);
+    console.log(`🔧 Detected network: ${network}`);
     
     let realData = null;
     let useRealData = false;
@@ -29,16 +30,18 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
         });
       } else if (network === 'ethereum') {
         console.log('📡 Attempting Ethereum real-time data from Etherscan API...');
+        console.log('🔍 Ethereum address detected:', address);
         realData = await realBlockchainAPI.getEthereumAddressData(address);
         useRealData = true;
         console.log('✅ SUCCESS: Ethereum real-time data retrieved:', {
           balance: realData.balance,
-          txCount: realData.transactionCount
+          txCount: realData.transactionCount,
+          tokenTransfers: realData.tokenTransfers?.length || 0
         });
       }
     } catch (error) {
       apiError = error;
-      console.error('❌ Real API failed:', error);
+      console.error('❌ Real API failed for', network, 'address:', error);
       
       // For API key errors, throw immediately to alert user
       if (error instanceof Error && (
@@ -124,14 +127,14 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
                 tx.vout ? Math.max(...tx.vout.map((out: any) => out.value / 100000000)) : 0
               ))
             : Math.max(...realData.transactions.map((tx: any) => 
-                parseInt(tx.value) / 1e18
+                parseInt(tx.value || '0') / 1e18
               )),
           direction: 'outbound',
           timestamp: network === 'bitcoin'
-            ? new Date(realData.transactions[0]?.status?.block_time * 1000).toISOString()
-            : new Date(parseInt(realData.transactions[0]?.timeStamp) * 1000).toISOString(),
+            ? new Date((realData.transactions[0]?.status?.block_time || Date.now() / 1000) * 1000).toISOString()
+            : new Date(parseInt(realData.transactions[0]?.timeStamp || '0') * 1000).toISOString(),
           counterparty: network === 'bitcoin' 
-            ? realData.transactions[0]?.vout[0]?.scriptpubkey_address 
+            ? realData.transactions[0]?.vout?.[0]?.scriptpubkey_address 
             : realData.transactions[0]?.to
         } : undefined
       },
@@ -194,6 +197,14 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
     };
     
     console.log('🎯 FINAL RESULT: Real-time analysis complete with live blockchain data');
+    console.log('📊 Final response summary:', {
+      address: enhancedResponse.address,
+      network: enhancedResponse.network,
+      risk_score: enhancedResponse.risk_score,
+      transaction_count: enhancedResponse.transaction_count,
+      balance: realData.balance
+    });
+    
     return enhancedResponse;
     
   } catch (error) {
@@ -209,14 +220,20 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
 };
 
 function detectNetworkFromAddress(address: string): 'bitcoin' | 'ethereum' {
-  // Bitcoin addresses start with 1, 3, or bc1
-  if (address.match(/^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/) || address.startsWith('bc1')) {
-    return 'bitcoin';
-  }
+  console.log('🔍 Detecting network for address:', address);
+  
   // Ethereum addresses are 42 characters starting with 0x
   if (address.match(/^0x[a-fA-F0-9]{40}$/)) {
+    console.log('✅ Detected as Ethereum address');
     return 'ethereum';
   }
-  // Default to bitcoin for ambiguous formats
+  
+  // Bitcoin addresses start with 1, 3, or bc1
+  if (address.match(/^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/) || address.startsWith('bc1')) {
+    console.log('✅ Detected as Bitcoin address');
+    return 'bitcoin';
+  }
+  
+  console.log('⚠️ Unable to detect network, defaulting to bitcoin');
   return 'bitcoin';
 }

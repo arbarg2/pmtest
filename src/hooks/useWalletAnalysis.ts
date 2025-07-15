@@ -39,7 +39,8 @@ export const useWalletAnalysis = () => {
     setIsAnalyzing(true);
     
     try {
-      console.log('Starting enhanced wallet analysis with real-time data for:', trimmedAddress);
+      console.log('🔍 Starting enhanced wallet analysis for:', trimmedAddress);
+      console.log('🔍 Address format validation passed');
       
       // Show progress toast
       toast({
@@ -48,18 +49,28 @@ export const useWalletAnalysis = () => {
       });
       
       // Use enhanced API with real blockchain data
+      console.log('📡 Calling analyzeWalletWithRealData...');
       const result = await analyzeWalletWithRealData(trimmedAddress);
-      console.log('Enhanced analysis result:', result);
+      console.log('✅ Enhanced analysis result received:', {
+        address: result.address,
+        network: result.network,
+        risk_score: result.risk_score,
+        risk_level: result.risk_level,
+        transaction_count: result.transaction_count,
+        explanation: result.explanation?.substring(0, 100) + '...'
+      });
       
       // Fix network normalization
       const normalizedNetwork = normalizeNetwork(result.network);
+      console.log('🔧 Normalized network:', normalizedNetwork);
       
       // Store in database with proper error handling
+      console.log('💾 Storing analysis result in database...');
       const dbResult = await storeAnalysisResult(trimmedAddress, normalizedNetwork, result, user.id);
-      console.log('Database creation result:', dbResult);
+      console.log('Database storage result:', dbResult.success ? 'SUCCESS' : 'FAILED', dbResult.error || '');
 
       if (dbResult.success && dbResult.record) {
-        console.log('Successfully created database record with ID:', dbResult.record.record_id);
+        console.log('✅ Successfully created database record with ID:', dbResult.record.record_id);
         
         // Add the database record ID to the result
         const enhancedResult = {
@@ -71,13 +82,14 @@ export const useWalletAnalysis = () => {
         setAnalysisData(enhancedResult);
         
         // Calculate and store risk factors in background (don't block UI)
-        processRiskFactorsInBackground(dbResult.record.id, result, trimmedAddress, normalizedNetwork);
+        processRiskFactorsInBackground(dbResult.record.id, result, trimmedAddress, normalizedNetwork)
+          .catch(error => console.error('Background risk factors processing failed:', error));
         
         // Show success toast
         const { title, description } = getAnalysisToastMessages(result);
         toast({ title, description });
       } else {
-        console.error('Failed to store analysis result:', dbResult.error);
+        console.error('❌ Failed to store analysis result:', dbResult.error);
         // Still show the analysis even if DB storage fails
         setAnalysisData({
           ...result,
@@ -90,7 +102,14 @@ export const useWalletAnalysis = () => {
         });
       }
     } catch (error) {
-      console.error('Analysis failed:', error);
+      console.error('❌ Analysis failed:', error);
+      
+      // More detailed error logging
+      if (error instanceof Error) {
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
       
       const { errorTitle, errorMessage } = getErrorToastMessages(error as Error);
       toast({
