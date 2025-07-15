@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -41,9 +42,8 @@ const Index = () => {
           if (result.success && result.record) {
             console.log('✅ Found record in database:', result.record);
             
-            // Convert database record to WalletRiskResponse format
-            const walletData: any = {
-              ...result.record.analysis_data,
+            // Safely construct wallet data with proper type checking
+            const walletData = {
               recordId: result.record.record_id,
               address: result.record.wallet_address,
               network: result.record.network,
@@ -53,12 +53,14 @@ const Index = () => {
               is_case: result.record.is_case,
               case_id: result.record.case_id,
               case_status: result.record.case_status,
-              case_created_at: result.record.case_created_at
+              case_created_at: result.record.case_created_at,
+              // Safely spread analysis_data if it exists and is an object
+              ...(result.record.analysis_data && typeof result.record.analysis_data === 'object' && result.record.analysis_data !== null 
+                ? result.record.analysis_data 
+                : {})
             };
             
-            // Set the analysis data so the results page will render
-            const { useWalletAnalysis } = await import('@/hooks/useWalletAnalysis');
-            // We can't call the hook here, so we'll set a flag to navigate with data
+            // Navigate with the wallet data
             navigate(`/record/${recordId}`, { state: { walletData } });
           } else {
             console.error('❌ Record not found in database:', result.error);
@@ -81,11 +83,8 @@ const Index = () => {
     const state = (window.history.state as any)?.usr;
     if (state?.walletData && recordId) {
       console.log('📋 Loading wallet data from navigation state');
-      // Import and set the analysis data
-      import('@/hooks/useWalletAnalysis').then(({ useWalletAnalysis }) => {
-        // We need to get the setAnalysisData function somehow
-        // For now, let's just set a local state and show the data
-      });
+      // The wallet data is already available in the location state
+      // The EnhancedWalletResults component will handle displaying it
     }
   }, [recordId]);
 
@@ -141,7 +140,11 @@ const Index = () => {
       );
     }
 
-    if (recordNotFound || !analysisData) {
+    // Check if we have wallet data from navigation state
+    const navigationState = (window.history.state as any)?.usr;
+    const walletData = navigationState?.walletData || analysisData;
+
+    if (recordNotFound || !walletData) {
       return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
           <div className="text-center">
@@ -162,7 +165,7 @@ const Index = () => {
 
     return (
       <EnhancedWalletResults
-        wallet={analysisData}
+        wallet={walletData}
         onBack={handleBack}
         onViewFlow={handleViewFlow}
         onGenerateReport={handleGenerateReport}
