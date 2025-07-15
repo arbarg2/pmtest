@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,11 +14,13 @@ import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { recordId } = useParams();
   const [walletAddress, setWalletAddress] = useState('');
-  const { isAnalyzing, analysisData, analyzeWallet, generateReport } = useWalletAnalysis();
+  const { isAnalyzing, analysisData, analyzeWallet, generateReport, setAnalysisData } = useWalletAnalysis();
   const [isLoadingWalletData, setIsLoadingWalletData] = useState(false);
   const [recordNotFound, setRecordNotFound] = useState(false);
+  const [walletData, setWalletData] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -26,16 +28,26 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
-  // Load wallet data when recordId is present
+  // Handle navigation state data and record loading
   useEffect(() => {
-    if (recordId && user && !analysisData) {
+    if (recordId && user) {
+      console.log('🔄 Loading data for record:', recordId);
+      
+      // Check if we have wallet data from navigation state first
+      const navigationState = location.state as any;
+      if (navigationState?.walletData) {
+        console.log('📋 Loading wallet data from navigation state');
+        setWalletData(navigationState.walletData);
+        setRecordNotFound(false);
+        return;
+      }
+
+      // If no navigation state data, try to load from database
       setIsLoadingWalletData(true);
       setRecordNotFound(false);
-      console.log('Loading wallet data for record:', recordId);
       
       const loadWalletData = async () => {
         try {
-          // Try to fetch the record from the database
           const { supabaseLookupRecords } = await import('@/services/supabaseLookupRecords');
           const result = await supabaseLookupRecords.getLookupRecordById(recordId, user.id);
           
@@ -43,7 +55,7 @@ const Index = () => {
             console.log('✅ Found record in database:', result.record);
             
             // Safely construct wallet data with proper type checking
-            const walletData = {
+            const loadedWalletData = {
               recordId: result.record.record_id,
               address: result.record.wallet_address,
               network: result.record.network,
@@ -55,13 +67,15 @@ const Index = () => {
               case_status: result.record.case_status,
               case_created_at: result.record.case_created_at,
               // Safely spread analysis_data if it exists and is an object
-              ...(result.record.analysis_data && typeof result.record.analysis_data === 'object' && result.record.analysis_data !== null 
-                ? result.record.analysis_data 
-                : {})
+              ...(result.record.analysis_data && 
+                  typeof result.record.analysis_data === 'object' && 
+                  result.record.analysis_data !== null 
+                  ? result.record.analysis_data 
+                  : {})
             };
             
-            // Navigate with the wallet data
-            navigate(`/record/${recordId}`, { state: { walletData } });
+            setWalletData(loadedWalletData);
+            setRecordNotFound(false);
           } else {
             console.error('❌ Record not found in database:', result.error);
             setRecordNotFound(true);
@@ -76,27 +90,19 @@ const Index = () => {
       
       loadWalletData();
     }
-  }, [recordId, user, navigate, analysisData]);
-
-  // Handle navigation state data
-  useEffect(() => {
-    const state = (window.history.state as any)?.usr;
-    if (state?.walletData && recordId) {
-      console.log('📋 Loading wallet data from navigation state');
-      // The wallet data is already available in the location state
-      // The EnhancedWalletResults component will handle displaying it
-    }
-  }, [recordId]);
+  }, [recordId, user, location.state]);
 
   const handleAnalyze = async () => {
     if (!walletAddress.trim()) return;
     
-    console.log('🚀 MAIN INDEX: Starting REAL DATA analysis for:', walletAddress);
+    console.log('🚀 Starting analysis for:', walletAddress);
     await analyzeWallet(walletAddress);
     
     // Navigate to results if we have analysis data with recordId
     if (analysisData?.recordId) {
-      navigate(`/record/${analysisData.recordId}`);
+      navigate(`/record/${analysisData.recordId}`, { 
+        state: { walletData: analysisData }
+      });
     }
   };
 
@@ -105,7 +111,6 @@ const Index = () => {
   };
 
   const handleViewFlow = () => {
-    // TODO: Implement transaction flow view
     console.log('View transaction flow');
   };
 
@@ -140,10 +145,6 @@ const Index = () => {
       );
     }
 
-    // Check if we have wallet data from navigation state
-    const navigationState = (window.history.state as any)?.usr;
-    const walletData = navigationState?.walletData || analysisData;
-
     if (recordNotFound || !walletData) {
       return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
@@ -163,6 +164,7 @@ const Index = () => {
       );
     }
 
+    // Show the Enhanced Wallet Results with the loaded data
     return (
       <EnhancedWalletResults
         wallet={walletData}

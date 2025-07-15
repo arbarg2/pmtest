@@ -39,8 +39,7 @@ export const useWalletAnalysis = () => {
     setIsAnalyzing(true);
     
     try {
-      console.log('🔍 Starting REAL DATA enhanced wallet analysis for:', trimmedAddress);
-      console.log('🔍 Address format validation passed');
+      console.log('🔍 Starting wallet analysis for:', trimmedAddress);
       
       // Show progress toast
       toast({
@@ -48,21 +47,17 @@ export const useWalletAnalysis = () => {
         description: "Fetching real-time blockchain data...",
       });
       
-      // Use enhanced API with REAL blockchain data - NO MOCK FALLBACK
-      console.log('📡 Calling analyzeWalletWithRealData for LIVE data...');
+      // Use enhanced API with REAL blockchain data
       const result = await analyzeWalletWithRealData(trimmedAddress);
-      console.log('✅ REAL DATA analysis result received:', {
+      console.log('✅ Analysis result received:', {
         address: result.address,
         network: result.network,
         risk_score: result.risk_score,
-        risk_level: result.risk_level,
-        transaction_count: result.transaction_count,
-        explanation: result.explanation?.substring(0, 100) + '...'
+        risk_level: result.risk_level
       });
       
       // Fix network normalization
       const normalizedNetwork = normalizeNetwork(result.network);
-      console.log('🔧 Normalized network:', normalizedNetwork);
       
       // Create the enhanced result with normalized network
       const enhancedResult = {
@@ -70,72 +65,47 @@ export const useWalletAnalysis = () => {
         network: normalizedNetwork
       };
       
-      // Show success toast immediately
-      const { title, description } = getAnalysisToastMessages(result);
-      toast({ title, description });
-      
       // Set analysis data immediately so user can see results
       setAnalysisData(enhancedResult);
       
-      // Store in database with improved error handling (don't block UI)
-      console.log('💾 Storing analysis result in database...');
-      
-      // Show immediate success, then try database storage
+      // Show immediate success
       toast({
         title: "Analysis Complete",
-        description: "Processing complete! Saving to database...",
+        description: "Wallet analysis completed successfully!",
       });
       
-      try {
-        const dbResult = await storeAnalysisResult(trimmedAddress, normalizedNetwork, result, user.id);
-        console.log('Database storage result:', dbResult.success ? 'SUCCESS' : 'FAILED', dbResult.error || '');
-
-        if (dbResult.success && dbResult.record) {
-          console.log('✅ Successfully created database record with ID:', dbResult.record.record_id);
-          
-          // Update the analysis data with the database record ID
-          const finalResult = {
-            ...enhancedResult,
-            recordId: dbResult.record.record_id
-          };
-          
-          setAnalysisData(finalResult);
-          
-          // Calculate and store risk factors in background (don't block UI)
-          processRiskFactorsInBackground(dbResult.record.id, result, trimmedAddress, normalizedNetwork)
-            .catch(error => console.error('Background risk factors processing failed:', error));
-          
-          toast({
-            title: "Analysis Saved",
-            description: `Analysis saved successfully with ID: ${dbResult.record.record_id}`,
-          });
-        } else {
-          console.error('❌ Failed to store analysis result:', dbResult.error);
-          
-          // Show warning but don't fail the analysis
-          toast({
-            title: "Analysis Complete - Storage Issue",
-            description: "Analysis completed but couldn't save to database. Results are available temporarily.",
-            variant: "destructive",
-          });
-        }
-      } catch (dbError) {
-        console.error('Database storage threw an error:', dbError);
-        toast({
-          title: "Analysis Complete - Storage Error",
-          description: "Analysis completed but database save failed. Results are temporary.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('❌ REAL DATA Analysis failed:', error);
+      // Store in database in background (non-blocking)
+      console.log('💾 Storing analysis result in database...');
       
-      // More detailed error logging
-      if (error instanceof Error) {
-        console.error('Error name:', error.name);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-      }
+      // Use Promise.resolve to handle database storage without blocking
+      Promise.resolve().then(async () => {
+        try {
+          const dbResult = await storeAnalysisResult(trimmedAddress, normalizedNetwork, result, user.id);
+          
+          if (dbResult.success && dbResult.record) {
+            console.log('✅ Database record created with ID:', dbResult.record.record_id);
+            
+            // Update the analysis data with the database record ID
+            const finalResult = {
+              ...enhancedResult,
+              recordId: dbResult.record.record_id
+            };
+            
+            setAnalysisData(finalResult);
+            
+            // Process risk factors in background
+            processRiskFactorsInBackground(dbResult.record.id, result, trimmedAddress, normalizedNetwork)
+              .catch(error => console.error('Background risk factors processing failed:', error));
+          } else {
+            console.error('❌ Failed to store analysis result:', dbResult.error);
+          }
+        } catch (dbError) {
+          console.error('Database storage error:', dbError);
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Analysis failed:', error);
       
       const { errorTitle, errorMessage } = getErrorToastMessages(error as Error);
       toast({
