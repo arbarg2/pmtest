@@ -34,7 +34,7 @@ export function UserDropdown() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth');
+    navigate('/');
   };
 
   const userInitials = user.email?.charAt(0).toUpperCase() || 'U';
