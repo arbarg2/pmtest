@@ -12,6 +12,8 @@ import CaseManagementPage from "./pages/CaseManagement";
 import NotFound from "./pages/NotFound";
 import ApiDocs from "./pages/ApiDocs";
 import BulkAnalysis from "./pages/BulkAnalysis";
+import AllCases from "./pages/AllCases";
+import AllRecords from "./pages/AllRecords";
 import { AuthPage } from "./components/auth/AuthPage";
 
 const queryClient = new QueryClient();
@@ -29,6 +31,8 @@ const App = () => (
               <Route path="/dashboard" element={<Index />} />
               <Route path="/record/:recordId" element={<Index />} />
               <Route path="/cases" element={<CaseManagementPage />} />
+              <Route path="/all-cases" element={<AllCases />} />
+              <Route path="/all-records" element={<AllRecords />} />
               <Route path="/bulk-analysis" element={<BulkAnalysis />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/api-docs" element={<ApiDocs />} />

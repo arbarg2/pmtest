@@ -97,7 +97,7 @@ export const AnalystDashboard = () => {
           recentActivity
         });
 
-        // Set recent data
+        // Set recent data (limit to 5 for dashboard)
         setRecentCases(cases.slice(0, 5));
         setRecentRecords(records.slice(0, 5));
       }
@@ -127,6 +127,14 @@ export const AnalystDashboard = () => {
 
   const handleViewRecord = (record: CaseRecord) => {
     navigate(`/record/${record.id}`);
+  };
+
+  const handleViewAllCases = () => {
+    navigate('/all-cases');
+  };
+
+  const handleViewAllRecords = () => {
+    navigate('/all-records');
   };
 
   return (
@@ -229,7 +237,7 @@ export const AnalystDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span>Recent Cases</span>
-                  <Button variant="ghost" size="sm" onClick={() => navigate('/cases')}>
+                  <Button variant="ghost" size="sm" onClick={handleViewAllCases}>
                     View All
                   </Button>
                 </CardTitle>
@@ -266,7 +274,7 @@ export const AnalystDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span>Recent Records</span>
-                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('records')}>
+                  <Button variant="ghost" size="sm" onClick={handleViewAllRecords}>
                     View All
                   </Button>
                 </CardTitle>
@@ -280,7 +288,7 @@ export const AnalystDashboard = () => {
                       <div key={record.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
-                            <span className="font-medium text-sm">{record.id}</span>
+                            <span className="font-medium text-sm">ID: {record.id}</span>
                             <Badge className={getRiskColor(record.risk_level)}>
                               {record.risk_level}
                             </Badge>
