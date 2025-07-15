@@ -10,6 +10,7 @@ import { WalletLookupPanel } from '@/components/WalletLookupPanel';
 import { AnalystDashboard } from '@/components/AnalystDashboard';
 import EnhancedWalletResults from '@/components/EnhancedWalletResults';
 import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
+import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -33,10 +34,7 @@ const Index = () => {
     if (analysisData && analysisData.recordId && !recordId) {
       // Navigate to the results page immediately when we have analysis data
       console.log('🚀 Navigating to results with recordId:', analysisData.recordId);
-      navigate(`/record/${analysisData.recordId}`, { 
-        state: { walletData: analysisData },
-        replace: true
-      });
+      navigate(`/record/${analysisData.recordId}`, { replace: true });
     }
   }, [analysisData, recordId, navigate]);
 
@@ -45,22 +43,11 @@ const Index = () => {
     if (recordId && user) {
       console.log('🔄 Loading data for record:', recordId);
       
-      // Check if we have wallet data from navigation state first
-      const navigationState = location.state as any;
-      if (navigationState?.walletData) {
-        console.log('📋 Loading wallet data from navigation state');
-        setWalletData(navigationState.walletData);
-        setRecordNotFound(false);
-        return;
-      }
-
-      // If no navigation state data, try to load from database
       setIsLoadingWalletData(true);
       setRecordNotFound(false);
       
       const loadWalletData = async () => {
         try {
-          const { supabaseLookupRecords } = await import('@/services/supabaseLookupRecords');
           const result = await supabaseLookupRecords.getLookupRecordById(recordId, user.id);
           
           if (result.success && result.record) {
@@ -99,7 +86,7 @@ const Index = () => {
       
       loadWalletData();
     }
-  }, [recordId, user, location.state]);
+  }, [recordId, user]);
 
   const handleAnalyze = async () => {
     if (!walletAddress.trim()) return;
