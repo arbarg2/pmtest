@@ -53,46 +53,73 @@ export const useWalletAnalysis = () => {
         network: normalizedNetwork
       };
       
-      // Store in database and get record ID immediately
+      // Try to store in database with retry mechanism
       console.log('💾 Storing analysis result in database...');
-      const dbResult = await supabaseLookupRecords.createLookupRecord({
-        wallet_address: trimmedAddress,
-        network: normalizedNetwork,
-        risk_score: result.risk_score || 0,
-        risk_level: result.risk_level || 'Low',
-        processing_time_ms: result.processing_time_ms || 0,
-        risk_assessment: {
-          risk_score: result.risk_score || 0,
-          risk_level: result.risk_level || 'Low',
-          risk_factors: result.risk_factors || {},
-          explanation: result.explanation || '',
-          entity_attribution: result.entity_attribution || null,
-          volume_metrics: result.volume_metrics || null,
-          geographic_risk: result.geographic_risk || null,
-          sanctions_exposure: result.sanctions_exposure || null,
-          top_counterparties: result.top_counterparties || [],
-          temporal_patterns: result.temporal_patterns || null,
-          behavioral_classification: result.behavioral_classification || null,
-          transaction_count: result.transaction_count || 0,
-          last_activity: result.last_activity || null,
-          processing_time_ms: result.processing_time_ms || 0,
-          full_wallet_data: result
-        },
-        analyst_fields: {
-          case_notes: '',
-          analyst_decision: 'pending',
-          tags: [],
-          attachments: []
+      let dbResult = null;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries && !dbResult?.success) {
+        try {
+          dbResult = await supabaseLookupRecords.createLookupRecord({
+            wallet_address: trimmedAddress,
+            network: normalizedNetwork,
+            risk_score: result.risk_score || 0,
+            risk_level: result.risk_level || 'Low',
+            processing_time_ms: result.processing_time_ms || 0,
+            risk_assessment: {
+              risk_score: result.risk_score || 0,
+              risk_level: result.risk_level || 'Low',
+              risk_factors: result.risk_factors || {},
+              explanation: result.explanation || '',
+              entity_attribution: result.entity_attribution || null,
+              volume_metrics: result.volume_metrics || null,
+              geographic_risk: result.geographic_risk || null,
+              sanctions_exposure: result.sanctions_exposure || null,
+              top_counterparties: result.top_counterparties || [],
+              temporal_patterns: result.temporal_patterns || null,
+              behavioral_classification: result.behavioral_classification || null,
+              transaction_count: result.transaction_count || 0,
+              last_activity: result.last_activity || null,
+              processing_time_ms: result.processing_time_ms || 0,
+              full_wallet_data: result
+            },
+            analyst_fields: {
+              case_notes: '',
+              analyst_decision: 'pending',
+              tags: [],
+              attachments: []
+            }
+          }, user.id);
+          
+          if (dbResult?.success) {
+            break; // Success, exit retry loop
+          }
+          
+          // If it's a duplicate key error, wait a bit and retry
+          if (dbResult?.code === '23505' || dbResult?.error?.includes('duplicate')) {
+            retryCount++;
+            console.log(`Retry attempt ${retryCount}/${maxRetries} due to duplicate key...`);
+            await new Promise(resolve => setTimeout(resolve, 500 * retryCount)); // Progressive delay
+            continue;
+          } else {
+            break; // Other error, don't retry
+          }
+        } catch (error) {
+          console.error('Database storage attempt failed:', error);
+          retryCount++;
+          if (retryCount >= maxRetries) break;
+          await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
         }
-      }, user.id);
+      }
 
-      if (dbResult.success && dbResult.record) {
-        console.log('✅ Database record created with ID:', dbResult.record.id);
+      if (dbResult?.success && dbResult.record) {
+        console.log('✅ Database record created successfully');
         
         // Set analysis data with the database record ID for navigation
         const finalResult = {
           ...enhancedResult,
-          recordId: dbResult.record.id // Use the database ID, not record_id
+          recordId: dbResult.record.id // Use the database internal ID
         };
         
         setAnalysisData(finalResult);
@@ -104,16 +131,25 @@ export const useWalletAnalysis = () => {
         
         return finalResult; // Return for immediate use
       } else {
-        console.error('❌ Failed to store analysis result:', dbResult.error);
-        setAnalysisData(enhancedResult);
+        console.warn('❌ Database storage failed after retries, proceeding without storage');
+        
+        // Generate a temporary ID for navigation purposes
+        const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const finalResult = {
+          ...enhancedResult,
+          recordId: tempId,
+          isTemporary: true
+        };
+        
+        setAnalysisData(finalResult);
         
         toast({
           title: "Analysis Complete",
-          description: "Analysis completed but database storage failed.",
+          description: "Analysis completed but couldn't save to database. Results are temporary.",
           variant: "destructive",
         });
         
-        return enhancedResult;
+        return finalResult;
       }
       
     } catch (error) {

@@ -17,7 +17,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
   const [walletAddress, setWalletAddress] = useState('');
-  const { isAnalyzing, analyzeWallet, generateReport } = useWalletAnalysis();
+  const { isAnalyzing, analyzeWallet, generateReport, analysisData } = useWalletAnalysis();
   const [isLoadingWalletData, setIsLoadingWalletData] = useState(false);
   const [recordNotFound, setRecordNotFound] = useState(false);
   const [walletData, setWalletData] = useState<any>(null);
@@ -38,13 +38,23 @@ const Index = () => {
       
       const loadWalletData = async () => {
         try {
+          // First check if this is a temporary result from current session
+          if (analysisData && analysisData.recordId === recordId && analysisData.isTemporary) {
+            console.log('✅ Using temporary analysis data from current session');
+            setWalletData(analysisData);
+            setRecordNotFound(false);
+            setIsLoadingWalletData(false);
+            return;
+          }
+
+          // Try to load from database
           const result = await supabaseLookupRecords.getLookupRecordById(recordId, user.id);
           
           if (result.success && result.record) {
             console.log('✅ Found record in database:', result.record);
             
             const loadedWalletData = {
-              recordId: result.record.record_id,
+              recordId: result.record.record_id || result.record.id,
               address: result.record.wallet_address,
               network: result.record.network,
               risk_score: result.record.risk_score,
@@ -76,7 +86,7 @@ const Index = () => {
       
       loadWalletData();
     }
-  }, [recordId, user]);
+  }, [recordId, user, analysisData]);
 
   const handleAnalyze = async () => {
     if (!walletAddress.trim()) return;
