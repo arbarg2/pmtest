@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { logAuditAction } from '@/utils/auditLogger';
 
@@ -146,8 +147,8 @@ export async function createCase(
     const caseId = caseIdData;
     console.log('✅ Generated case ID:', caseId);
 
-    // Update the record to make it a case
-    const updateData = {
+    // Update the record to make it a case - properly type the updateData object
+    const updateData: any = {
       is_case: true,
       case_id: caseId,
       case_status: 'open',
