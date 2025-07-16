@@ -211,6 +211,11 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
   }
 };
 
+// Export the API object for backward compatibility
+export const enhancedWalletAPI = {
+  analyzeWallet: analyzeWalletWithRealData
+};
+
 function detectNetworkFromAddress(address: string): 'bitcoin' | 'ethereum' {
   console.log('🔍 Detecting network for address:', address);
   

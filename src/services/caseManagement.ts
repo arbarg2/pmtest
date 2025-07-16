@@ -1,198 +1,308 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { logAuditAction } from '@/utils/auditLogger';
 
 export interface CaseRecord {
   id: string;
   record_id: string;
+  case_id: string;
   wallet_address: string;
   network: string;
-  risk_level: string;
   risk_score: number;
+  risk_level: string;
+  analysis_data: any;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
   case_status: string;
-  case_created_at: string;
+  investigation_status: string;
   analyst_notes: string;
+  assigned_to: string | null;
+  analyst_id: string | null;
+  reviewed_at: string | null;
+  case_created_at: string | null;
+  is_case: boolean;
   tags: string[];
 }
 
-interface CaseCreationResult {
-  success: boolean;
-  caseId?: string;
-  record?: any;
-  error?: string;
+export interface CaseAssignment {
+  caseId: string;
+  assignedTo: string;
+  assignedBy: string;
+  assignedAt: string;
+  notes?: string;
 }
 
-class CaseManagementService {
-  async createCase(recordId: string, userId: string): Promise<CaseCreationResult> {
-    try {
-      console.log('Creating case for record:', recordId, 'user:', userId);
-      
-      // First, get the record to ensure it exists and the user has access
-      const { data: existingRecord, error: recordError } = await supabase
-        .from('investigation_records')
-        .select('*')
-        .eq('record_id', recordId)
-        .eq('user_id', userId)
-        .single();
-      
-      if (recordError) {
-        console.error('Error fetching record:', recordError);
-        return { success: false, error: 'Failed to fetch record' };
-      }
-      
-      if (!existingRecord) {
-        console.error('Record not found');
-        return { success: false, error: 'Record not found or access denied' };
-      }
-      
-      // Check if already a case
-      if (existingRecord.is_case) {
-        return { success: false, error: 'Record is already a case' };
-      }
-      
-      // Generate case ID
-      const { data: caseIdResult, error: caseIdError } = await supabase.rpc('generate_case_id');
-      
-      if (caseIdError || !caseIdResult) {
-        console.error('Error generating case ID:', caseIdError);
-        return { success: false, error: 'Failed to generate case ID' };
-      }
-      
-      const caseId = caseIdResult;
-      
-      // Update the record to make it a case using the internal UUID
-      const { data: record, error } = await supabase
-        .from('investigation_records')
-        .update({
-          is_case: true,
-          case_id: caseId,
-          case_created_at: new Date().toISOString(),
-          case_status: 'open'
-        })
-        .eq('id', existingRecord.id)
-        .eq('user_id', userId)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error creating case:', error);
-        return { success: false, error: 'Failed to create case' };
-      }
-      
-      // Log case creation in audit log
-      await this.logCaseAction(caseId, userId, 'case_created', {
-        record_id: existingRecord.id,
-        status: 'open'
-      });
+export interface CaseNote {
+  id: string;
+  case_id: string;
+  user_id: string;
+  note: string;
+  created_at: string;
+  author_name?: string;
+}
 
-      // Log audit action
-      await logAuditAction('create_case', existingRecord.record_id, {
+export async function getAllCases(): Promise<CaseRecord[]> {
+  try {
+    const { data, error } = await supabase
+      .from('investigation_records')
+      .select('*')
+      .eq('is_case', true)
+      .order('case_created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching cases:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Failed to fetch cases:', error);
+    throw error;
+  }
+}
+
+export async function getCaseById(caseId: string): Promise<CaseRecord | null> {
+  try {
+    const { data, error } = await supabase
+      .from('investigation_records')
+      .select('*')
+      .eq('case_id', caseId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching case:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch case:', error);
+    return null;
+  }
+}
+
+export async function createCase(
+  recordId: string,
+  assignee?: string,
+  initialNote?: string
+): Promise<{ success: boolean; caseId?: string; error?: string }> {
+  try {
+    console.log('🔍 Creating case for record:', recordId);
+    
+    // First, find the record by record_id (display ID like LR_250716_001)
+    const { data: existingRecord, error: fetchError } = await supabase
+      .from('investigation_records')
+      .select('*')
+      .eq('record_id', recordId)
+      .single();
+
+    if (fetchError || !existingRecord) {
+      console.error('❌ Record not found:', fetchError);
+      return { success: false, error: 'Record not found or access denied' };
+    }
+
+    // Generate a unique case ID
+    const { data: caseIdData, error: caseIdError } = await supabase
+      .rpc('generate_case_id');
+
+    if (caseIdError || !caseIdData) {
+      console.error('❌ Failed to generate case ID:', caseIdError);
+      return { success: false, error: 'Failed to generate case ID' };
+    }
+
+    const caseId = caseIdData;
+    console.log('✅ Generated case ID:', caseId);
+
+    // Update the record to make it a case
+    const { error: updateError } = await supabase
+      .from('investigation_records')
+      .update({
+        is_case: true,
         case_id: caseId,
-        wallet_address: existingRecord.wallet_address,
-        network: existingRecord.network,
-        risk_level: existingRecord.risk_level
-      });
-      
-      return { success: true, caseId, record };
-    } catch (error) {
-      console.error('Exception in createCase:', error);
-      return { success: false, error: 'An unexpected error occurred' };
+        case_status: 'open',
+        case_created_at: new Date().toISOString(),
+        assigned_to: assignee || null,
+        analyst_notes: initialNote || '',
+        investigation_status: 'active',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', existingRecord.id);
+
+    if (updateError) {
+      console.error('❌ Failed to update record:', updateError);
+      return { success: false, error: 'Failed to create case' };
     }
-  }
 
-  async updateCaseStatus(recordId: string, userId: string, status: string): Promise<boolean> {
-    try {
-      // First, get the record to ensure it exists and the user has access
-      const { data: record, error: recordError } = await supabase
-        .from('investigation_records')
-        .select('*')
-        .eq('record_id', recordId)
-        .eq('user_id', userId)
-        .single();
-      
-      if (recordError) {
-        console.error('Error fetching record:', recordError);
-        return false;
-      }
-      
-      if (!record) {
-        console.error('Record not found');
-        return false;
-      }
-      
-      // Update the record with the new status
-      const { error } = await supabase
-        .from('investigation_records')
-        .update({
-          case_status: status
-        })
-        .eq('record_id', recordId)
-        .eq('user_id', userId);
-      
-      if (error) {
-        console.error('Error updating case status:', error);
-        return false;
-      }
-      
-      if (record?.case_id) {
-        await this.logCaseAction(record.case_id, userId, 'status_updated', {
-          new_status: status,
-          record_id: recordId
-        });
+    console.log('✅ Case created successfully:', caseId);
 
-        // Log audit action
-        await logAuditAction('update_case_status', recordId, {
-          case_id: record.case_id,
-          new_status: status,
-          previous_status: 'unknown' // Could be enhanced to track previous status
-        });
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error in updateCaseStatus:', error);
-      return false;
-    }
-  }
+    // Log the case creation
+    await logAuditAction('create_case', caseId, {
+      record_id: recordId,
+      wallet_address: existingRecord.wallet_address,
+      assigned_to: assignee,
+      status: 'open'
+    });
 
-  async getCases(userId: string): Promise<{ success: boolean; cases?: CaseRecord[]; error?: string }> {
-    try {
-      const { data: cases, error } = await supabase
-        .from('investigation_records')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_case', true);
-
-      if (error) {
-        console.error('Error fetching cases:', error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, cases: cases || [] };
-    } catch (error) {
-      console.error('Error in getCases:', error);
-      return { success: false, error: 'Failed to fetch cases' };
-    }
-  }
-
-  private async logCaseAction(caseId: string, userId: string, action: string, metadata: Record<string, any>) {
-    try {
-      const { error } = await supabase
-        .from('case_actions')
-        .insert([{
-          case_id: caseId,
-          user_id: userId,
-          action,
-          timestamp: new Date().toISOString(),
-          metadata
-        }]);
-
-      if (error) {
-        console.error('Failed to log case action:', error);
-      }
-    } catch (error) {
-      console.error('Exception in case action logging:', error);
-    }
+    return { success: true, caseId };
+  } catch (error) {
+    console.error('❌ Error creating case:', error);
+    return { success: false, error: 'Failed to create case' };
   }
 }
 
-export const caseManagementService = new CaseManagementService();
+export async function updateCaseStatus(
+  caseId: string,
+  status: string,
+  note?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Find the case record by case_id
+    const { data: caseRecord, error: fetchError } = await supabase
+      .from('investigation_records')
+      .select('*')
+      .eq('case_id', caseId)
+      .single();
+
+    if (fetchError || !caseRecord) {
+      console.error('❌ Case not found:', fetchError);
+      return { success: false, error: 'Case not found or access denied' };
+    }
+
+    const updateData: any = {
+      case_status: status,
+      updated_at: new Date().toISOString()
+    };
+
+    if (note) {
+      updateData.analyst_notes = caseRecord.analyst_notes 
+        ? `${caseRecord.analyst_notes}\n\n[${new Date().toISOString()}] ${note}`
+        : note;
+    }
+
+    if (status === 'closed') {
+      updateData.reviewed_at = new Date().toISOString();
+    }
+
+    const { error: updateError } = await supabase
+      .from('investigation_records')
+      .update(updateData)
+      .eq('id', caseRecord.id);
+
+    if (updateError) {
+      console.error('❌ Failed to update case status:', updateError);
+      return { success: false, error: 'Failed to update case status' };
+    }
+
+    // Log the status change
+    await logAuditAction('update_case_status', caseId, {
+      old_status: caseRecord.case_status,
+      new_status: status,
+      note: note,
+      wallet_address: caseRecord.wallet_address
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error updating case status:', error);
+    return { success: false, error: 'Failed to update case status' };
+  }
+}
+
+export async function assignCase(
+  caseId: string,
+  assigneeId: string,
+  notes?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Find the case record by case_id
+    const { data: caseRecord, error: fetchError } = await supabase
+      .from('investigation_records')
+      .select('*')
+      .eq('case_id', caseId)
+      .single();
+
+    if (fetchError || !caseRecord) {
+      console.error('❌ Case not found:', fetchError);
+      return { success: false, error: 'Case not found or access denied' };
+    }
+
+    const updateData: any = {
+      assigned_to: assigneeId,
+      analyst_id: assigneeId,
+      updated_at: new Date().toISOString()
+    };
+
+    if (notes) {
+      updateData.analyst_notes = caseRecord.analyst_notes 
+        ? `${caseRecord.analyst_notes}\n\n[${new Date().toISOString()}] Assignment: ${notes}`
+        : `Assignment: ${notes}`;
+    }
+
+    const { error: updateError } = await supabase
+      .from('investigation_records')
+      .update(updateData)
+      .eq('id', caseRecord.id);
+
+    if (updateError) {
+      console.error('❌ Failed to assign case:', updateError);
+      return { success: false, error: 'Failed to assign case' };
+    }
+
+    // Log the assignment
+    await logAuditAction('assign_case', caseId, {
+      assigned_to: assigneeId,
+      notes: notes,
+      wallet_address: caseRecord.wallet_address
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error assigning case:', error);
+    return { success: false, error: 'Failed to assign case' };
+  }
+}
+
+export async function addCaseNote(
+  caseId: string,
+  note: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data: caseRecord, error: fetchError } = await supabase
+      .from('investigation_records')
+      .select('*')
+      .eq('case_id', caseId)
+      .single();
+
+    if (fetchError || !caseRecord) {
+      return { success: false, error: 'Case not found or access denied' };
+    }
+
+    const updatedNotes = caseRecord.analyst_notes 
+      ? `${caseRecord.analyst_notes}\n\n[${new Date().toISOString()}] ${note}`
+      : note;
+
+    const { error: updateError } = await supabase
+      .from('investigation_records')
+      .update({
+        analyst_notes: updatedNotes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', caseRecord.id);
+
+    if (updateError) {
+      return { success: false, error: 'Failed to add note' };
+    }
+
+    // Log the note addition
+    await logAuditAction('add_case_note', caseId, {
+      note: note,
+      wallet_address: caseRecord.wallet_address
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error adding case note:', error);
+    return { success: false, error: 'Failed to add note' };
+  }
+}

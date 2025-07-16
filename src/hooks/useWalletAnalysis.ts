@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { enhancedWalletAPI } from '@/services/enhancedApi';
+import { analyzeWalletWithRealData } from '@/services/enhancedApi';
 import { storeAnalysisResult } from '@/services/walletAnalysisDatabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -27,19 +27,15 @@ export const useWalletAnalysis = () => {
     try {
       console.log(`🔍 Starting wallet analysis for: ${address}`);
       
-      const result = await enhancedWalletAPI.analyzeWallet(address);
+      const result = await analyzeWalletWithRealData(address);
       
-      if (!result.success || !result.data) {
-        throw new Error(result.error || 'Analysis failed');
-      }
-
       console.log('✅ Analysis completed successfully');
       
       // Store in database
       const dbResult = await storeAnalysisResult(
         address,
-        result.data.network || 'ethereum',
-        result.data,
+        result.network || 'ethereum',
+        result,
         user.id
       );
 
@@ -58,15 +54,15 @@ export const useWalletAnalysis = () => {
       // Log audit action
       await logAuditAction('wallet_lookup', recordId, {
         wallet_address: address,
-        network: result.data.network || 'ethereum',
-        risk_score: result.data.risk_score,
-        risk_level: result.data.risk_level,
-        transaction_count: result.data.transaction_count,
-        processing_time_ms: result.data.processing_time_ms
+        network: result.network || 'ethereum',
+        risk_score: result.risk_score,
+        risk_level: result.risk_level,
+        transaction_count: result.transaction_count,
+        processing_time_ms: result.processing_time_ms
       });
 
       const enhancedResult = {
-        ...result.data,
+        ...result,
         recordId,
         isTemporary
       };
