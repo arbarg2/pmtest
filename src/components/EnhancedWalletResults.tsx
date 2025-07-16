@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -63,15 +62,24 @@ const EnhancedWalletResults = ({
   };
 
   const handleCaseCreated = (newCaseId: string) => {
+    console.log('Case created with ID:', newCaseId);
     setIsCase(true);
     setCaseId(newCaseId);
     setCaseStatus('open');
     setCaseCreatedAt(new Date().toISOString());
+    
+    // Force a page refresh to ensure the updated data is displayed
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   };
 
   const handleStatusChanged = () => {
-    // Refresh case status - in a real app you might want to refetch the record
-    window.location.reload();
+    console.log('Case status changed, refreshing data...');
+    // Force a page refresh to get updated case data
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
   return (
@@ -115,6 +123,7 @@ const EnhancedWalletResults = ({
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
+        
         {/* Top Row - Wallet Overview */}
         <div className="mb-8">
           <WalletOverview wallet={wallet} />

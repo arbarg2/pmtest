@@ -34,16 +34,24 @@ const CaseManagement = ({
   const { user } = useAuth();
 
   const handleCreateCase = async () => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to create a case.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsCreatingCase(true);
     try {
+      console.log('Creating case for record ID:', recordId);
       const result = await caseManagementService.createCase(recordId, user.id);
       
       if (result.success && result.caseId) {
         toast({
-          title: "Case Created",
-          description: `Case ${result.caseId} has been created successfully. You can now manage it in Case Management.`,
+          title: "Case Created Successfully",
+          description: `Case ${result.caseId} has been created. You can now manage it in the Case Management dashboard.`,
         });
         
         if (onCaseCreated) {
@@ -57,6 +65,7 @@ const CaseManagement = ({
         });
       }
     } catch (error) {
+      console.error('Error creating case:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",

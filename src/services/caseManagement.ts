@@ -21,6 +21,23 @@ class CaseManagementService {
     try {
       console.log('Creating case for record:', recordId, 'user:', userId);
       
+      // First check if the record exists and belongs to the user
+      const { data: existingRecord, error: fetchError } = await supabase
+        .from('investigation_records')
+        .select('*')
+        .eq('id', recordId)
+        .eq('user_id', userId)
+        .single();
+      
+      if (fetchError) {
+        console.error('Error fetching record:', fetchError);
+        return { success: false, error: 'Record not found or access denied' };
+      }
+      
+      if (existingRecord.is_case) {
+        return { success: false, error: 'This record is already a case' };
+      }
+      
       // Generate case ID using database function
       const { data: caseIdResult, error: caseIdError } = await supabase
         .rpc('generate_case_id');
