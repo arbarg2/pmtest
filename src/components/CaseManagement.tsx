@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -77,13 +76,20 @@ const CaseManagement = ({
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    if (!user) return;
+    if (!user || !caseId) {
+      toast({
+        title: "Error",
+        description: "Unable to update status. Missing case information.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsUpdatingStatus(true);
     try {
-      const success = await caseManagementService.updateCaseStatus(recordId, user.id, newStatus);
+      const result = await caseManagementService.updateCaseStatus(caseId, newStatus);
       
-      if (success) {
+      if (result.success) {
         toast({
           title: "Status Updated",
           description: `Case status has been updated to ${newStatus}.`,
@@ -95,11 +101,12 @@ const CaseManagement = ({
       } else {
         toast({
           title: "Update Failed",
-          description: "Failed to update case status. Please try again.",
+          description: result.error || "Failed to update case status. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error('Error updating case status:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
