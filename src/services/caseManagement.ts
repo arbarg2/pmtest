@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { logAuditAction } from '@/utils/auditLogger';
 
@@ -306,3 +305,23 @@ export async function addCaseNote(
     return { success: false, error: 'Failed to add note' };
   }
 }
+
+// Create a service object that wraps all the functions
+export const caseManagementService = {
+  getAllCases,
+  getCaseById,
+  createCase,
+  updateCaseStatus,
+  assignCase,
+  addCaseNote,
+  // Add a getCases method that wraps getAllCases for compatibility
+  getCases: async (userId: string) => {
+    try {
+      const cases = await getAllCases();
+      return { success: true, cases };
+    } catch (error) {
+      console.error('Error in getCases:', error);
+      return { success: false, error: 'Failed to fetch cases' };
+    }
+  }
+};
