@@ -41,11 +41,24 @@ const CaseManagement = ({
       });
       return;
     }
+
+    if (!recordId) {
+      toast({
+        title: "Error",
+        description: "No record ID provided for case creation.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsCreatingCase(true);
     try {
-      console.log('Creating case for record ID:', recordId);
+      console.log('🚀 Creating case for record ID:', recordId);
+      console.log('🚀 User ID:', user.id);
+      
       const result = await caseManagementService.createCase(recordId, user.id);
+      
+      console.log('📋 Case creation result:', result);
       
       if (result.success && result.caseId) {
         toast({
@@ -57,6 +70,7 @@ const CaseManagement = ({
           onCaseCreated(result.caseId);
         }
       } else {
+        console.error('❌ Case creation failed:', result.error);
         toast({
           title: "Case Creation Failed",
           description: result.error || "Failed to create case. Please try again.",
@@ -64,7 +78,7 @@ const CaseManagement = ({
         });
       }
     } catch (error) {
-      console.error('Error creating case:', error);
+      console.error('❌ Exception during case creation:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -153,9 +167,14 @@ const CaseManagement = ({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              This is currently a lookup record. Create a case to enable full investigation management features.
-            </p>
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
+              <p className="text-sm text-blue-800 dark:text-blue-300 mb-2">
+                <strong>Record ID:</strong> {recordId}
+              </p>
+              <p className="text-sm text-blue-800 dark:text-blue-300">
+                This is currently a lookup record. Create a case to enable full investigation management features.
+              </p>
+            </div>
             
             <Button 
               onClick={handleCreateCase}
@@ -175,8 +194,8 @@ const CaseManagement = ({
               )}
             </Button>
             
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
-              <p className="text-sm text-blue-800 dark:text-blue-300">
+            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-400">
+              <p className="text-sm text-green-800 dark:text-green-300">
                 💡 Creating a case will enable analyst notes, status tracking, assignment, and full case management features.
               </p>
             </div>

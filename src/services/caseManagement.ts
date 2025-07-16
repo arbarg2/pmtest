@@ -88,17 +88,50 @@ export async function createCase(
 ): Promise<{ success: boolean; caseId?: string; error?: string }> {
   try {
     console.log('🔍 Creating case for record:', recordId);
+    console.log('🔍 Assignee:', assignee);
+    console.log('🔍 Initial note:', initialNote);
     
-    // First, find the record by record_id (display ID like LR_250716_001)
-    const { data: existingRecord, error: fetchError } = await supabase
+    // First, try to find the record by record_id (display ID like LR_250716_001)
+    let { data: existingRecord, error: fetchError } = await supabase
       .from('investigation_records')
       .select('*')
       .eq('record_id', recordId)
-      .single();
+      .maybeSingle();
 
-    if (fetchError || !existingRecord) {
-      console.error('❌ Record not found:', fetchError);
-      return { success: false, error: 'Record not found or access denied' };
+    // If not found by record_id, try by internal id
+    if (!existingRecord && !fetchError) {
+      console.log('🔍 Not found by record_id, trying by internal id');
+      const result = await supabase
+        .from('investigation_records')
+        .select('*')
+        .eq('id', recordId)
+        .maybeSingle();
+      
+      existingRecord = result.data;
+      fetchError = result.error;
+    }
+
+    if (fetchError) {
+      console.error('❌ Database error:', fetchError);
+      return { success: false, error: `Database error: ${fetchError.message}` };
+    }
+
+    if (!existingRecord) {
+      console.error('❌ Record not found with ID:', recordId);
+      return { success: false, error: 'Record not found. Please check the record ID.' };
+    }
+
+    console.log('✅ Found record:', {
+      id: existingRecord.id,
+      record_id: existingRecord.record_id,
+      wallet_address: existingRecord.wallet_address,
+      is_case: existingRecord.is_case
+    });
+
+    // Check if it's already a case
+    if (existingRecord.is_case) {
+      console.log('⚠️ Record is already a case:', existingRecord.case_id);
+      return { success: false, error: 'This record is already a case.' };
     }
 
     // Generate a unique case ID
@@ -114,39 +147,62 @@ export async function createCase(
     console.log('✅ Generated case ID:', caseId);
 
     // Update the record to make it a case
+    const updateData = {
+      is_case: true,
+      case_id: caseId,
+      case_status: 'open',
+      case_created_at: new Date().toISOString(),
+      investigation_status: 'active',
+      updated_at: new Date().toISOString()
+    };
+
+    // Add assignee if provided
+    if (assignee) {
+      updateData.assigned_to = assignee;
+      updateData.analyst_id = assignee;
+    }
+
+    // Add initial note if provided
+    if (initialNote) {
+      updateData.analyst_notes = existingRecord.analyst_notes 
+        ? `${existingRecord.analyst_notes}\n\n[${new Date().toISOString()}] Case created: ${initialNote}`
+        : `Case created: ${initialNote}`;
+    }
+
+    console.log('📤 Updating record with:', updateData);
+
     const { error: updateError } = await supabase
       .from('investigation_records')
-      .update({
-        is_case: true,
-        case_id: caseId,
-        case_status: 'open',
-        case_created_at: new Date().toISOString(),
-        assigned_to: assignee || null,
-        analyst_notes: initialNote || '',
-        investigation_status: 'active',
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', existingRecord.id);
 
     if (updateError) {
       console.error('❌ Failed to update record:', updateError);
-      return { success: false, error: 'Failed to create case' };
+      return { success: false, error: `Failed to create case: ${updateError.message}` };
     }
 
     console.log('✅ Case created successfully:', caseId);
 
     // Log the case creation
-    await logAuditAction('create_case', caseId, {
-      record_id: recordId,
-      wallet_address: existingRecord.wallet_address,
-      assigned_to: assignee,
-      status: 'open'
-    });
+    try {
+      await logAuditAction('create_case', caseId, {
+        record_id: existingRecord.record_id,
+        wallet_address: existingRecord.wallet_address,
+        assigned_to: assignee,
+        status: 'open'
+      });
+    } catch (auditError) {
+      console.warn('⚠️ Failed to log audit action:', auditError);
+      // Don't fail the whole operation for audit logging
+    }
 
     return { success: true, caseId };
   } catch (error) {
     console.error('❌ Error creating case:', error);
-    return { success: false, error: 'Failed to create case' };
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'An unexpected error occurred' 
+    };
   }
 }
 
