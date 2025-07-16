@@ -14,6 +14,7 @@ import ApiDocs from "./pages/ApiDocs";
 import BulkAnalysis from "./pages/BulkAnalysis";
 import AllCases from "./pages/AllCases";
 import AllRecords from "./pages/AllRecords";
+import AuditLogs from "./pages/AuditLogs";
 import { AuthPage } from "./components/auth/AuthPage";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/all-cases" element={<AllCases />} />
               <Route path="/all-records" element={<AllRecords />} />
               <Route path="/bulk-analysis" element={<BulkAnalysis />} />
+              <Route path="/audit-logs" element={<AuditLogs />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/api-docs" element={<ApiDocs />} />
               <Route path="*" element={<NotFound />} />

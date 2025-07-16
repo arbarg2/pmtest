@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
-import { User, Settings, LogOut, Moon, Sun, Database, FileSpreadsheet, Upload } from 'lucide-react';
+import { User, Settings, LogOut, Moon, Sun, Database, FileSpreadsheet, Upload, ClipboardList } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
@@ -71,6 +71,10 @@ export function UserDropdown() {
         <DropdownMenuItem onClick={() => navigate('/cases')}>
           <Settings className="mr-2 h-4 w-4" />
           <span>Case Management</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/audit-logs')}>
+          <ClipboardList className="mr-2 h-4 w-4" />
+          <span>Audit Logs</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate('/api-docs')}>
           <FileSpreadsheet className="mr-2 h-4 w-4" />

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { reportExportService } from '@/services/reportExport';
 import { WalletRiskResponse } from '@/services/api';
 import { RiskFactor, SanctionsMatch } from '@/services/riskFactors';
 import WatchWalletButton from '@/components/WatchWalletButton';
+import { logAuditAction } from '@/utils/auditLogger';
 
 interface ExportActionsProps {
   wallet: WalletRiskResponse;
@@ -47,6 +47,16 @@ const ExportActions = ({
     setIsExporting(true);
     try {
       await reportExportService.exportToPDF(exportData);
+      
+      // Log audit action
+      await logAuditAction('download_pdf', recordId, {
+        wallet_address: wallet.address,
+        export_type: 'pdf_report',
+        risk_level: wallet.risk_level,
+        risk_factors_count: riskFactors.length,
+        sanctions_matches_count: sanctionsMatches.length
+      });
+
       toast({
         title: "PDF Export Complete",
         description: "Investigation report has been downloaded successfully.",
@@ -67,6 +77,15 @@ const ExportActions = ({
     setIsExporting(true);
     try {
       await reportExportService.exportToCSV(exportData);
+      
+      // Log audit action
+      await logAuditAction('download_csv', recordId, {
+        wallet_address: wallet.address,
+        export_type: 'csv_data',
+        risk_level: wallet.risk_level,
+        data_points: Object.keys(exportData).length
+      });
+
       toast({
         title: "CSV Export Complete",
         description: "Data has been exported to CSV successfully.",
@@ -83,7 +102,14 @@ const ExportActions = ({
     }
   };
 
-  const handleEscalate = () => {
+  const handleEscalate = async () => {
+    // Log audit action
+    await logAuditAction('escalate_case', recordId, {
+      wallet_address: wallet.address,
+      risk_level: wallet.risk_level,
+      escalation_reason: 'manual_escalation'
+    });
+
     toast({
       title: "Case Escalated",
       description: "This investigation has been flagged for senior review.",
@@ -98,7 +124,7 @@ const ExportActions = ({
       default: return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     }
   };
-
+  
   return (
     <Card className="shadow-lg border-0 bg-white/90 backdrop-blur">
       <CardHeader>
