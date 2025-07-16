@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { logAuditAction } from '@/utils/auditLogger';
 
@@ -147,13 +146,13 @@ export async function createCase(
     const caseId = caseIdData;
     console.log('✅ Generated case ID:', caseId);
 
-    // Update the record to make it a case - properly type the updateData object
+    // Update the record to make it a case - use valid investigation_status
     const updateData: any = {
       is_case: true,
       case_id: caseId,
       case_status: 'open',
       case_created_at: new Date().toISOString(),
-      investigation_status: 'active',
+      investigation_status: 'pending', // Changed from 'active' to 'pending' - valid status
       updated_at: new Date().toISOString()
     };
 
