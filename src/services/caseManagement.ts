@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface CaseCreationResult {
@@ -22,15 +21,35 @@ class CaseManagementService {
       console.log('Creating case for record:', recordId, 'user:', userId);
       
       // First check if the record exists and belongs to the user
-      const { data: existingRecord, error: fetchError } = await supabase
+      // Try by record_id first (the display ID), then by internal id if needed
+      let { data: existingRecord, error: fetchError } = await supabase
         .from('investigation_records')
         .select('*')
-        .eq('id', recordId)
+        .eq('record_id', recordId)
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
       
-      if (fetchError) {
+      // If not found by record_id, try by internal id (UUID)
+      if (!existingRecord && !fetchError) {
+        console.log('Not found by record_id, trying by internal id');
+        const result = await supabase
+          .from('investigation_records')
+          .select('*')
+          .eq('id', recordId)
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        existingRecord = result.data;
+        fetchError = result.error;
+      }
+      
+      if (fetchError && fetchError.code !== 'PGRST116') {
         console.error('Error fetching record:', fetchError);
+        return { success: false, error: 'Error accessing record' };
+      }
+      
+      if (!existingRecord) {
+        console.error('Record not found');
         return { success: false, error: 'Record not found or access denied' };
       }
       
@@ -49,7 +68,7 @@ class CaseManagementService {
       
       const caseId = caseIdResult;
       
-      // Update the record to make it a case
+      // Update the record to make it a case using the internal UUID
       const { data: record, error } = await supabase
         .from('investigation_records')
         .update({
@@ -58,7 +77,7 @@ class CaseManagementService {
           case_created_at: new Date().toISOString(),
           case_status: 'open'
         })
-        .eq('id', recordId)
+        .eq('id', existingRecord.id) // Use the internal UUID here
         .eq('user_id', userId)
         .select()
         .single();
@@ -70,7 +89,7 @@ class CaseManagementService {
       
       // Log case creation in audit log
       await this.logCaseAction(caseId, userId, 'case_created', {
-        record_id: recordId,
+        record_id: existingRecord.id,
         status: 'open'
       });
       
@@ -87,14 +106,30 @@ class CaseManagementService {
 
   async updateCaseStatus(recordId: string, userId: string, status: string): Promise<boolean> {
     try {
-      const { data: record, error } = await supabase
+      // Try to update by record_id first, then by internal id if needed
+      let { data: record, error } = await supabase
         .from('investigation_records')
         .update({ case_status: status })
-        .eq('id', recordId)
+        .eq('record_id', recordId)
         .eq('user_id', userId)
         .eq('is_case', true)
         .select('case_id')
-        .single();
+        .maybeSingle();
+      
+      // If not found by record_id, try by internal id
+      if (!record && !error) {
+        const result = await supabase
+          .from('investigation_records')
+          .update({ case_status: status })
+          .eq('id', recordId)
+          .eq('user_id', userId)
+          .eq('is_case', true)
+          .select('case_id')
+          .maybeSingle();
+        
+        record = result.data;
+        error = result.error;
+      }
       
       if (error) {
         console.error('Error updating case status:', error);
@@ -118,14 +153,30 @@ class CaseManagementService {
 
   async assignCase(recordId: string, userId: string, assignedTo: string): Promise<boolean> {
     try {
-      const { data: record, error } = await supabase
+      // Try to update by record_id first, then by internal id if needed
+      let { data: record, error } = await supabase
         .from('investigation_records')
         .update({ assigned_to: assignedTo })
-        .eq('id', recordId)
+        .eq('record_id', recordId)
         .eq('user_id', userId)
         .eq('is_case', true)
         .select('case_id')
-        .single();
+        .maybeSingle();
+      
+      // If not found by record_id, try by internal id
+      if (!record && !error) {
+        const result = await supabase
+          .from('investigation_records')
+          .update({ assigned_to: assignedTo })
+          .eq('id', recordId)
+          .eq('user_id', userId)
+          .eq('is_case', true)
+          .select('case_id')
+          .maybeSingle();
+        
+        record = result.data;
+        error = result.error;
+      }
       
       if (error) {
         console.error('Error assigning case:', error);
