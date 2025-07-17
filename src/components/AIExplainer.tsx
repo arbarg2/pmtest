@@ -125,12 +125,11 @@ export function AIExplainer({ walletData }: AIExplainerProps) {
       <CardContent className="pt-0">
         {explanation && isExpanded ? (
           <div className="bg-white/90 backdrop-blur rounded-lg p-5 border border-blue-100 shadow-inner">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700"
-            >
-              {explanation || ''}
-            </ReactMarkdown>
+            <div className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {explanation || ''}
+              </ReactMarkdown>
+            </div>
           </div>
         ) : explanation && !isExpanded ? (
           <div className="bg-white/90 backdrop-blur rounded-lg p-4 border border-blue-100">
