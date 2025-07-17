@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, FolderOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import CaseManagement from '@/components/CaseManagement';
 import { CaseChartsPanel } from '@/components/charts/CaseChartsPanel';
 
 const AllCases = () => {
@@ -44,8 +43,15 @@ const AllCases = () => {
         {/* Charts Panel */}
         <CaseChartsPanel />
         
-        {/* Case Management Component */}
-        <CaseManagement />
+        {/* Cases List - Placeholder for now */}
+        <Card className="bg-white/90 backdrop-blur">
+          <CardHeader>
+            <CardTitle>All Cases</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-slate-600">Cases list will be implemented here.</p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
