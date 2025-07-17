@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 // TODO: Replace with your actual Tines webhook URL
-// Example: 'https://your-tines-instance.tines.com/webhook/your-webhook-id'
+// You can get this from your Tines workflow by adding a webhook trigger
+// Example format: 'https://your-tenant.tines.com/webhook/abc123def456'
 const TINES_WEBHOOK_URL = 'https://hooks.tines.com/webhook/your-webhook-id-here';
 const AI_SUMMARY_ENDPOINT = 'https://edjkvebuxfxoylzgoddi.supabase.co/functions/v1/ai-summary';
 
@@ -38,7 +39,23 @@ export const useAISummary = () => {
 
       // Check if webhook URL is configured
       if (TINES_WEBHOOK_URL.includes('your-webhook-id-here')) {
-        throw new Error('Please configure your Tines webhook URL in src/hooks/useAISummary.ts');
+        console.error('❌ Tines webhook URL not configured');
+        
+        // Show a more helpful error message
+        toast({
+          title: "Configuration Required",
+          description: "Please contact your administrator to configure the Tines webhook URL for AI summaries.",
+          variant: "destructive",
+        });
+
+        // Reset status on configuration error
+        await supabase
+          .from('investigation_records')
+          .update({ ai_summary_status: 'failed' })
+          .eq('record_id', recordId);
+
+        setIsGenerating(false);
+        return;
       }
 
       // Send data to Tines webhook
@@ -61,7 +78,7 @@ export const useAISummary = () => {
       });
 
       if (!tinesResponse.ok) {
-        throw new Error(`Tines webhook failed: ${tinesResponse.statusText}`);
+        throw new Error(`Tines webhook failed: ${tinesResponse.status} ${tinesResponse.statusText}`);
       }
 
       console.log('✅ Successfully sent data to Tines');
@@ -86,7 +103,7 @@ export const useAISummary = () => {
 
       toast({
         title: "AI Summary Failed",
-        description: error instanceof Error ? error.message : "Failed to generate AI summary",
+        description: error instanceof Error ? error.message : "Failed to generate AI summary. Please try again.",
         variant: "destructive",
       });
     }
