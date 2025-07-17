@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -56,9 +57,10 @@ const EnhancedWalletResults = ({
     }
   }, [wallet]);
 
-  // Update the handleViewFlow function to use proper navigation
+  // Fixed handleViewFlow function to use the correct route pattern
   const handleViewFlow = () => {
     if (recordId) {
+      // Navigate to the correct route pattern: /wallets/:recordId/flow
       navigate(`/wallets/${recordId}/flow`);
     } else {
       console.warn('No recordId available for flow navigation');
