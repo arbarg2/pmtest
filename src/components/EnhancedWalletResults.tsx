@@ -18,6 +18,7 @@ import SanctionsScreening from '@/components/SanctionsScreening';
 import AnalystNotesThread from '@/components/AnalystNotesThread';
 import CaseManagement from '@/components/CaseManagement';
 import { HollyAIAnalysis } from '@/components/HollyAIAnalysis';
+import { AIExplainer } from '@/components/AIExplainer';
 
 interface EnhancedWalletResultsProps {
   wallet: WalletRiskResponse;
@@ -146,9 +147,10 @@ const EnhancedWalletResults = ({
           <WalletOverview wallet={wallet} />
         </div>
 
-        {/* AI Analysis Section - Now with recordId prop */}
-        <div className="mb-8">
+        {/* AI Analysis Section - Both HollyAIAnalysis and AIExplainer */}
+        <div className="mb-8 space-y-6">
           <HollyAIAnalysis walletData={wallet} recordId={recordId} />
+          <AIExplainer walletData={wallet} recordId={recordId} />
         </div>
 
         {/* Second Row - Entity Attribution and Geographic Risk */}
