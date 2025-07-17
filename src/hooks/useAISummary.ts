@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -6,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 // TODO: Replace with your actual Tines webhook URL
 // You can get this from your Tines workflow by adding a webhook trigger
 // Example format: 'https://your-tenant.tines.com/webhook/abc123def456'
-const TINES_WEBHOOK_URL = 'https://hooks.tines.com/webhook/your-webhook-id-here';
+const TINES_WEBHOOK_URL = 'https://pat.tines.com/webhook/aml-buddy-bot/d944814a4370670941138b195459ae7e';
 const AI_SUMMARY_ENDPOINT = 'https://edjkvebuxfxoylzgoddi.supabase.co/functions/v1/ai-summary';
 
 export interface AISummaryData {
@@ -36,27 +35,6 @@ export const useAISummary = () => {
         .from('investigation_records')
         .update({ ai_summary_status: 'processing' })
         .eq('record_id', recordId);
-
-      // Check if webhook URL is configured
-      if (TINES_WEBHOOK_URL.includes('your-webhook-id-here')) {
-        console.error('❌ Tines webhook URL not configured');
-        
-        // Show a more helpful error message
-        toast({
-          title: "Configuration Required",
-          description: "Please contact your administrator to configure the Tines webhook URL for AI summaries.",
-          variant: "destructive",
-        });
-
-        // Reset status on configuration error
-        await supabase
-          .from('investigation_records')
-          .update({ ai_summary_status: 'failed' })
-          .eq('record_id', recordId);
-
-        setIsGenerating(false);
-        return;
-      }
 
       // Send data to Tines webhook
       const tinesPayload = {
