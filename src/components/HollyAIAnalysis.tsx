@@ -22,6 +22,8 @@ import {
   Loader2
 } from 'lucide-react';
 import { useAISummary } from '@/hooks/useAISummary';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface HollyAIAnalysisProps {
   walletData?: any;
@@ -206,9 +208,11 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
                     </span>
                   )}
                 </div>
-                <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                  {summaryData.ai_summary}
-                </p>
+                <div className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {summaryData.ai_summary || ''}
+                  </ReactMarkdown>
+                </div>
               </div>
 
               {summaryData.ai_summary_previous && (
@@ -216,9 +220,11 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
                   <summary className="cursor-pointer text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-2">
                     View Previous Summary
                   </summary>
-                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-sm">
-                    {summaryData.ai_summary_previous}
-                  </p>
+                  <div className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {summaryData.ai_summary_previous || ''}
+                    </ReactMarkdown>
+                  </div>
                 </details>
               )}
             </div>
