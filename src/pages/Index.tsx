@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,17 +28,15 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
-  // Handle record loading when recordId is present
   useEffect(() => {
     if (recordId && user) {
       console.log('🔄 Loading data for record:', recordId);
-      
+
       setIsLoadingWalletData(true);
       setRecordNotFound(false);
-      
+
       const loadWalletData = async () => {
         try {
-          // First check if this is a temporary result from current session
           if (analysisData && analysisData.recordId === recordId && analysisData.isTemporary === true) {
             console.log('✅ Using temporary analysis data from current session');
             setWalletData(analysisData);
@@ -47,12 +45,11 @@ const Index = () => {
             return;
           }
 
-          // Try to load from database
           const result = await supabaseLookupRecords.getLookupRecordById(recordId, user.id);
-          
+
           if (result.success && result.record) {
             console.log('✅ Found record in database:', result.record);
-            
+
             const loadedWalletData = {
               recordId: result.record.record_id || result.record.id,
               address: result.record.wallet_address,
@@ -63,13 +60,13 @@ const Index = () => {
               case_id: result.record.case_id,
               case_status: result.record.case_status,
               case_created_at: result.record.case_created_at,
-              ...(result.record.analysis_data && 
-                  typeof result.record.analysis_data === 'object' && 
-                  result.record.analysis_data !== null 
-                  ? result.record.analysis_data 
-                  : {})
+              ...(result.record.analysis_data &&
+                typeof result.record.analysis_data === 'object' &&
+                result.record.analysis_data !== null
+                ? result.record.analysis_data
+                : {})
             };
-            
+
             setWalletData(loadedWalletData);
             setRecordNotFound(false);
           } else {
@@ -83,19 +80,18 @@ const Index = () => {
           setIsLoadingWalletData(false);
         }
       };
-      
+
       loadWalletData();
     }
   }, [recordId, user, analysisData]);
 
   const handleAnalyze = async () => {
     if (!walletAddress.trim()) return;
-    
+
     console.log('🚀 Starting analysis for:', walletAddress);
     try {
       const result = await analyzeWallet(walletAddress);
       if (result && result.recordId) {
-        // Navigate immediately to the results page
         console.log('🚀 Navigating to results with recordId:', result.recordId);
         navigate(`/record/${result.recordId}`, { replace: true });
       }
@@ -116,7 +112,6 @@ const Index = () => {
     generateReport(walletAddress);
   };
 
-  // Show loading while checking auth
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
@@ -125,12 +120,10 @@ const Index = () => {
     );
   }
 
-  // Redirect to auth if not authenticated
   if (!user) {
     return null;
   }
 
-  // If we have a recordId, show the appropriate state
   if (recordId) {
     if (isLoadingWalletData) {
       return (
@@ -162,7 +155,6 @@ const Index = () => {
       );
     }
 
-    // Show the Enhanced Wallet Results with the loaded data
     return (
       <EnhancedWalletResults
         wallet={walletData}
@@ -174,10 +166,8 @@ const Index = () => {
     );
   }
 
-  // Main dashboard view
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/80 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -199,12 +189,18 @@ const Index = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Top Row - Wallet Analysis Panel */}
-        <div className="mb-8">
-          <Card className="bg-white/90 backdrop-blur shadow-lg border-0">
+        <div className="mb-10">
+          <div className="mb-4 text-sm text-slate-600 dark:text-slate-400 uppercase tracking-wide font-medium">
+            Investigate a Wallet Address
+          </div>
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md shadow-xl border border-slate-200 dark:border-slate-700">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Shield className="w-5 h-5 mr-2 text-primary" />
-                Wallet Analysis - LIVE BLOCKCHAIN DATA
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800 dark:text-slate-200">
+                <Shield className="w-5 h-5 text-primary" />
+                Wallet Intelligence Lookup
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
+                  Live
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
