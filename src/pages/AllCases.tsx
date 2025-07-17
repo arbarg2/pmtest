@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, FolderOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { CaseManagement } from '@/components/CaseManagement';
+import CaseManagement from '@/components/CaseManagement';
 import { CaseChartsPanel } from '@/components/charts/CaseChartsPanel';
 
 const AllCases = () => {
