@@ -1,8 +1,16 @@
+
+/*
+ * Updated to use react-markdown for better formatting of AI-generated explanations.
+ * Replaced plain text rendering with markdown support for headings, bullets, bold text, etc.
+ * Added Tailwind prose styling for improved readability while maintaining existing functionality.
+ */
+
 import React, { useState } from 'react';
 import { Sparkles, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { WalletRiskResponse } from '@/services/api';
+import ReactMarkdown from 'react-markdown';
 
 interface AIExplainerProps {
   walletData: WalletRiskResponse;
@@ -115,8 +123,10 @@ export function AIExplainer({ walletData }: AIExplainerProps) {
       
       <CardContent className="pt-0">
         {explanation && isExpanded ? (
-          <div className="bg-white/90 backdrop-blur rounded-lg p-5 text-sm text-slate-700 leading-relaxed whitespace-pre-line border border-blue-100 shadow-inner">
-            {explanation}
+          <div className="bg-white/90 backdrop-blur rounded-lg p-5 border border-blue-100 shadow-inner">
+            <ReactMarkdown className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700">
+              {explanation}
+            </ReactMarkdown>
           </div>
         ) : explanation && !isExpanded ? (
           <div className="bg-white/90 backdrop-blur rounded-lg p-4 border border-blue-100">
