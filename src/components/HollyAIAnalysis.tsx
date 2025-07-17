@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,30 +75,26 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
     setIsAddingToNotes(true);
     try {
       // First, check if there's an existing case for this record
-      let caseExists = false;
-      try {
-        const { data: existingRecord } = await supabase
-          .from('investigation_records')
-          .select('is_case, case_id')
-          .eq('id', recordId)
-          .maybeSingle();
-        
-        caseExists = existingRecord?.is_case || false;
-      } catch (error) {
-        console.log('Error checking case status:', error);
-      }
-
+      const { data: existingRecord } = await supabase
+        .from('investigation_records')
+        .select('is_case, case_id')
+        .eq('id', recordId)
+        .maybeSingle();
+      
+      let caseId = existingRecord?.case_id;
+      
       // If no case exists, create one first
-      if (!caseExists) {
+      if (!existingRecord?.is_case) {
         const createResult = await caseManagementService.createCase(recordId, user.id);
         if (!createResult.success) {
           throw new Error(createResult.error || 'Failed to create case');
         }
+        caseId = createResult.caseId;
       }
 
-      // Add the AI summary as a case note
+      // Add the AI summary as a case note using the case ID
       const noteContent = `**Holly AI Risk Summary**\n\n${summaryData.ai_summary}`;
-      const addNoteResult = await caseManagementService.addCaseNote(recordId, noteContent);
+      const addNoteResult = await caseManagementService.addCaseNote(caseId!, noteContent);
       
       if (addNoteResult.success) {
         setHasAddedToNotes(true);
@@ -135,20 +132,20 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
 
   // Holly Loading Animation Component
   const HollyLoadingAnimation = () => (
-    <div className="flex items-center justify-center py-12" aria-busy="true">
+    <div className="flex items-center justify-center py-8" aria-busy="true">
       <div className="text-center">
         {/* Holly Avatar with Animation */}
-        <div className="relative mx-auto mb-4">
-          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center animate-pulse shadow-lg">
-            <BookOpen className="w-8 h-8 text-white animate-bounce" />
+        <div className="relative mx-auto mb-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+            <BookOpen className="w-6 h-6 text-white animate-bounce" />
           </div>
           {/* Sparkle animations */}
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>
-          <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-pink-400 rounded-full animate-ping delay-150"></div>
+          <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
+          <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 bg-pink-400 rounded-full animate-ping delay-150"></div>
         </div>
         
         {/* Main Message */}
-        <p className="text-purple-700 dark:text-purple-300 font-medium mb-2">
+        <p className="text-purple-700 dark:text-purple-300 font-medium mb-1">
           Holly is summarizing your investigation...
         </p>
         
@@ -187,10 +184,10 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
 
   return (
     <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950 border-purple-200 dark:border-purple-800">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center text-purple-800 dark:text-purple-200">
-            <Brain className="w-6 h-6 mr-3 text-purple-600 dark:text-purple-400" />
+            <Brain className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
             Holly AI Analysis
             <Badge variant="outline" className="ml-2 text-purple-600 border-purple-300 dark:text-purple-400 dark:border-purple-700">
               AI-Powered
@@ -220,48 +217,48 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
         </p>
       </CardHeader>
       
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {/* Quick Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-            <div className="flex items-center space-x-2 mb-2">
-              <Activity className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              <span className="font-medium text-purple-800 dark:text-purple-200">Behavioral Score</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
+            <div className="flex items-center space-x-2 mb-1">
+              <Activity className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <span className="font-medium text-purple-800 dark:text-purple-200 text-sm">Behavioral Score</span>
             </div>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+            <div className="text-xl font-bold text-purple-900 dark:text-purple-100">
               {aiInsights.riskBreakdown.temporalAnomalies.toFixed(1)}/10
             </div>
-            <p className="text-sm text-purple-600 dark:text-purple-400">Anomaly Detection</p>
+            <p className="text-xs text-purple-600 dark:text-purple-400">Anomaly Detection</p>
           </div>
           
-          <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-            <div className="flex items-center space-x-2 mb-2">
-              <Target className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              <span className="font-medium text-purple-800 dark:text-purple-200">Confidence</span>
+          <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
+            <div className="flex items-center space-x-2 mb-1">
+              <Target className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <span className="font-medium text-purple-800 dark:text-purple-200 text-sm">Confidence</span>
             </div>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+            <div className="text-xl font-bold text-purple-900 dark:text-purple-100">
               {(aiInsights.confidenceLevel * 100).toFixed(0)}%
             </div>
-            <p className="text-sm text-purple-600 dark:text-purple-400">Analysis Certainty</p>
+            <p className="text-xs text-purple-600 dark:text-purple-400">Analysis Certainty</p>
           </div>
           
-          <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-            <div className="flex items-center space-x-2 mb-2">
-              <AlertTriangle className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              <span className="font-medium text-purple-800 dark:text-purple-200">Alerts</span>
+          <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
+            <div className="flex items-center space-x-2 mb-1">
+              <AlertTriangle className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <span className="font-medium text-purple-800 dark:text-purple-200 text-sm">Alerts</span>
             </div>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+            <div className="text-xl font-bold text-purple-900 dark:text-purple-100">
               {aiInsights.behavioralAnomalies.length}
             </div>
-            <p className="text-sm text-purple-600 dark:text-purple-400">Active Anomalies</p>
+            <p className="text-xs text-purple-600 dark:text-purple-400">Active Anomalies</p>
           </div>
         </div>
 
         {/* AI Summary Section */}
-        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 rounded-lg p-6 border border-indigo-200 dark:border-indigo-800">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 rounded-lg p-4 border border-indigo-200 dark:border-indigo-800">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
-              <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <h4 className="font-semibold text-indigo-800 dark:text-indigo-200">Holly AI Intelligence Summary</h4>
               {summaryData.ai_summary_status && getStatusIcon()}
             </div>
@@ -300,8 +297,8 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
           {isGenerating ? (
             <HollyLoadingAnimation />
           ) : summaryData.ai_summary ? (
-            <div className="space-y-4">
-              <div className="bg-white/60 dark:bg-slate-800/60 rounded-lg p-4">
+            <div className="space-y-3">
+              <div className="bg-white/60 dark:bg-slate-800/60 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Current Summary</span>
                   {summaryData.ai_summary_generated_at && (
@@ -344,7 +341,7 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
               </div>
 
               {summaryData.ai_summary_previous && (
-                <details className="bg-white/40 dark:bg-slate-800/40 rounded-lg p-4">
+                <details className="bg-white/40 dark:bg-slate-800/40 rounded-lg p-3">
                   <summary className="cursor-pointer text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-2">
                     View Previous Summary
                   </summary>
@@ -357,9 +354,9 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
               )}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-              <p className="text-slate-600 dark:text-slate-400 mb-2">No AI summary generated yet</p>
+            <div className="text-center py-6">
+              <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-slate-600 dark:text-slate-400 mb-1">No AI summary generated yet</p>
               <p className="text-sm text-slate-500">Click the button above to generate an intelligent summary of this investigation</p>
             </div>
           )}
@@ -367,16 +364,16 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
 
         {/* Expanded Analysis */}
         {isExpanded && (
-          <div className="space-y-6 mt-6">
+          <div className="space-y-4 mt-4">
             {/* Behavioral Anomaly Detection */}
-            <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-6 border border-purple-200 dark:border-purple-800">
-              <h4 className="flex items-center font-semibold text-purple-800 dark:text-purple-200 mb-4">
-                <Eye className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
+            <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+              <h4 className="flex items-center font-semibold text-purple-800 dark:text-purple-200 mb-3">
+                <Eye className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400" />
                 Behavioral Anomaly Detection
               </h4>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {aiInsights.behavioralAnomalies.map((anomaly, index) => (
-                  <div key={index} className="flex items-start space-x-3 p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
+                  <div key={index} className="flex items-start space-x-2 p-2 bg-purple-50 dark:bg-purple-950 rounded-lg">
                     <AlertTriangle className="w-4 h-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
                     <span className="text-sm text-purple-800 dark:text-purple-200">{anomaly}</span>
                   </div>
@@ -385,14 +382,14 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
             </div>
 
             {/* Contextual Risk Score Breakdown */}
-            <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-6 border border-purple-200 dark:border-purple-800">
-              <h4 className="flex items-center font-semibold text-purple-800 dark:text-purple-200 mb-4">
-                <TrendingUp className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
+            <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+              <h4 className="flex items-center font-semibold text-purple-800 dark:text-purple-200 mb-3">
+                <TrendingUp className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400" />
                 Contextual Risk Score Breakdown
               </h4>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {Object.entries(aiInsights.riskBreakdown).map(([category, score]) => (
-                  <div key={category} className="space-y-2">
+                  <div key={category} className="space-y-1">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium text-purple-800 dark:text-purple-200 capitalize">
                         {category.replace(/([A-Z])/g, ' $1').trim()}
@@ -413,14 +410,14 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
             </div>
 
             {/* Actionable Insights */}
-            <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-6 border border-purple-200 dark:border-purple-800">
-              <h4 className="flex items-center font-semibold text-purple-800 dark:text-purple-200 mb-4">
-                <Lightbulb className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
+            <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+              <h4 className="flex items-center font-semibold text-purple-800 dark:text-purple-200 mb-3">
+                <Lightbulb className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400" />
                 Actionable Insights
               </h4>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {aiInsights.actionableInsights.map((insight, index) => (
-                  <div key={index} className="flex items-start space-x-3 p-3 bg-indigo-50 dark:bg-indigo-950 rounded-lg">
+                  <div key={index} className="flex items-start space-x-2 p-2 bg-indigo-50 dark:bg-indigo-950 rounded-lg">
                     <Lightbulb className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
                     <span className="text-sm text-indigo-800 dark:text-indigo-200">{insight}</span>
                   </div>
