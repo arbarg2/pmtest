@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-const TINES_WEBHOOK_URL = 'https://your-tines-webhook-url.com/webhook'; // Replace with actual Tines webhook URL
+// TODO: Replace with your actual Tines webhook URL
+// Example: 'https://your-tines-instance.tines.com/webhook/your-webhook-id'
+const TINES_WEBHOOK_URL = 'https://hooks.tines.com/webhook/your-webhook-id-here';
 const AI_SUMMARY_ENDPOINT = 'https://edjkvebuxfxoylzgoddi.supabase.co/functions/v1/ai-summary';
 
 export interface AISummaryData {
@@ -34,14 +36,21 @@ export const useAISummary = () => {
         .update({ ai_summary_status: 'processing' })
         .eq('record_id', recordId);
 
+      // Check if webhook URL is configured
+      if (TINES_WEBHOOK_URL.includes('your-webhook-id-here')) {
+        throw new Error('Please configure your Tines webhook URL in src/hooks/useAISummary.ts');
+      }
+
       // Send data to Tines webhook
       const tinesPayload = {
         record_id: recordId,
         wallet_data: walletData,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        callback_url: AI_SUMMARY_ENDPOINT
       };
 
-      console.log('📤 Sending data to Tines webhook:', tinesPayload);
+      console.log('📤 Sending data to Tines webhook:', TINES_WEBHOOK_URL);
+      console.log('📋 Payload:', tinesPayload);
 
       const tinesResponse = await fetch(TINES_WEBHOOK_URL, {
         method: 'POST',
