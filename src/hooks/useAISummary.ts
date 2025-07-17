@@ -1,12 +1,7 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-// TODO: Replace with your actual Tines webhook URL
-// You can get this from your Tines workflow by adding a webhook trigger
-// Example format: 'https://your-tenant.tines.com/webhook/abc123def456'
-const TINES_WEBHOOK_URL = 'https://pat.tines.com/webhook/aml-buddy-bot/d944814a4370670941138b195459ae7e';
-const AI_SUMMARY_ENDPOINT = 'https://edjkvebuxfxoylzgoddi.supabase.co/functions/v1/ai-summary';
 
 export interface AISummaryData {
   ai_summary: string | null;
@@ -36,30 +31,21 @@ export const useAISummary = () => {
         .update({ ai_summary_status: 'processing' })
         .eq('record_id', recordId);
 
-      // Send data to Tines webhook
-      const tinesPayload = {
-        record_id: recordId,
-        wallet_data: walletData,
-        timestamp: new Date().toISOString(),
-        callback_url: AI_SUMMARY_ENDPOINT
-      };
-
-      console.log('📤 Sending data to Tines webhook:', TINES_WEBHOOK_URL);
-      console.log('📋 Payload:', tinesPayload);
-
-      const tinesResponse = await fetch(TINES_WEBHOOK_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(tinesPayload),
+      // Call our Edge Function which will handle the Tines webhook call
+      console.log('📤 Calling AI summary Edge Function');
+      const { data, error } = await supabase.functions.invoke('ai-summary', {
+        body: {
+          action: 'generate',
+          record_id: recordId,
+          wallet_data: walletData
+        }
       });
 
-      if (!tinesResponse.ok) {
-        throw new Error(`Tines webhook failed: ${tinesResponse.status} ${tinesResponse.statusText}`);
+      if (error) {
+        throw new Error(`Edge Function failed: ${error.message}`);
       }
 
-      console.log('✅ Successfully sent data to Tines');
+      console.log('✅ Successfully initiated AI summary generation');
 
       // Start polling for the AI summary result
       startPolling(recordId);
