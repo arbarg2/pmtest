@@ -1,126 +1,86 @@
-Here’s a **clean, professional `README.md` description** for your product **Rìan**—focused, clear, and investor/user-friendly:
+
+# Rìan Intelligence - Blockchain Investigation Platform
+
+## Recent Changes
+
+### [2025-01-17 - Transaction Flow Navigation & Visualization]
+- **Fixed TransactionFlowPreview navigation**: Properly wired up `onViewFlow` handlers to route to dedicated transaction flow pages
+- **Added new route**: `/wallets/:recordId/flow` for detailed transaction flow analysis
+- **Created WalletTransactionFlow page**: Full-page transaction flow visualization with proper data loading and error handling
+- **Enhanced TransactionGraph component**: 
+  - Added support for both real backend data and mock data fallback
+  - Implemented resilient data handling for edge cases (single nodes, no counterparties)
+  - Added interactive SVG-based graph visualization with risk-based color coding
+  - Included network statistics, node details panel, and risk assessment summaries
+  - Added "Mock Data" alerts to avoid confusion during demos
+  - Implemented data export functionality
+- **Updated App.tsx routing**: Added new transaction flow route to router configuration
+- **Enhanced EnhancedWalletResults**: Updated to use proper navigation instead of callback-only approach
+
+### Features Added:
+- Interactive transaction graph with SVG-based visualization
+- Real-time node selection and detail viewing  
+- Risk-based color coding (red=high, yellow=medium, green=low risk)
+- Network statistics dashboard
+- Export functionality for graph data
+- Graceful handling of missing/malformed data
+- Mock data fallback for consistent demo experience
+- Edge case handling for isolated wallets
+
+### Technical Details:
+- Uses React Router for navigation between analysis and flow views
+- Implements TypeScript interfaces for graph data structures
+- SVG-based rendering for better performance and customization
+- Responsive design that works on desktop and mobile
+- Proper error boundaries and loading states
 
 ---
 
-# Rìan — Crypto Wallet Risk Scoring & Compliance Co-Pilot
+A React-based blockchain investigation platform built with TypeScript, Supabase, and Tailwind CSS.
 
-**Rìan** is an **AI-driven crypto compliance platform** that enables businesses to **instantly assess wallet risk, trace transactions, and generate audit-ready reports**—without the complexity or cost of traditional blockchain forensics tools.
+## Tech Stack
 
-Designed for **exchanges, fintechs, OTC desks, and compliance teams**, Rìan helps organizations meet **AML, KYC, and sanctions screening requirements** through a fast, explainable, and affordable solution.
+- **Frontend**: React 18, TypeScript, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Auth, Edge Functions)
+- **Routing**: React Router DOM
+- **UI Components**: Radix UI, shadcn/ui
+- **Charts**: Recharts
+- **Icons**: Lucide React
 
----
+## Key Features
 
-## 🚀 Key Features
+- Wallet risk analysis and scoring
+- Transaction flow visualization
+- Case management system
+- Bulk wallet analysis
+- AI-powered insights
+- Real-time monitoring
+- Export capabilities
 
-* **Wallet Risk Scoring:** Instantly assess any crypto wallet for exposure to sanctions, darknet markets, mixers, scams, or high-risk behavior.
-* **AI-Powered Decisioning:** Receive clear **Block / Allow / Investigate** recommendations, with **plain-language explanations** powered by AI (**Holly**).
-* **Transaction Tracing:** Visualize fund flows and wallet linkages up to 3 hops deep.
-* **Case Management:** Save wallet checks, add investigation notes, and auto-generate compliance reports.
-* **Bulk Screening:** Upload and screen multiple wallet addresses with ease.
-* **Audit-Ready Reports:** Generate downloadable reports for regulatory and internal compliance needs.
+## Getting Started
 
----
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Set up environment variables (see `.env.example`)
+4. Start development server: `npm run dev`
 
-## ⚙️ Built For
+## Project Structure
 
-* **Crypto Exchanges**
-* **Fintechs & Payment Platforms**
-* **OTC Trading Desks**
-* **Compliance Teams & RegTech Providers**
-
----
-
-## 🌐 Why Rìan?
-
-* Traditional blockchain compliance tools are **too expensive** and **too complex** for most businesses.
-* **Rìan** delivers **speed, simplicity, and transparency**—helping businesses stay compliant without breaking budgets.
-
----
-
-## 🛠️ Status
-
-This is an **early-stage MVP** built for design partner feedback and validation.
-To request access or become a design partner, please [contact us](mailto:your-email@example.com).
-
----
-
-
-
-
-
-# Welcome to your Lovable project
-
-## Project info
-
-**URL**: https://lovable.dev/projects/258d9e64-b24b-459d-b327-1b38f6e9a077
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/258d9e64-b24b-459d-b327-1b38f6e9a077) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+src/
+├── components/          # Reusable UI components
+├── pages/              # Route components
+├── services/           # API and business logic
+├── hooks/              # Custom React hooks
+├── contexts/           # React context providers
+├── types/              # TypeScript type definitions
+└── utils/              # Utility functions
 ```
 
-**Edit a file directly in GitHub**
+## Contributing
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Please read our contributing guidelines before submitting pull requests.
 
-**Use GitHub Codespaces**
+## License
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/258d9e64-b24b-459d-b327-1b38f6e9a077) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
-
-
-
+[License information here]

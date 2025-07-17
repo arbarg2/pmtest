@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WalletRiskResponse } from '@/services/api';
+import { useNavigate } from 'react-router-dom';
 
 // Import all dashboard components
 import WalletOverview from '@/components/dashboard/WalletOverview';
@@ -36,6 +37,7 @@ const EnhancedWalletResults = ({
   riskFactors = [],
   sanctionsMatches = []
 }: EnhancedWalletResultsProps) => {
+  const navigate = useNavigate();
   const [investigationStatus, setInvestigationStatus] = useState('pending');
   const [analystNotes, setAnalystNotes] = useState('');
   const [isCase, setIsCase] = useState(false);
@@ -53,6 +55,19 @@ const EnhancedWalletResults = ({
       setCaseCreatedAt(wallet.case_created_at);
     }
   }, [wallet]);
+
+  // Update the handleViewFlow function to use proper navigation
+  const handleViewFlow = () => {
+    if (recordId) {
+      navigate(`/wallets/${recordId}/flow`);
+    } else {
+      console.warn('No recordId available for flow navigation');
+      // Fallback to the original onViewFlow if provided
+      if (onViewFlow) {
+        onViewFlow();
+      }
+    }
+  };
 
   const handleNotesUpdate = (notes: any[], status: string) => {
     setInvestigationStatus(status);
@@ -153,7 +168,7 @@ const EnhancedWalletResults = ({
 
         {/* Fifth Row - Transaction Flow and Counterparties */}
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
-          <TransactionFlowPreview wallet={wallet} onViewFlow={onViewFlow} />
+          <TransactionFlowPreview wallet={wallet} onViewFlow={handleViewFlow} />
           <CounterpartyIntelligence wallet={wallet} />
         </div>
 

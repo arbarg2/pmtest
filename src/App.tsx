@@ -15,6 +15,7 @@ import BulkAnalysis from "./pages/BulkAnalysis";
 import AllCases from "./pages/AllCases";
 import AllRecords from "./pages/AllRecords";
 import AuditLogs from "./pages/AuditLogs";
+import WalletTransactionFlow from "./pages/WalletTransactionFlow";
 import { AuthPage } from "./components/auth/AuthPage";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/" element={<Landing />} />
               <Route path="/dashboard" element={<Index />} />
               <Route path="/record/:recordId" element={<Index />} />
+              <Route path="/wallets/:recordId/flow" element={<WalletTransactionFlow />} />
               <Route path="/cases" element={<CaseManagementPage />} />
               <Route path="/all-cases" element={<AllCases />} />
               <Route path="/all-records" element={<AllRecords />} />
