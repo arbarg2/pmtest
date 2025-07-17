@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -137,8 +136,8 @@ export function InvestigationRecordsTable() {
 
   const handleViewDetails = (record: InvestigationRecord) => {
     console.log('Viewing record:', record);
-    // Navigate to the analysis page with the record ID
-    navigate(`/analysis/${record.record_id}`);
+    // Fixed navigation to use the correct route pattern
+    navigate(`/record/${record.record_id}`);
   };
 
   if (!user) {

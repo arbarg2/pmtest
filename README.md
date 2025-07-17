@@ -84,3 +84,13 @@ Please read our contributing guidelines before submitting pull requests.
 ## License
 
 [License information here]
+
+## 🔄 Changelog - [2025-01-17]
+
+- Fixed broken navigation from /dashboard > View Details to correct record route (`/record/:recordId`)
+- Added drillable, toggleable chart panels to /all-records and /all-cases pages
+- Charts show lookups and cases over time and by category (risk level, case status)
+- RecordChartsPanel displays daily lookup trends and risk level distribution
+- CaseChartsPanel shows case creation timeline and status breakdown
+- All charts are responsive, toggleable (hide/show), and handle empty states gracefully
+
