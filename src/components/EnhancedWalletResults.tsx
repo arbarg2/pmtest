@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,7 +17,6 @@ import SanctionsScreening from '@/components/SanctionsScreening';
 import AnalystNotesThread from '@/components/AnalystNotesThread';
 import CaseManagement from '@/components/CaseManagement';
 import { HollyAIAnalysis } from '@/components/HollyAIAnalysis';
-import { AIExplainer } from '@/components/AIExplainer';
 
 interface EnhancedWalletResultsProps {
   wallet: WalletRiskResponse;
@@ -147,10 +145,9 @@ const EnhancedWalletResults = ({
           <WalletOverview wallet={wallet} />
         </div>
 
-        {/* AI Analysis Section - Both HollyAIAnalysis and AIExplainer */}
-        <div className="mb-8 space-y-6">
+        {/* AI Analysis Section - Only Holly AI Analysis */}
+        <div className="mb-8">
           <HollyAIAnalysis walletData={wallet} recordId={recordId} />
-          <AIExplainer walletData={wallet} recordId={recordId} />
         </div>
 
         {/* Second Row - Entity Attribution and Geographic Risk */}

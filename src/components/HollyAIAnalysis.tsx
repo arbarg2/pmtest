@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,9 +18,15 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Plus,
+  BookOpen
 } from 'lucide-react';
 import { useAISummary } from '@/hooks/useAISummary';
+import { useToast } from '@/hooks/use-toast';
+import { caseManagementService } from '@/services/caseManagement';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -32,6 +37,10 @@ interface HollyAIAnalysisProps {
 
 export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isAddingToNotes, setIsAddingToNotes] = useState(false);
+  const [hasAddedToNotes, setHasAddedToNotes] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
   const { 
     isGenerating, 
     summaryData, 
@@ -52,6 +61,65 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
     }
   };
 
+  const handleAddToCaseNotes = async () => {
+    if (!user || !recordId || !summaryData.ai_summary) {
+      toast({
+        title: "Error",
+        description: "Unable to add summary to case notes. Missing required data.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAddingToNotes(true);
+    try {
+      // First, check if there's an existing case for this record
+      let caseExists = false;
+      try {
+        const { data: existingRecord } = await supabase
+          .from('investigation_records')
+          .select('is_case, case_id')
+          .eq('id', recordId)
+          .maybeSingle();
+        
+        caseExists = existingRecord?.is_case || false;
+      } catch (error) {
+        console.log('Error checking case status:', error);
+      }
+
+      // If no case exists, create one first
+      if (!caseExists) {
+        const createResult = await caseManagementService.createCase(recordId, user.id);
+        if (!createResult.success) {
+          throw new Error(createResult.error || 'Failed to create case');
+        }
+      }
+
+      // Add the AI summary as a case note
+      const noteContent = `**Holly AI Risk Summary**\n\n${summaryData.ai_summary}`;
+      const addNoteResult = await caseManagementService.addCaseNote(recordId, noteContent);
+      
+      if (addNoteResult.success) {
+        setHasAddedToNotes(true);
+        toast({
+          title: "✅ Added to Case Notes",
+          description: "Holly AI summary has been saved to case notes.",
+        });
+      } else {
+        throw new Error(addNoteResult.error || 'Failed to add note');
+      }
+    } catch (error) {
+      console.error('Error adding summary to case notes:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add summary to case notes.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingToNotes(false);
+    }
+  };
+
   const getStatusIcon = () => {
     switch (summaryData.ai_summary_status) {
       case 'completed':
@@ -64,6 +132,38 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
         return <Clock className="w-4 h-4 text-gray-500" />;
     }
   };
+
+  // Holly Loading Animation Component
+  const HollyLoadingAnimation = () => (
+    <div className="flex items-center justify-center py-12" aria-busy="true">
+      <div className="text-center">
+        {/* Holly Avatar with Animation */}
+        <div className="relative mx-auto mb-4">
+          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+            <BookOpen className="w-8 h-8 text-white animate-bounce" />
+          </div>
+          {/* Sparkle animations */}
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>
+          <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-pink-400 rounded-full animate-ping delay-150"></div>
+        </div>
+        
+        {/* Main Message */}
+        <p className="text-purple-700 dark:text-purple-300 font-medium mb-2">
+          Holly is summarizing your investigation...
+        </p>
+        
+        {/* Subtitle with animated dots */}
+        <div className="flex items-center justify-center space-x-1 text-sm text-slate-500">
+          <span>Analyzing blockchain data</span>
+          <div className="flex space-x-1">
+            <div className="w-1 h-1 bg-purple-500 rounded-full animate-bounce"></div>
+            <div className="w-1 h-1 bg-purple-500 rounded-full animate-bounce delay-100"></div>
+            <div className="w-1 h-1 bg-purple-500 rounded-full animate-bounce delay-200"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const aiInsights = {
     behavioralAnomalies: [
@@ -162,7 +262,7 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
               <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              <h4 className="font-semibold text-indigo-800 dark:text-indigo-200">AI Intelligence Summary</h4>
+              <h4 className="font-semibold text-indigo-800 dark:text-indigo-200">Holly AI Intelligence Summary</h4>
               {summaryData.ai_summary_status && getStatusIcon()}
             </div>
             <div className="flex items-center space-x-2">
@@ -180,7 +280,7 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
                 {isGenerating ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
+                    Regenerating...
                   </>
                 ) : summaryData.ai_summary ? (
                   <>
@@ -197,7 +297,9 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
             </div>
           </div>
 
-          {summaryData.ai_summary ? (
+          {isGenerating ? (
+            <HollyLoadingAnimation />
+          ) : summaryData.ai_summary ? (
             <div className="space-y-4">
               <div className="bg-white/60 dark:bg-slate-800/60 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -208,11 +310,37 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
                     </span>
                   )}
                 </div>
-                <div className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700">
+                <div className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 leading-relaxed whitespace-pre-wrap">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {summaryData.ai_summary || ''}
                   </ReactMarkdown>
                 </div>
+              </div>
+
+              {/* Add to Case Notes Button */}
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleAddToCaseNotes}
+                  disabled={isAddingToNotes || hasAddedToNotes || !summaryData.ai_summary}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {isAddingToNotes ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Adding to Notes...
+                    </>
+                  ) : hasAddedToNotes ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Added to Notes
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add to Case Notes
+                    </>
+                  )}
+                </Button>
               </div>
 
               {summaryData.ai_summary_previous && (
@@ -220,21 +348,13 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
                   <summary className="cursor-pointer text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-2">
                     View Previous Summary
                   </summary>
-                  <div className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700">
+                  <div className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 leading-relaxed whitespace-pre-wrap">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {summaryData.ai_summary_previous || ''}
                     </ReactMarkdown>
                   </div>
                 </details>
               )}
-            </div>
-          ) : isGenerating ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="text-center">
-                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-2" />
-                <p className="text-indigo-700 dark:text-indigo-300">Generating AI summary...</p>
-                <p className="text-sm text-slate-500">This may take a few moments</p>
-              </div>
             </div>
           ) : (
             <div className="text-center py-8">
