@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,15 +12,56 @@ import {
   Eye, 
   Target,
   Lightbulb,
-  Activity
+  Activity,
+  Sparkles,
+  FileText,
+  RefreshCw,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Loader2
 } from 'lucide-react';
+import { useAISummary } from '@/hooks/useAISummary';
 
 interface HollyAIAnalysisProps {
   walletData?: any;
+  recordId?: string;
 }
 
-export function HollyAIAnalysis({ walletData }: HollyAIAnalysisProps) {
+export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { 
+    isGenerating, 
+    summaryData, 
+    generateAISummary, 
+    loadExistingSummary 
+  } = useAISummary();
+
+  // Load existing summary when component mounts or recordId changes
+  useEffect(() => {
+    if (recordId) {
+      loadExistingSummary(recordId);
+    }
+  }, [recordId, loadExistingSummary]);
+
+  const handleGenerateAISummary = () => {
+    if (recordId && walletData) {
+      generateAISummary(recordId, walletData);
+    }
+  };
+
+  const getStatusIcon = () => {
+    switch (summaryData.ai_summary_status) {
+      case 'completed':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'processing':
+        return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
+      case 'failed':
+        return <XCircle className="w-4 h-4 text-red-500" />;
+      default:
+        return <Clock className="w-4 h-4 text-gray-500" />;
+    }
+  };
 
   const aiInsights = {
     behavioralAnomalies: [
@@ -112,6 +153,90 @@ export function HollyAIAnalysis({ walletData }: HollyAIAnalysisProps) {
             </div>
             <p className="text-sm text-purple-600 dark:text-purple-400">Active Anomalies</p>
           </div>
+        </div>
+
+        {/* AI Summary Section */}
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 rounded-lg p-6 border border-indigo-200 dark:border-indigo-800">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <h4 className="font-semibold text-indigo-800 dark:text-indigo-200">AI Intelligence Summary</h4>
+              {summaryData.ai_summary_status && getStatusIcon()}
+            </div>
+            <div className="flex items-center space-x-2">
+              {summaryData.ai_summary_previous && (
+                <Badge variant="outline" className="text-xs">
+                  Previous Available
+                </Badge>
+              )}
+              <Button
+                onClick={handleGenerateAISummary}
+                disabled={isGenerating || !recordId}
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : summaryData.ai_summary ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Regenerate Summary
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Generate AI Summary
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {summaryData.ai_summary ? (
+            <div className="space-y-4">
+              <div className="bg-white/60 dark:bg-slate-800/60 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Current Summary</span>
+                  {summaryData.ai_summary_generated_at && (
+                    <span className="text-xs text-slate-500">
+                      Generated: {new Date(summaryData.ai_summary_generated_at).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+                <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                  {summaryData.ai_summary}
+                </p>
+              </div>
+
+              {summaryData.ai_summary_previous && (
+                <details className="bg-white/40 dark:bg-slate-800/40 rounded-lg p-4">
+                  <summary className="cursor-pointer text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-2">
+                    View Previous Summary
+                  </summary>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-sm">
+                    {summaryData.ai_summary_previous}
+                  </p>
+                </details>
+              )}
+            </div>
+          ) : isGenerating ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-2" />
+                <p className="text-indigo-700 dark:text-indigo-300">Generating AI summary...</p>
+                <p className="text-sm text-slate-500">This may take a few moments</p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <FileText className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+              <p className="text-slate-600 dark:text-slate-400 mb-2">No AI summary generated yet</p>
+              <p className="text-sm text-slate-500">Click the button above to generate an intelligent summary of this investigation</p>
+            </div>
+          )}
         </div>
 
         {/* Expanded Analysis */}

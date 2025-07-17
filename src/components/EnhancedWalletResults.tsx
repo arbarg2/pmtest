@@ -12,12 +12,12 @@ import EntityAttribution from '@/components/dashboard/EntityAttribution';
 import GeographicRisk from '@/components/dashboard/GeographicRisk';
 import CounterpartyIntelligence from '@/components/dashboard/CounterpartyIntelligence';
 import TransactionFlowPreview from '@/components/dashboard/TransactionFlowPreview';
-import AIAnalysisSummary from '@/components/dashboard/AIAnalysisSummary';
 import ExportActions from '@/components/dashboard/ExportActions';
 import RiskFactorsBreakdown from '@/components/RiskFactorsBreakdown';
 import SanctionsScreening from '@/components/SanctionsScreening';
 import AnalystNotesThread from '@/components/AnalystNotesThread';
 import CaseManagement from '@/components/CaseManagement';
+import { HollyAIAnalysis } from '@/components/HollyAIAnalysis';
 
 interface EnhancedWalletResultsProps {
   wallet: WalletRiskResponse;
@@ -146,9 +146,9 @@ const EnhancedWalletResults = ({
           <WalletOverview wallet={wallet} />
         </div>
 
-        {/* AI Analysis Section */}
+        {/* AI Analysis Section - Now with recordId prop */}
         <div className="mb-8">
-          <AIAnalysisSummary wallet={wallet} />
+          <HollyAIAnalysis walletData={wallet} recordId={recordId} />
         </div>
 
         {/* Second Row - Entity Attribution and Geographic Risk */}

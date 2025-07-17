@@ -70,6 +70,10 @@ export type Database = {
       }
       investigation_records: {
         Row: {
+          ai_summary: string | null
+          ai_summary_generated_at: string | null
+          ai_summary_previous: string | null
+          ai_summary_status: string | null
           analysis_data: Json
           analyst_id: string | null
           analyst_notes: string | null
@@ -92,6 +96,10 @@ export type Database = {
           wallet_address: string
         }
         Insert: {
+          ai_summary?: string | null
+          ai_summary_generated_at?: string | null
+          ai_summary_previous?: string | null
+          ai_summary_status?: string | null
           analysis_data: Json
           analyst_id?: string | null
           analyst_notes?: string | null
@@ -114,6 +122,10 @@ export type Database = {
           wallet_address: string
         }
         Update: {
+          ai_summary?: string | null
+          ai_summary_generated_at?: string | null
+          ai_summary_previous?: string | null
+          ai_summary_status?: string | null
           analysis_data?: Json
           analyst_id?: string | null
           analyst_notes?: string | null
