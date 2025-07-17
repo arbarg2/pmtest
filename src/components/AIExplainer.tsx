@@ -3,24 +3,32 @@
  * Updated to use react-markdown for better formatting of AI-generated explanations.
  * Replaced plain text rendering with markdown support for headings, bullets, bold text, etc.
  * Added Tailwind prose styling for improved readability while maintaining existing functionality.
+ * Added Holly AI loading animation and Add to Case Notes functionality.
  */
 
 import React, { useState } from 'react';
-import { Sparkles, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sparkles, Loader2, ChevronDown, ChevronUp, Plus, Check, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { WalletRiskResponse } from '@/services/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { caseManagementService } from '@/services/caseManagement';
+import { useToast } from '@/hooks/use-toast';
 
 interface AIExplainerProps {
   walletData: WalletRiskResponse;
+  recordId?: string;
+  onAddToCaseNotes?: (recordId: string, summary: string) => Promise<void>;
 }
 
-export function AIExplainer({ walletData }: AIExplainerProps) {
+export function AIExplainer({ walletData, recordId, onAddToCaseNotes }: AIExplainerProps) {
   const [isExplaining, setIsExplaining] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSavingToCase, setIsSavingToCase] = useState(false);
+  const [isSavedToCase, setIsSavedToCase] = useState(false);
+  const { toast } = useToast();
 
   const generateExplanation = async () => {
     setIsExplaining(true);
@@ -70,6 +78,53 @@ export function AIExplainer({ walletData }: AIExplainerProps) {
     setIsExpanded(true);
   };
 
+  const handleAddToCaseNotes = async () => {
+    if (!recordId || !explanation) {
+      toast({
+        title: "Error",
+        description: "No record ID or explanation available",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSavingToCase(true);
+    
+    try {
+      if (onAddToCaseNotes) {
+        // Use custom handler if provided
+        await onAddToCaseNotes(recordId, explanation);
+      } else {
+        // Default behavior: create case and add note
+        const caseResult = await caseManagementService.createCase(
+          recordId,
+          undefined, // No specific assignee
+          `Holly AI Summary: ${explanation.substring(0, 100)}...`
+        );
+        
+        if (!caseResult.success) {
+          throw new Error(caseResult.error || 'Failed to create case');
+        }
+      }
+      
+      setIsSavedToCase(true);
+      toast({
+        title: "Success",
+        description: "Summary added to case notes",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Error adding to case notes:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add summary to case notes",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingToCase(false);
+    }
+  };
+
   return (
     <Card className="bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 border-blue-200 shadow-lg">
       <CardHeader className="pb-3">
@@ -93,7 +148,12 @@ export function AIExplainer({ walletData }: AIExplainerProps) {
               >
                 {isExplaining ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <div className="w-4 h-4 mr-2">
+                      <div className="relative">
+                        <BookOpen className="w-4 h-4 animate-pulse text-blue-200" />
+                        <Sparkles className="w-2 h-2 absolute -top-1 -right-1 animate-ping text-yellow-300" />
+                      </div>
+                    </div>
                     Analyzing...
                   </>
                 ) : (
@@ -123,12 +183,68 @@ export function AIExplainer({ walletData }: AIExplainerProps) {
       </CardHeader>
       
       <CardContent className="pt-0">
+        {/* Holly Loading Animation */}
+        {isExplaining && (
+          <div className="bg-white/90 backdrop-blur rounded-lg p-6 border border-blue-100 shadow-inner">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="relative">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center animate-pulse">
+                  <BookOpen className="w-8 h-8 text-white" />
+                </div>
+                <div className="absolute -top-2 -right-2">
+                  <Sparkles className="w-6 h-6 text-yellow-400 animate-ping" />
+                </div>
+                <div className="absolute -bottom-1 -left-1">
+                  <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce"></div>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-purple-800 font-medium">Holly is summarizing your investigation...</p>
+                <p className="text-purple-600 text-sm mt-1">Analyzing patterns and risk indicators</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {explanation && isExpanded ? (
-          <div className="bg-white/90 backdrop-blur rounded-lg p-5 border border-blue-100 shadow-inner">
-            <div className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {explanation || ''}
-              </ReactMarkdown>
+          <div className="space-y-4">
+            <div className="bg-white/90 backdrop-blur rounded-lg p-5 border border-blue-100 shadow-inner">
+              <div className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {explanation || ''}
+                </ReactMarkdown>
+              </div>
+            </div>
+            
+            {/* Add to Case Notes Button */}
+            <div className="flex justify-end">
+              <Button
+                onClick={handleAddToCaseNotes}
+                disabled={isSavingToCase || isSavedToCase}
+                size="sm"
+                variant={isSavedToCase ? "outline" : "default"}
+                className={isSavedToCase ? 
+                  "border-green-300 text-green-700 hover:text-green-800" : 
+                  "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                }
+              >
+                {isSavingToCase ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : isSavedToCase ? (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Saved to Case
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add to Case Notes
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         ) : explanation && !isExpanded ? (
