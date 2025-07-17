@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { WalletRiskResponse } from '@/services/api';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface AIExplainerProps {
   walletData: WalletRiskResponse;
@@ -124,11 +125,12 @@ export function AIExplainer({ walletData }: AIExplainerProps) {
       <CardContent className="pt-0">
         {explanation && isExpanded ? (
           <div className="bg-white/90 backdrop-blur rounded-lg p-5 border border-blue-100 shadow-inner">
-            <div className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700">
-              <ReactMarkdown>
-                {explanation}
-              </ReactMarkdown>
-            </div>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700"
+            >
+              {explanation || ''}
+            </ReactMarkdown>
           </div>
         ) : explanation && !isExpanded ? (
           <div className="bg-white/90 backdrop-blur rounded-lg p-4 border border-blue-100">
