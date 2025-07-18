@@ -25,34 +25,6 @@ const Index = () => {
   const [sanctionsMatches, setSanctionsMatches] = useState<SanctionsMatch[]>([]);
   const [isLoadingRiskData, setIsLoadingRiskData] = useState(false);
 
-  // Handler functions - moved before they are used
-  const handleBack = () => {
-    navigate('/dashboard');
-  };
-
-  const handleViewFlow = () => {
-    console.log('View transaction flow');
-  };
-
-  const handleGenerateReport = () => {
-    generateReport(walletAddress);
-  };
-
-  const handleAnalyze = async () => {
-    if (!walletAddress.trim()) return;
-
-    console.log('🚀 Starting analysis for:', walletAddress);
-    try {
-      const result = await analyzeWallet(walletAddress);
-      if (result && result.recordId) {
-        console.log('🚀 Navigating to results with recordId:', result.recordId);
-        navigate(`/record/${result.recordId}`, { replace: true });
-      }
-    } catch (error) {
-      console.error('Analysis failed:', error);
-    }
-  };
-
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
@@ -225,6 +197,33 @@ const Index = () => {
       />
     );
   }
+
+  const handleAnalyze = async () => {
+    if (!walletAddress.trim()) return;
+
+    console.log('🚀 Starting analysis for:', walletAddress);
+    try {
+      const result = await analyzeWallet(walletAddress);
+      if (result && result.recordId) {
+        console.log('🚀 Navigating to results with recordId:', result.recordId);
+        navigate(`/record/${result.recordId}`, { replace: true });
+      }
+    } catch (error) {
+      console.error('Analysis failed:', error);
+    }
+  };
+
+  const handleBack = () => {
+    navigate('/dashboard');
+  };
+
+  const handleViewFlow = () => {
+    console.log('View transaction flow');
+  };
+
+  const handleGenerateReport = () => {
+    generateReport(walletAddress);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
