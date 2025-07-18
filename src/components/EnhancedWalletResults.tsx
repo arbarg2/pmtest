@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft, FileText, AlertTriangle, Shield, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { WalletRiskResponse } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 
@@ -44,6 +45,8 @@ const EnhancedWalletResults = ({
   const [caseId, setCaseId] = useState<string | undefined>();
   const [caseStatus, setCaseStatus] = useState('open');
   const [caseCreatedAt, setCaseCreatedAt] = useState<string | undefined>();
+  const [activeSection, setActiveSection] = useState('overview');
+  const [isExportCollapsed, setIsExportCollapsed] = useState(true);
 
   // Initialize case data from wallet/record data
   useEffect(() => {
@@ -98,6 +101,41 @@ const EnhancedWalletResults = ({
     }, 500);
   };
 
+  const getRiskBadgeConfig = (riskLevel: string, riskScore: number) => {
+    if (riskLevel === 'High' || riskScore >= 7) {
+      return {
+        color: 'bg-red-100 text-red-800 border-red-200',
+        icon: <AlertTriangle className="w-4 h-4" />,
+        text: 'HIGH RISK'
+      };
+    } else if (riskLevel === 'Medium' || riskScore >= 4) {
+      return {
+        color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        icon: <AlertTriangle className="w-4 h-4" />,
+        text: 'MEDIUM RISK'
+      };
+    } else {
+      return {
+        color: 'bg-green-100 text-green-800 border-green-200',
+        icon: <CheckCircle className="w-4 h-4" />,
+        text: 'LOW RISK'
+      };
+    }
+  };
+
+  const riskBadgeConfig = getRiskBadgeConfig(wallet.risk_level, wallet.risk_score);
+  const shouldEscalate = wallet.risk_score >= 7 || wallet.risk_level === 'High';
+  const sanctionsCount = sanctionsMatches?.length || 0;
+  const highRiskFactors = riskFactors?.filter(f => f.severity === 'high')?.length || 0;
+
+  const scrollToSection = (sectionId: string) => {
+    setActiveSection(sectionId);
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Header */}
@@ -129,10 +167,33 @@ const EnhancedWalletResults = ({
                 </div>
               </div>
             </div>
-            <Button onClick={onGenerateReport} className="bg-accent hover:bg-accent/90 text-white">
-              <FileText className="w-4 h-4 mr-2" />
-              Generate Report
-            </Button>
+            <div className="flex items-center space-x-3">
+              {/* Sticky Navigation */}
+              <div className="hidden md:flex items-center space-x-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur rounded-lg p-1 border">
+                {[
+                  { id: 'overview', label: 'Overview' },
+                  { id: 'ai-analysis', label: 'AI' },
+                  { id: 'flow', label: 'Flow' },
+                  { id: 'notes', label: 'Notes' }
+                ].map((section) => (
+                  <button
+                    key={section.id}
+                    onClick={() => scrollToSection(section.id)}
+                    className={`px-3 py-1 text-xs rounded transition-colors ${
+                      activeSection === section.id
+                        ? 'bg-primary text-white'
+                        : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {section.label}
+                  </button>
+                ))}
+              </div>
+              <Button onClick={onGenerateReport} className="bg-accent hover:bg-accent/90 text-white">
+                <FileText className="w-4 h-4 mr-2" />
+                Generate Report
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -140,14 +201,63 @@ const EnhancedWalletResults = ({
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         
-        {/* Top Row - Wallet Overview */}
-        <div className="mb-8">
+        {/* Priority Risk Indicators - Top Section */}
+        <div className="mb-8 p-6 bg-white/90 backdrop-blur rounded-xl border shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              <div className="text-4xl font-bold text-slate-900 dark:text-slate-100">
+                {wallet.risk_score.toFixed(1)}<span className="text-2xl text-slate-500">/10</span>
+              </div>
+              <Badge className={`${riskBadgeConfig.color} px-4 py-2 text-lg font-bold border`}>
+                {riskBadgeConfig.icon}
+                <span className="ml-2">{riskBadgeConfig.text}</span>
+              </Badge>
+            </div>
+            {shouldEscalate && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <div className="flex items-center text-red-700 font-semibold">
+                  <AlertTriangle className="w-5 h-5 mr-2" />
+                  ESCALATE RECOMMENDED
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Risk Summary Header */}
+          <div className="flex items-center space-x-6 text-sm">
+            {sanctionsCount > 0 && (
+              <div className="flex items-center text-red-600">
+                <Shield className="w-4 h-4 mr-1" />
+                Sanctions Flagged ({sanctionsCount})
+              </div>
+            )}
+            {highRiskFactors > 0 && (
+              <div className="flex items-center text-red-600">
+                <AlertTriangle className="w-4 h-4 mr-1" />
+                {highRiskFactors}+ Red Flags
+              </div>
+            )}
+            <div className="text-slate-500">
+              Network: {wallet.network.toUpperCase()}
+            </div>
+            <div className="text-slate-500">
+              Transactions: {wallet.transaction_count?.toLocaleString() || '0'}
+            </div>
+          </div>
+        </div>
+
+        {/* Wallet Overview */}
+        <div id="overview" className="mb-8">
           <WalletOverview wallet={wallet} />
         </div>
 
-        {/* AI Analysis Section - Only Holly AI Analysis */}
-        <div className="mb-8">
-          <HollyAIAnalysis walletData={wallet} recordId={recordId} />
+        {/* AI Analysis Section with Risk Summary Header */}
+        <div id="ai-analysis" className="mb-8">
+          <HollyAIAnalysis 
+            walletData={wallet} 
+            recordId={recordId}
+            riskSummaryHeader={`${shouldEscalate ? '🚨 Escalate' : '✅ Monitor'} | ${sanctionsCount > 0 ? 'Sanctions Flagged' : 'No Sanctions'} | ${highRiskFactors}+ Red Flags`}
+          />
         </div>
 
         {/* Second Row - Entity Attribution and Geographic Risk */}
@@ -168,7 +278,7 @@ const EnhancedWalletResults = ({
         </div>
 
         {/* Fifth Row - Transaction Flow and Counterparties */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
+        <div id="flow" className="grid lg:grid-cols-2 gap-6 mb-8">
           <TransactionFlowPreview wallet={wallet} onViewFlow={handleViewFlow} />
           <CounterpartyIntelligence wallet={wallet} />
         </div>
@@ -186,24 +296,36 @@ const EnhancedWalletResults = ({
           />
         </div>
 
-        {/* Bottom Row - Analyst Notes and Export Actions (only show if it's a case) */}
+        {/* Bottom Row - Analyst Notes and Export Actions (collapsed by default) */}
         {isCase && (
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div id="notes" className="space-y-6">
             {/* Analyst Notes Thread */}
             <AnalystNotesThread
               recordId={recordId}
               onNotesUpdate={handleNotesUpdate}
             />
 
-            {/* Export Actions */}
-            <ExportActions
-              wallet={wallet}
-              recordId={recordId}
-              riskFactors={riskFactors}
-              sanctionsMatches={sanctionsMatches}
-              analystNotes={analystNotes}
-              investigationStatus={investigationStatus}
-            />
+            {/* Collapsible Export Actions */}
+            <div className="bg-white/90 backdrop-blur rounded-xl border shadow-lg">
+              <button
+                onClick={() => setIsExportCollapsed(!isExportCollapsed)}
+                className="w-full p-4 text-left font-semibold text-slate-900 hover:bg-slate-50 rounded-t-xl border-b"
+              >
+                Export & Actions {isExportCollapsed ? '▼' : '▲'}
+              </button>
+              {!isExportCollapsed && (
+                <div className="p-4">
+                  <ExportActions
+                    wallet={wallet}
+                    recordId={recordId}
+                    riskFactors={riskFactors}
+                    sanctionsMatches={sanctionsMatches}
+                    analystNotes={analystNotes}
+                    investigationStatus={investigationStatus}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

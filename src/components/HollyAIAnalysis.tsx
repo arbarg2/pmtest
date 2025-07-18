@@ -1,314 +1,275 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Brain, 
-  ChevronDown, 
-  ChevronUp, 
-  AlertTriangle, 
-  TrendingUp, 
-  Eye, 
-  Target,
-  Lightbulb,
-  Activity,
-  Sparkles,
-  FileText,
-  RefreshCw,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  Plus,
-  BookOpen
-} from 'lucide-react';
-import { useAISummary } from '@/hooks/useAISummary';
-import { useToast } from '@/hooks/use-toast';
-import { caseManagementService } from '@/services/caseManagement';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { Sparkles, RefreshCw, ChevronDown, ChevronUp, AlertTriangle, Shield } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface HollyAIAnalysisProps {
-  walletData?: any;
+  walletData: any;
   recordId?: string;
+  riskSummaryHeader?: string;
 }
 
-export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isAddingToNotes, setIsAddingToNotes] = useState(false);
-  const [hasAddedToNotes, setHasAddedToNotes] = useState(false);
-  const { toast } = useToast();
+export function HollyAIAnalysis({ walletData, recordId, riskSummaryHeader }: HollyAIAnalysisProps) {
   const { user } = useAuth();
-  const { 
-    isGenerating, 
-    summaryData, 
-    generateAISummary, 
-    loadExistingSummary 
-  } = useAISummary();
+  const [summaryData, setSummaryData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
-  useEffect(() => {
-    if (recordId) {
-      loadExistingSummary(recordId);
-    }
-  }, [recordId, loadExistingSummary]);
-
-  const handleGenerateAISummary = () => {
-    if (recordId && walletData) {
-      generateAISummary(recordId, walletData);
+  const formatTimestamp = (timestamp: string | null) => {
+    if (!timestamp) return 'Not available';
+    try {
+      return new Date(timestamp).toLocaleString();
+    } catch (error) {
+      return 'Invalid date';
     }
   };
 
-  const handleAddToCaseNotes = async () => {
-    if (!user || !recordId || !summaryData.ai_summary) {
-      toast({
-        title: "Error",
-        description: "Unable to add summary to case notes. Missing required data.",
-        variant: "destructive",
-      });
+  const getRiskScoreColor = (score: number) => {
+    if (score >= 7) return 'text-red-600 bg-red-50 border-red-200';
+    if (score >= 4) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+    return 'text-green-600 bg-green-50 border-green-200';
+  };
+
+  const getNetworkColor = (network: string) => {
+    const colors = {
+      bitcoin: 'text-orange-600 bg-orange-50 border-orange-200',
+      ethereum: 'text-blue-600 bg-blue-50 border-blue-200',
+      default: 'text-gray-600 bg-gray-50 border-gray-200'
+    };
+    return colors[network?.toLowerCase()] || colors.default;
+  };
+
+  const fetchSummaryData = async () => {
+    if (!recordId || !user) {
+      console.log('Missing recordId or user for summary fetch');
       return;
     }
 
-    setIsAddingToNotes(true);
     try {
-      // First, check if there's an existing case for this record
-      const { data: existingRecord } = await supabase
+      const { data, error } = await supabase
         .from('investigation_records')
-        .select('is_case, case_id')
-        .eq('id', recordId)
-        .maybeSingle();
-      
-      let caseId = existingRecord?.case_id;
-      
-      // If no case exists, create one first
-      if (!existingRecord?.is_case) {
-        const createResult = await caseManagementService.createCase(recordId, user.id);
-        if (!createResult.success) {
-          throw new Error(createResult.error || 'Failed to create case');
-        }
-        caseId = createResult.caseId;
+        .select('ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous')
+        .eq('record_id', recordId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching summary data:', error);
+        return;
       }
 
-      // Add the AI summary as a case note using the case ID
-      const noteContent = `**Holly AI Risk Summary**\n\n${summaryData.ai_summary}`;
-      const addNoteResult = await caseManagementService.addCaseNote(caseId!, noteContent);
-      
-      if (addNoteResult.success) {
-        setHasAddedToNotes(true);
-        toast({
-          title: "✅ Added to Case Notes",
-          description: "Holly AI summary has been saved to case notes.",
-        });
-      } else {
-        throw new Error(addNoteResult.error || 'Failed to add note');
-      }
+      setSummaryData(data);
     } catch (error) {
-      console.error('Error adding summary to case notes:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add summary to case notes.",
-        variant: "destructive",
+      console.error('Error in fetchSummaryData:', error);
+    }
+  };
+
+  const generateSummary = async () => {
+    if (!recordId || !user) {
+      console.error('Missing recordId or user for summary generation');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('ai-summary', {
+        body: { 
+          recordId,
+          walletData,
+          forceRegenerate: false
+        }
       });
+
+      if (error) {
+        console.error('Error generating summary:', error);
+        return;
+      }
+
+      console.log('Summary generated successfully:', data);
+      await fetchSummaryData();
+    } catch (error) {
+      console.error('Error in generateSummary:', error);
     } finally {
-      setIsAddingToNotes(false);
+      setIsLoading(false);
     }
   };
 
-  const getStatusIcon = () => {
-    switch (summaryData.ai_summary_status) {
-      case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'processing':
-        return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
-      case 'failed':
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-500" />;
+  const regenerateSummary = async () => {
+    if (!recordId || !user) {
+      console.error('Missing recordId or user for summary regeneration');
+      return;
+    }
+
+    try {
+      setIsRegenerating(true);
+      
+      const { data, error } = await supabase.functions.invoke('ai-summary', {
+        body: { 
+          recordId,
+          walletData,
+          forceRegenerate: true
+        }
+      });
+
+      if (error) {
+        console.error('Error regenerating summary:', error);
+        return;
+      }
+
+      console.log('Summary regenerated successfully:', data);
+      await fetchSummaryData();
+    } catch (error) {
+      console.error('Error in regenerateSummary:', error);
+    } finally {
+      setIsRegenerating(false);
     }
   };
 
-  // Holly Loading Animation Component
-  const HollyLoadingAnimation = () => (
-    <div className="flex items-center justify-center py-8" aria-busy="true">
-      <div className="text-center">
-        {/* Holly Avatar with Animation */}
-        <div className="relative mx-auto mb-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center animate-pulse shadow-lg">
-            <BookOpen className="w-6 h-6 text-white animate-bounce" />
-          </div>
-          {/* Sparkle animations */}
-          <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
-          <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 bg-pink-400 rounded-full animate-ping delay-150"></div>
-        </div>
-        
-        {/* Main Message */}
-        <p className="text-purple-700 dark:text-purple-300 font-medium mb-1">
-          Holly is summarizing your investigation...
-        </p>
-        
-        {/* Subtitle with animated dots */}
-        <div className="flex items-center justify-center space-x-1 text-sm text-slate-500">
-          <span>Analyzing blockchain data</span>
-          <div className="flex space-x-1">
-            <div className="w-1 h-1 bg-purple-500 rounded-full animate-bounce"></div>
-            <div className="w-1 h-1 bg-purple-500 rounded-full animate-bounce delay-100"></div>
-            <div className="w-1 h-1 bg-purple-500 rounded-full animate-bounce delay-200"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const aiInsights = {
-    behavioralAnomalies: [
-      "Unusual transaction frequency spike detected in last 7 days (+340%)",
-      "Atypical interaction with privacy-focused protocols",
-      "Pattern deviation from historical transaction timing"
-    ],
-    riskBreakdown: {
-      transactionPatterns: 7.2,
-      counterpartyRisk: 5.8,
-      geographicRisk: 3.1,
-      temporalAnomalies: 8.5
-    },
-    actionableInsights: [
-      "Enhanced monitoring recommended for next 14 days",
-      "Consider additional KYC verification for high-value transactions",
-      "Flag for manual review if transaction volume exceeds $50,000"
-    ],
-    confidenceLevel: 0.87
-  };
+  useEffect(() => {
+    fetchSummaryData();
+  }, [recordId, user]);
 
   return (
-    <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950 border-purple-200 dark:border-purple-800">
-      <CardHeader className="pb-2">
+    <Card className="shadow-lg border-0 bg-gradient-to-br from-purple-50/80 to-indigo-50/80 dark:from-purple-900/20 dark:to-indigo-900/20 backdrop-blur">
+      <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center text-purple-800 dark:text-purple-200">
-            <Brain className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
+          <CardTitle className="flex items-center text-xl">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
             Holly AI Analysis
-            <Badge variant="outline" className="ml-2 text-purple-600 border-purple-300 dark:text-purple-400 dark:border-purple-700">
-              AI-Powered
+            <Badge variant="secondary" className="ml-3 bg-purple-100 text-purple-700 border-purple-200">
+              Enhanced Intelligence
             </Badge>
           </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
-          >
-            {isCollapsed ? (
-              <>
-                <ChevronDown className="w-4 h-4 mr-1" />
-                Expand
-              </>
-            ) : (
-              <>
-                <ChevronUp className="w-4 h-4 mr-1" />
-                Collapse
-              </>
+          <div className="flex items-center space-x-2">
+            {summaryData?.ai_summary && (
+              <Button
+                onClick={regenerateSummary}
+                disabled={isRegenerating}
+                variant="outline"
+                size="sm"
+                className="hover:bg-purple-50 border-purple-200"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isRegenerating ? 'animate-spin' : ''}`} />
+                {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+              </Button>
             )}
-          </Button>
+            <Button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              variant="ghost"
+              size="sm"
+              className="hover:bg-purple-50"
+            >
+              {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            </Button>
+          </div>
         </div>
-        <p className="text-purple-700 dark:text-purple-300 text-sm">
-          Advanced behavioral analysis and risk contextualization powered by machine learning
-        </p>
       </CardHeader>
       
       {!isCollapsed && (
         <CardContent className="px-4 pt-2 pb-4 space-y-3">
+          {/* Risk Summary Header */}
+          {riskSummaryHeader && (
+            <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-3 mb-4">
+              <div className="flex items-center text-red-700 font-semibold text-sm">
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                {riskSummaryHeader}
+              </div>
+            </div>
+          )}
+
           {/* Quick Summary */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
-              <div className="flex items-center space-x-2 mb-1">
-                <Activity className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                <span className="font-medium text-purple-800 dark:text-purple-200 text-sm">Behavioral Score</span>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Risk Assessment</div>
+              <div className={`text-lg font-bold px-2 py-1 rounded text-center border ${getRiskScoreColor(walletData?.risk_score || 0)}`}>
+                {walletData?.risk_score?.toFixed(1) || 'N/A'}/10
               </div>
-              <div className="text-xl font-bold text-purple-900 dark:text-purple-100">
-                {aiInsights.riskBreakdown.temporalAnomalies.toFixed(1)}/10
-              </div>
-              <p className="text-xs text-purple-600 dark:text-purple-400">Anomaly Detection</p>
             </div>
             
             <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
-              <div className="flex items-center space-x-2 mb-1">
-                <Target className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                <span className="font-medium text-purple-800 dark:text-purple-200 text-sm">Confidence</span>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Network</div>
+              <div className={`text-sm font-semibold px-2 py-1 rounded text-center border ${getNetworkColor(walletData?.network || '')}`}>
+                {walletData?.network?.toUpperCase() || 'Unknown'}
               </div>
-              <div className="text-xl font-bold text-purple-900 dark:text-purple-100">
-                {(aiInsights.confidenceLevel * 100).toFixed(0)}%
-              </div>
-              <p className="text-xs text-purple-600 dark:text-purple-400">Analysis Certainty</p>
             </div>
             
             <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
-              <div className="flex items-center space-x-2 mb-1">
-                <AlertTriangle className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                <span className="font-medium text-purple-800 dark:text-purple-200 text-sm">Alerts</span>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Entity Type</div>
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 text-center">
+                {walletData?.entity_attribution?.type || 'Unknown'}
               </div>
-              <div className="text-xl font-bold text-purple-900 dark:text-purple-100">
-                {aiInsights.behavioralAnomalies.length}
-              </div>
-              <p className="text-xs text-purple-600 dark:text-purple-400">Active Anomalies</p>
             </div>
           </div>
 
-          {/* AI Summary Section */}
-          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 rounded-lg p-4 border border-indigo-200 dark:border-indigo-800">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <h4 className="font-semibold text-indigo-800 dark:text-indigo-200">Holly AI Intelligence Summary</h4>
-                {summaryData.ai_summary_status && getStatusIcon()}
+          {/* AI Summary Content */}
+          {!summaryData ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-8 h-8 text-purple-600 dark:text-purple-400" />
               </div>
-              <div className="flex items-center space-x-2">
-                {summaryData.ai_summary_previous && (
-                  <Badge variant="outline" className="text-xs">
-                    Previous Available
-                  </Badge>
-                )}
-                <Button
-                  onClick={handleGenerateAISummary}
-                  disabled={isGenerating || !recordId}
-                  size="sm"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Regenerating...
-                    </>
-                  ) : summaryData.ai_summary ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Regenerate Summary
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="w-4 h-4 mr-2" />
-                      Generate AI Summary
-                    </>
-                  )}
-                </Button>
-              </div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                Generate AI Intelligence Summary
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-6 max-w-md mx-auto">
+                Holly AI will analyze this wallet's patterns, risks, and provide actionable intelligence insights.
+              </p>
+              <Button
+                onClick={generateSummary}
+                disabled={isLoading}
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-8 py-3"
+              >
+                <Sparkles className={`w-5 h-5 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? 'Analyzing...' : 'Generate AI Summary'}
+              </Button>
             </div>
-
-            {isGenerating ? (
-              <HollyLoadingAnimation />
-            ) : summaryData.ai_summary ? (
-              <div className="space-y-3">
-                <div className="bg-white/60 dark:bg-slate-800/60 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Current Summary</span>
-                    {summaryData.ai_summary_generated_at && (
-                      <span className="text-xs text-slate-500">
-                        Generated: {new Date(summaryData.ai_summary_generated_at).toLocaleString()}
-                      </span>
-                    )}
+          ) : (
+            <div className="space-y-4">
+              {/* Summary Status and Timestamp */}
+              <div className="flex items-center justify-between bg-white/60 dark:bg-slate-800/60 rounded-lg p-3 border border-purple-100 dark:border-purple-800">
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Analysis Status: {summaryData.ai_summary_status || 'completed'}
+                    </span>
                   </div>
-                  <div className="prose prose-sm max-w-none space-y-2 leading-snug text-slate-700">
+                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                    Generated: {formatTimestamp(summaryData.ai_summary_generated_at)}
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {summaryData.ai_summary_previous && (
+                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                      Previous Version Available
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Main AI Summary */}
+              {summaryData.ai_summary && (
+                <div className="bg-white/90 dark:bg-slate-800/90 rounded-xl border border-purple-200 dark:border-purple-700 overflow-hidden">
+                  <div className="bg-gradient-to-r from-purple-500 to-indigo-600 px-4 py-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-white flex items-center">
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Intelligence Summary
+                      </h4>
+                      <span className="text-purple-100 text-xs">
+                        Holly AI Analysis
+                      </span>
+                    </div>
+                  </div>
+                  <div className="prose prose-sm max-w-none space-y-2 leading-snug text-slate-700 p-3">
                     <ReactMarkdown 
                       remarkPlugins={[remarkGfm]}
                       components={{
@@ -329,38 +290,15 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
                     </ReactMarkdown>
                   </div>
                 </div>
+              )}
 
-                {/* Add to Case Notes Button */}
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleAddToCaseNotes}
-                    disabled={isAddingToNotes || hasAddedToNotes || !summaryData.ai_summary}
-                    className="bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    {isAddingToNotes ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Adding to Notes...
-                      </>
-                    ) : hasAddedToNotes ? (
-                      <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Added to Notes
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add to Case Notes
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                {summaryData.ai_summary_previous && (
-                  <details className="bg-white/40 dark:bg-slate-800/40 rounded-lg p-3">
-                    <summary className="cursor-pointer text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-2">
-                      View Previous Summary
-                    </summary>
+              {/* Previous Summary (Collapsible) */}
+              {summaryData.ai_summary_previous && (
+                <details className="bg-white/60 dark:bg-slate-800/60 rounded-lg border border-purple-100 dark:border-purple-800">
+                  <summary className="cursor-pointer text-sm font-medium text-indigo-700 dark:text-indigo-300 p-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg">
+                    View Previous Summary
+                  </summary>
+                  <div className="px-3 pb-3">
                     <div className="prose prose-sm max-w-none space-y-2 leading-snug text-slate-700">
                       <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
@@ -381,115 +319,9 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
                         {summaryData.ai_summary_previous || ''}
                       </ReactMarkdown>
                     </div>
-                  </details>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                <p className="text-slate-600 dark:text-slate-400 mb-1">No AI summary generated yet</p>
-                <p className="text-sm text-slate-500">Click the button above to generate an intelligent summary of this investigation</p>
-              </div>
-            )}
-          </div>
-
-          {/* Expanded Analysis */}
-          {isExpanded && (
-            <div className="space-y-4 mt-4">
-              <div className="flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
-                >
-                  {isExpanded ? (
-                    <>
-                      <ChevronUp className="w-4 h-4 mr-1" />
-                      Collapse Analysis
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="w-4 h-4 mr-1" />
-                      Expand Analysis
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* Behavioral Anomaly Detection */}
-              <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                <h4 className="flex items-center font-semibold text-purple-800 dark:text-purple-200 mb-3">
-                  <Eye className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400" />
-                  Behavioral Anomaly Detection
-                </h4>
-                <div className="space-y-2">
-                  {aiInsights.behavioralAnomalies.map((anomaly, index) => (
-                    <div key={index} className="flex items-start space-x-2 p-2 bg-purple-50 dark:bg-purple-950 rounded-lg">
-                      <AlertTriangle className="w-4 h-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-purple-800 dark:text-purple-200">{anomaly}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Contextual Risk Score Breakdown */}
-              <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                <h4 className="flex items-center font-semibold text-purple-800 dark:text-purple-200 mb-3">
-                  <TrendingUp className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400" />
-                  Contextual Risk Score Breakdown
-                </h4>
-                <div className="space-y-3">
-                  {Object.entries(aiInsights.riskBreakdown).map(([category, score]) => (
-                    <div key={category} className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-purple-800 dark:text-purple-200 capitalize">
-                          {category.replace(/([A-Z])/g, ' $1').trim()}
-                        </span>
-                        <span className="text-sm font-bold text-purple-900 dark:text-purple-100">
-                          {score.toFixed(1)}/10
-                        </span>
-                      </div>
-                      <div className="w-full bg-purple-100 dark:bg-purple-900 rounded-full h-2">
-                        <div
-                          className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${(score / 10) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Actionable Insights */}
-              <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                <h4 className="flex items-center font-semibold text-purple-800 dark:text-purple-200 mb-3">
-                  <Lightbulb className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400" />
-                  Actionable Insights
-                </h4>
-                <div className="space-y-2">
-                  {aiInsights.actionableInsights.map((insight, index) => (
-                    <div key={index} className="flex items-start space-x-2 p-2 bg-indigo-50 dark:bg-indigo-950 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-indigo-800 dark:text-indigo-200">{insight}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {!isExpanded && (
-            <div className="flex justify-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsExpanded(true)}
-                className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
-              >
-                <ChevronDown className="w-4 h-4 mr-1" />
-                Expand Analysis
-              </Button>
+                  </div>
+                </details>
+              )}
             </div>
           )}
         </CardContent>
