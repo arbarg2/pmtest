@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -11,6 +10,7 @@ import { AnalystDashboard } from '@/components/AnalystDashboard';
 import EnhancedWalletResults from '@/components/EnhancedWalletResults';
 import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
+import { riskFactorsService, RiskFactor, SanctionsMatch } from '@/services/riskFactors';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -21,6 +21,9 @@ const Index = () => {
   const [isLoadingWalletData, setIsLoadingWalletData] = useState(false);
   const [recordNotFound, setRecordNotFound] = useState(false);
   const [walletData, setWalletData] = useState<any>(null);
+  const [riskFactors, setRiskFactors] = useState<RiskFactor[]>([]);
+  const [sanctionsMatches, setSanctionsMatches] = useState<SanctionsMatch[]>([]);
+  const [isLoadingRiskData, setIsLoadingRiskData] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -85,32 +88,59 @@ const Index = () => {
     }
   }, [recordId, user, analysisData]);
 
-  const handleAnalyze = async () => {
-    if (!walletAddress.trim()) return;
+  // Fetch risk factors and sanctions data when wallet data is loaded
+  useEffect(() => {
+    if (walletData && recordId && user) {
+      const fetchRiskData = async () => {
+        setIsLoadingRiskData(true);
+        console.log('🔄 Fetching risk factors and sanctions data for record:', recordId);
 
-    console.log('🚀 Starting analysis for:', walletAddress);
-    try {
-      const result = await analyzeWallet(walletAddress);
-      if (result && result.recordId) {
-        console.log('🚀 Navigating to results with recordId:', result.recordId);
-        navigate(`/record/${result.recordId}`, { replace: true });
-      }
-    } catch (error) {
-      console.error('Analysis failed:', error);
+        try {
+          // Fetch existing risk factors from database
+          const existingRiskFactors = await riskFactorsService.getRiskFactors(recordId);
+          console.log('📊 Existing risk factors:', existingRiskFactors);
+
+          // If no risk factors exist, calculate and store them
+          if (existingRiskFactors.length === 0) {
+            console.log('💭 No existing risk factors, calculating new ones...');
+            const calculatedFactors = await riskFactorsService.calculateAndStoreRiskFactors(recordId, walletData);
+            setRiskFactors(calculatedFactors);
+          } else {
+            setRiskFactors(existingRiskFactors);
+          }
+
+          // Fetch existing sanctions screening from database
+          const existingSanctions = await riskFactorsService.getSanctionsScreening(recordId);
+          console.log('🛡️ Existing sanctions screening:', existingSanctions);
+
+          // If no sanctions screening exists, perform new screening
+          if (existingSanctions.length === 0) {
+            console.log('🔍 No existing sanctions screening, performing new screening...');
+            const sanctionsResults = await riskFactorsService.screenSanctions(
+              walletData.address || walletData.wallet_address,
+              walletData.network || 'bitcoin'
+            );
+            
+            // Store sanctions results in database
+            const storedSanctions = await riskFactorsService.storeSanctionsScreening(recordId, sanctionsResults);
+            setSanctionsMatches(storedSanctions);
+          } else {
+            setSanctionsMatches(existingSanctions);
+          }
+
+        } catch (error) {
+          console.error('❌ Failed to fetch risk data:', error);
+          // Set empty arrays on error
+          setRiskFactors([]);
+          setSanctionsMatches([]);
+        } finally {
+          setIsLoadingRiskData(false);
+        }
+      };
+
+      fetchRiskData();
     }
-  };
-
-  const handleBack = () => {
-    navigate('/dashboard');
-  };
-
-  const handleViewFlow = () => {
-    console.log('View transaction flow');
-  };
-
-  const handleGenerateReport = () => {
-    generateReport(walletAddress);
-  };
+  }, [walletData, recordId, user]);
 
   if (loading) {
     return (
@@ -162,9 +192,38 @@ const Index = () => {
         onViewFlow={handleViewFlow}
         onGenerateReport={handleGenerateReport}
         recordId={recordId}
+        riskFactors={riskFactors}
+        sanctionsMatches={sanctionsMatches}
       />
     );
   }
+
+  const handleAnalyze = async () => {
+    if (!walletAddress.trim()) return;
+
+    console.log('🚀 Starting analysis for:', walletAddress);
+    try {
+      const result = await analyzeWallet(walletAddress);
+      if (result && result.recordId) {
+        console.log('🚀 Navigating to results with recordId:', result.recordId);
+        navigate(`/record/${result.recordId}`, { replace: true });
+      }
+    } catch (error) {
+      console.error('Analysis failed:', error);
+    }
+  };
+
+  const handleBack = () => {
+    navigate('/dashboard');
+  };
+
+  const handleViewFlow = () => {
+    console.log('View transaction flow');
+  };
+
+  const handleGenerateReport = () => {
+    generateReport(walletAddress);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
