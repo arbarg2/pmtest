@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -217,7 +218,7 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
       </CardHeader>
       
       {!isCollapsed && (
-        <CardContent className="space-y-3">
+        <CardContent className="px-4 pt-2 pb-4 space-y-3">
           {/* Quick Summary */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
@@ -307,8 +308,23 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
                       </span>
                     )}
                   </div>
-                  <div className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 leading-relaxed whitespace-pre-wrap">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <div className="prose prose-sm max-w-none space-y-2 leading-snug text-slate-700">
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        h1: ({ children }) => <h1 className="text-blue-700 font-semibold mt-3 mb-1 text-sm">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-blue-700 font-semibold mt-3 mb-1 text-sm">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-blue-700 font-semibold mt-3 mb-1 text-sm">{children}</h3>,
+                        h4: ({ children }) => <h4 className="text-blue-700 font-semibold mt-3 mb-1 text-sm">{children}</h4>,
+                        h5: ({ children }) => <h5 className="text-blue-700 font-semibold mt-3 mb-1 text-sm">{children}</h5>,
+                        h6: ({ children }) => <h6 className="text-blue-700 font-semibold mt-3 mb-1 text-sm">{children}</h6>,
+                        p: ({ children }) => <p className="mb-1 text-sm">{children}</p>,
+                        li: ({ children }) => <li className="ml-4 list-disc text-sm">{children}</li>,
+                        ul: ({ children }) => <ul className="space-y-0.5">{children}</ul>,
+                        ol: ({ children }) => <ol className="space-y-0.5">{children}</ol>,
+                        strong: ({ children }) => <strong className="font-semibold text-slate-900">{children}</strong>,
+                      }}
+                    >
                       {summaryData.ai_summary || ''}
                     </ReactMarkdown>
                   </div>
@@ -345,8 +361,23 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
                     <summary className="cursor-pointer text-sm font-medium text-indigo-700 dark:text-indigo-300 mb-2">
                       View Previous Summary
                     </summary>
-                    <div className="prose prose-sm prose-slate max-w-none prose-headings:text-slate-800 prose-strong:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 leading-relaxed whitespace-pre-wrap">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <div className="prose prose-sm max-w-none space-y-2 leading-snug text-slate-700">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          h1: ({ children }) => <h1 className="text-blue-700 font-semibold mt-3 mb-1 text-sm">{children}</h1>,
+                          h2: ({ children }) => <h2 className="text-blue-700 font-semibold mt-3 mb-1 text-sm">{children}</h2>,
+                          h3: ({ children }) => <h3 className="text-blue-700 font-semibold mt-3 mb-1 text-sm">{children}</h3>,
+                          h4: ({ children }) => <h4 className="text-blue-700 font-semibold mt-3 mb-1 text-sm">{children}</h4>,
+                          h5: ({ children }) => <h5 className="text-blue-700 font-semibold mt-3 mb-1 text-sm">{children}</h5>,
+                          h6: ({ children }) => <h6 className="text-blue-700 font-semibold mt-3 mb-1 text-sm">{children}</h6>,
+                          p: ({ children }) => <p className="mb-1 text-sm">{children}</p>,
+                          li: ({ children }) => <li className="ml-4 list-disc text-sm">{children}</li>,
+                          ul: ({ children }) => <ul className="space-y-0.5">{children}</ul>,
+                          ol: ({ children }) => <ol className="space-y-0.5">{children}</ol>,
+                          strong: ({ children }) => <strong className="font-semibold text-slate-900">{children}</strong>,
+                        }}
+                      >
                         {summaryData.ai_summary_previous || ''}
                       </ReactMarkdown>
                     </div>
