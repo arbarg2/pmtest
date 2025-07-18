@@ -1,5 +1,5 @@
 
-# Rìan Intelligence Platform
+# Rìan Crypto Intelligence Platform
 
 A comprehensive blockchain investigation and wallet analysis platform built with React, TypeScript, and Supabase.
 
@@ -63,4 +63,4 @@ The platform uses Supabase with Row Level Security (RLS) policies ensuring users
 
 ---
 
-*AI Summary feature added December 2024 - Provides intelligent analysis of blockchain investigations through integrated AI workflows.*
+*AI Summary - Provides intelligent analysis of blockchain investigations through integrated AI workflows.*
