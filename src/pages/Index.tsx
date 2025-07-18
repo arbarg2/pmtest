@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -24,6 +25,34 @@ const Index = () => {
   const [riskFactors, setRiskFactors] = useState<RiskFactor[]>([]);
   const [sanctionsMatches, setSanctionsMatches] = useState<SanctionsMatch[]>([]);
   const [isLoadingRiskData, setIsLoadingRiskData] = useState(false);
+
+  // Declare all handler functions before they are used
+  const handleAnalyze = async () => {
+    if (!walletAddress.trim()) return;
+
+    console.log('🚀 Starting analysis for:', walletAddress);
+    try {
+      const result = await analyzeWallet(walletAddress);
+      if (result && result.recordId) {
+        console.log('🚀 Navigating to results with recordId:', result.recordId);
+        navigate(`/record/${result.recordId}`, { replace: true });
+      }
+    } catch (error) {
+      console.error('Analysis failed:', error);
+    }
+  };
+
+  const handleBack = () => {
+    navigate('/dashboard');
+  };
+
+  const handleViewFlow = () => {
+    console.log('View transaction flow');
+  };
+
+  const handleGenerateReport = () => {
+    generateReport(walletAddress);
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -198,33 +227,6 @@ const Index = () => {
     );
   }
 
-  const handleAnalyze = async () => {
-    if (!walletAddress.trim()) return;
-
-    console.log('🚀 Starting analysis for:', walletAddress);
-    try {
-      const result = await analyzeWallet(walletAddress);
-      if (result && result.recordId) {
-        console.log('🚀 Navigating to results with recordId:', result.recordId);
-        navigate(`/record/${result.recordId}`, { replace: true });
-      }
-    } catch (error) {
-      console.error('Analysis failed:', error);
-    }
-  };
-
-  const handleBack = () => {
-    navigate('/dashboard');
-  };
-
-  const handleViewFlow = () => {
-    console.log('View transaction flow');
-  };
-
-  const handleGenerateReport = () => {
-    generateReport(walletAddress);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/80 sticky top-0 z-50">
@@ -281,3 +283,4 @@ const Index = () => {
 };
 
 export default Index;
+
