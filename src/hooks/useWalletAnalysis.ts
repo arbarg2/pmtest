@@ -1,106 +1,98 @@
 
 import { useState } from 'react';
-import { analyzeWalletWithRealData } from '@/services/enhancedApi';
-import { storeAnalysisResult } from '@/services/walletAnalysisDatabase';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { logAuditAction } from '@/utils/auditLogger';
+import { toast } from 'sonner';
+import { enhancedWalletAPI } from '@/services/enhancedApi';
+import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
+import { riskFactorsService } from '@/services/riskFactors';
+import { WalletRiskResponse } from '@/services/api';
 
 export const useWalletAnalysis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisData, setAnalysisData] = useState<any>(null);
-  const { user } = useAuth();
-  const { toast } = useToast();
+  const [analysisData, setAnalysisData] = useState<WalletRiskResponse | null>(null);
 
-  const analyzeWallet = async (address: string) => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to analyze wallets.",
-        variant: "destructive",
-      });
-      return null;
-    }
-
+  const analyzeWallet = async (walletAddress: string, network: string = 'bitcoin') => {
     setIsAnalyzing(true);
     
     try {
-      console.log(`🔍 Starting wallet analysis for: ${address}`);
+      console.log('🚀 Starting wallet analysis for:', walletAddress);
       
-      const result = await analyzeWalletWithRealData(address);
+      // Perform the wallet analysis
+      const result = await enhancedWalletAPI.analyzeWallet(walletAddress, network);
       
-      console.log('✅ Analysis completed successfully');
-      
-      // Store in database
-      const dbResult = await storeAnalysisResult(
-        address,
-        result.network || 'ethereum',
-        result,
-        user.id
-      );
-
-      let recordId: string;
-      let isTemporary = false;
-
-      if (dbResult.success && dbResult.record) {
-        recordId = dbResult.record.record_id;
-        console.log(`✅ Analysis stored with record ID: ${recordId}`);
-      } else {
-        console.warn('⚠️ Failed to store in database, using temporary ID');
-        recordId = `temp_${Date.now()}`;
-        isTemporary = true;
+      if (!result) {
+        throw new Error('No analysis result received');
       }
 
-      // Log audit action
-      await logAuditAction('wallet_lookup', recordId, {
-        wallet_address: address,
-        network: result.network || 'ethereum',
-        risk_score: result.risk_score,
-        risk_level: result.risk_level,
-        transaction_count: result.transaction_count,
-        processing_time_ms: result.processing_time_ms
-      });
+      console.log('✅ Analysis completed:', result);
 
-      const enhancedResult = {
-        ...result,
-        recordId,
-        isTemporary
-      };
-
-      setAnalysisData(enhancedResult);
+      // Save the analysis to database
+      console.log('💾 Saving analysis to database...');
+      const saveResult = await supabaseLookupRecords.saveLookupRecord(result);
       
-      toast({
-        title: "Analysis Complete",
-        description: `Wallet ${address.slice(0, 8)}... analyzed successfully.`,
-      });
+      if (saveResult.success && saveResult.recordId) {
+        console.log('✅ Analysis saved with record ID:', saveResult.recordId);
+        
+        // Calculate and store risk factors
+        try {
+          console.log('🔍 Calculating and storing risk factors...');
+          const riskFactors = await riskFactorsService.calculateAndStoreRiskFactors(saveResult.recordId, result);
+          console.log('✅ Risk factors stored:', riskFactors.length, 'factors');
+        } catch (error) {
+          console.error('❌ Failed to store risk factors:', error);
+        }
 
-      return enhancedResult;
+        // Screen and store sanctions data
+        try {
+          console.log('🔍 Screening and storing sanctions data...');
+          const sanctionsResults = await riskFactorsService.screenSanctions(walletAddress, network);
+          if (sanctionsResults.length > 0) {
+            const storedSanctions = await riskFactorsService.storeSanctionsScreening(saveResult.recordId, sanctionsResults);
+            console.log('✅ Sanctions screening stored:', storedSanctions.length, 'matches');
+          } else {
+            console.log('✅ No sanctions matches found');
+          }
+        } catch (error) {
+          console.error('❌ Failed to store sanctions screening:', error);
+        }
+
+        // Add the record ID to the result and mark as temporary if save failed
+        const enhancedResult = {
+          ...result,
+          recordId: saveResult.recordId,
+          isTemporary: false
+        };
+        
+        setAnalysisData(enhancedResult);
+        toast.success('Wallet analysis completed successfully');
+        
+        return enhancedResult;
+      } else {
+        console.warn('⚠️ Failed to save to database, proceeding with temporary record');
+        
+        // Create temporary record ID for session
+        const tempRecordId = `temp_${Date.now()}`;
+        const tempResult = {
+          ...result,
+          recordId: tempRecordId,
+          isTemporary: true
+        };
+        
+        setAnalysisData(tempResult);
+        toast.warning('Analysis completed but not saved to database');
+        
+        return tempResult;
+      }
     } catch (error) {
-      console.error('❌ Analysis failed:', error);
-      
-      toast({
-        title: "Analysis Failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred.",
-        variant: "destructive",
-      });
-      
-      return null;
+      console.error('❌ Wallet analysis failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Analysis failed');
+      throw error;
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const generateReport = async (walletAddress: string) => {
-    // Log audit action for report generation
-    await logAuditAction('generate_report', undefined, {
-      wallet_address: walletAddress,
-      report_type: 'comprehensive'
-    });
-
-    toast({
-      title: "Report Generated",
-      description: "Comprehensive wallet report has been prepared.",
-    });
+  const generateReport = (walletAddress: string) => {
+    toast.info('Report generation initiated for ' + walletAddress);
   };
 
   return {
