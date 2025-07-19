@@ -39,7 +39,7 @@ export const useAISummary = () => {
     console.log('🤖 Starting AI summary generation for record:', recordId);
 
     try {
-      // Verify the record exists first
+      // Verify the record exists first - query by UUID id field
       console.log('🔍 Verifying record exists before AI generation...');
       const { data: existingRecord, error: verifyError } = await supabase
         .from('investigation_records')
@@ -88,7 +88,7 @@ export const useAISummary = () => {
       const { data, error } = await supabase.functions.invoke('ai-summary', {
         body: {
           action: 'generate',
-          record_id: recordId,
+          record_id: existingRecord.record_id, // Pass the record_id string to the edge function
           wallet_data: walletData
         }
       });
@@ -221,28 +221,37 @@ export const useAISummary = () => {
     }, 3000); // Poll every 3 seconds
   };
 
-  const loadExistingSummary = useCallback(async (recordId: string) => {
-    if (!recordId) {
+  const loadExistingSummary = useCallback(async (recordIdOrUuid: string) => {
+    if (!recordIdOrUuid) {
       console.log('⚠️ No record ID provided for loading existing summary');
       return;
     }
 
     // Prevent duplicate loading calls
-    if (loadingRecords.current.has(recordId)) {
-      console.log('🔄 Already loading summary for record:', recordId);
+    if (loadingRecords.current.has(recordIdOrUuid)) {
+      console.log('🔄 Already loading summary for record:', recordIdOrUuid);
       return;
     }
 
-    loadingRecords.current.add(recordId);
+    loadingRecords.current.add(recordIdOrUuid);
 
     try {
-      console.log('📖 Loading existing summary for record:', recordId);
+      console.log('📖 Loading existing summary for record:', recordIdOrUuid);
       
-      const { data, error } = await supabase
+      // Try to determine if this is a UUID or record_id string
+      const isUuid = recordIdOrUuid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+      
+      let query = supabase
         .from('investigation_records')
-        .select('ai_summary, ai_summary_previous, ai_summary_generated_at, ai_summary_status')
-        .eq('id', recordId)
-        .maybeSingle();
+        .select('ai_summary, ai_summary_previous, ai_summary_generated_at, ai_summary_status');
+      
+      if (isUuid) {
+        query = query.eq('id', recordIdOrUuid);
+      } else {
+        query = query.eq('record_id', recordIdOrUuid);
+      }
+      
+      const { data, error } = await query.maybeSingle();
 
       if (error) {
         console.error('❌ Error loading existing summary:', error);
@@ -263,7 +272,21 @@ export const useAISummary = () => {
         if (data.ai_summary_status === 'processing') {
           console.log('🔄 Found processing status, starting polling...');
           setIsGenerating(true);
-          pollForSummaryCompletion(recordId);
+          
+          // We need the UUID for polling, so get it if we don't have it
+          if (!isUuid) {
+            const { data: recordData } = await supabase
+              .from('investigation_records')
+              .select('id')
+              .eq('record_id', recordIdOrUuid)
+              .maybeSingle();
+            
+            if (recordData) {
+              pollForSummaryCompletion(recordData.id);
+            }
+          } else {
+            pollForSummaryCompletion(recordIdOrUuid);
+          }
         }
       } else {
         console.log('⚠️ No existing summary data found');
@@ -272,7 +295,7 @@ export const useAISummary = () => {
       console.error('❌ Error loading existing summary:', error);
     } finally {
       // Always remove from loading set when done
-      loadingRecords.current.delete(recordId);
+      loadingRecords.current.delete(recordIdOrUuid);
     }
   }, []);
 
