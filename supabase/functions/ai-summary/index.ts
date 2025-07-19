@@ -54,7 +54,7 @@ serve(async (req) => {
         const { data: existingRecord, error: verifyError } = await supabase
           .from('investigation_records')
           .select('id, record_id')
-          .eq('id', record_id)
+          .eq('record_id', record_id)
           .maybeSingle()
 
         if (verifyError || !existingRecord) {
@@ -75,7 +75,7 @@ serve(async (req) => {
         const tinesWebhookUrl = 'https://pat.tines.com/webhook/aml-buddy-bot/d944814a4370670941138b195459ae7e'
         
         const webhookPayload = {
-          record_id: record_id,
+          record_id: existingRecord.id, // Use the UUID for callback
           wallet_data: wallet_data,
           callback_url: `${supabaseUrl}/functions/v1/ai-summary`
         }
