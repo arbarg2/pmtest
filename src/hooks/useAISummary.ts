@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,6 +19,12 @@ export const useAISummary = () => {
     ai_summary_status: null
   });
   const { toast } = useToast();
+  
+  // Ref to track if success toast was already shown
+  const successToastShown = useRef<Set<string>>(new Set());
+  
+  // Ref to track loading states to prevent duplicate calls
+  const loadingRecords = useRef<Set<string>>(new Set());
 
   const generateAISummary = async (recordId: string, walletData: any) => {
     if (!recordId) {
@@ -169,10 +175,14 @@ export const useAISummary = () => {
             clearInterval(pollInterval);
             setIsGenerating(false);
             
-            toast({
-              title: "AI Summary Complete",
-              description: "Your AI summary has been generated successfully!",
-            });
+            // Only show success toast once per record
+            if (!successToastShown.current.has(recordId)) {
+              successToastShown.current.add(recordId);
+              toast({
+                title: "AI Summary Complete",
+                description: "Your AI summary has been generated successfully!",
+              });
+            }
           } else if (data.ai_summary_status === 'failed') {
             console.log('❌ AI summary failed');
             clearInterval(pollInterval);
@@ -213,11 +223,19 @@ export const useAISummary = () => {
     }, 3000); // Poll every 3 seconds
   };
 
-  const loadExistingSummary = async (recordId: string) => {
+  const loadExistingSummary = useCallback(async (recordId: string) => {
     if (!recordId) {
       console.log('⚠️ No record ID provided for loading existing summary');
       return;
     }
+
+    // Prevent duplicate loading calls
+    if (loadingRecords.current.has(recordId)) {
+      console.log('🔄 Already loading summary for record:', recordId);
+      return;
+    }
+
+    loadingRecords.current.add(recordId);
 
     try {
       console.log('📖 Loading existing summary for record:', recordId);
@@ -254,8 +272,11 @@ export const useAISummary = () => {
       }
     } catch (error) {
       console.error('❌ Error loading existing summary:', error);
+    } finally {
+      // Always remove from loading set when done
+      loadingRecords.current.delete(recordId);
     }
-  };
+  }, []);
 
   return {
     isGenerating,
