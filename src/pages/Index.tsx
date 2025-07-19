@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -11,6 +10,7 @@ import { AnalystDashboard } from '@/components/AnalystDashboard';
 import EnhancedWalletResults from '@/components/EnhancedWalletResults';
 import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
+import { riskFactorsService } from '@/services/riskFactors';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -21,6 +21,8 @@ const Index = () => {
   const [isLoadingWalletData, setIsLoadingWalletData] = useState(false);
   const [recordNotFound, setRecordNotFound] = useState(false);
   const [walletData, setWalletData] = useState<any>(null);
+  const [riskFactors, setRiskFactors] = useState([]);
+  const [sanctionsMatches, setSanctionsMatches] = useState([]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -69,6 +71,28 @@ const Index = () => {
 
             setWalletData(loadedWalletData);
             setRecordNotFound(false);
+
+            // Fetch risk factors data
+            try {
+              console.log('🔍 Fetching risk factors for record:', result.record.id);
+              const fetchedFactors = await riskFactorsService.getRiskFactors(result.record.id);
+              console.log('✅ Risk factors fetched:', fetchedFactors);
+              setRiskFactors(fetchedFactors);
+            } catch (error) {
+              console.error('❌ Failed to fetch risk factors:', error);
+              setRiskFactors([]);
+            }
+
+            // Fetch sanctions screening data
+            try {
+              console.log('🔍 Fetching sanctions screening for record:', result.record.id);
+              const fetchedSanctions = await riskFactorsService.getSanctionsScreening(result.record.id);
+              console.log('✅ Sanctions screening fetched:', fetchedSanctions);
+              setSanctionsMatches(fetchedSanctions);
+            } catch (error) {
+              console.error('❌ Failed to fetch sanctions screening:', error);
+              setSanctionsMatches([]);
+            }
           } else {
             console.error('❌ Record not found in database:', result.error);
             setRecordNotFound(true);
@@ -162,6 +186,8 @@ const Index = () => {
         onViewFlow={handleViewFlow}
         onGenerateReport={handleGenerateReport}
         recordId={recordId}
+        riskFactors={riskFactors}
+        sanctionsMatches={sanctionsMatches}
       />
     );
   }
