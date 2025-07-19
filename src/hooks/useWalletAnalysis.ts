@@ -5,12 +5,19 @@ import { enhancedWalletAPI } from '@/services/enhancedApi';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { riskFactorsService } from '@/services/riskFactors';
 import { WalletRiskResponse } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const useWalletAnalysis = () => {
+  const { user } = useAuth();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisData, setAnalysisData] = useState<WalletRiskResponse | null>(null);
 
   const analyzeWallet = async (walletAddress: string, network: string = 'bitcoin') => {
+    if (!user) {
+      toast.error('Please log in to perform wallet analysis');
+      return;
+    }
+    
     setIsAnalyzing(true);
     
     try {
@@ -40,7 +47,7 @@ export const useWalletAnalysis = () => {
           tags: [],
           attachments: []
         }
-      }, 'temp-user-id');
+      }, user.id);
       
       if (saveResult.success && saveResult.record) {
         console.log('✅ Analysis saved with record ID:', saveResult.record.id);
