@@ -17,7 +17,7 @@ export const useWalletAnalysis = () => {
       console.log('🚀 Starting wallet analysis for:', walletAddress);
       
       // Perform the wallet analysis
-      const result = await enhancedWalletAPI.analyzeWallet(walletAddress, network);
+      const result = await enhancedWalletAPI.analyzeWallet(walletAddress);
       
       if (!result) {
         throw new Error('No analysis result received');
@@ -27,15 +27,28 @@ export const useWalletAnalysis = () => {
 
       // Save the analysis to database
       console.log('💾 Saving analysis to database...');
-      const saveResult = await supabaseLookupRecords.saveLookupRecord(result);
+      const saveResult = await supabaseLookupRecords.createLookupRecord({
+        wallet_address: result.address,
+        network: result.network,
+        risk_score: result.risk_score,
+        risk_level: result.risk_level,
+        processing_time_ms: result.processing_time_ms,
+        risk_assessment: result,
+        analyst_fields: {
+          case_notes: '',
+          analyst_decision: 'pending' as const,
+          tags: [],
+          attachments: []
+        }
+      }, 'temp-user-id');
       
-      if (saveResult.success && saveResult.recordId) {
-        console.log('✅ Analysis saved with record ID:', saveResult.recordId);
+      if (saveResult.success && saveResult.record) {
+        console.log('✅ Analysis saved with record ID:', saveResult.record.id);
         
         // Calculate and store risk factors
         try {
           console.log('🔍 Calculating and storing risk factors...');
-          const riskFactors = await riskFactorsService.calculateAndStoreRiskFactors(saveResult.recordId, result);
+          const riskFactors = await riskFactorsService.calculateAndStoreRiskFactors(saveResult.record.id, result);
           console.log('✅ Risk factors stored:', riskFactors.length, 'factors');
         } catch (error) {
           console.error('❌ Failed to store risk factors:', error);
@@ -46,7 +59,7 @@ export const useWalletAnalysis = () => {
           console.log('🔍 Screening and storing sanctions data...');
           const sanctionsResults = await riskFactorsService.screenSanctions(walletAddress, network);
           if (sanctionsResults.length > 0) {
-            const storedSanctions = await riskFactorsService.storeSanctionsScreening(saveResult.recordId, sanctionsResults);
+            const storedSanctions = await riskFactorsService.storeSanctionsScreening(saveResult.record.id, sanctionsResults);
             console.log('✅ Sanctions screening stored:', storedSanctions.length, 'matches');
           } else {
             console.log('✅ No sanctions matches found');
@@ -58,7 +71,7 @@ export const useWalletAnalysis = () => {
         // Add the record ID to the result and mark as temporary if save failed
         const enhancedResult = {
           ...result,
-          recordId: saveResult.recordId,
+          recordId: saveResult.record.id,
           isTemporary: false
         };
         
