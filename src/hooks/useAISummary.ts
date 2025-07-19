@@ -21,15 +21,63 @@ export const useAISummary = () => {
   const { toast } = useToast();
 
   const generateAISummary = async (recordId: string, walletData: any) => {
+    if (!recordId) {
+      console.error('❌ No record ID provided for AI summary generation');
+      toast({
+        title: "Error",
+        description: "No record ID available. Please try refreshing the page.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
     console.log('🤖 Starting AI summary generation for record:', recordId);
 
     try {
-      // First, mark the record as processing
-      await supabase
+      // Verify the record exists first
+      console.log('🔍 Verifying record exists before AI generation...');
+      const { data: existingRecord, error: verifyError } = await supabase
+        .from('investigation_records')
+        .select('id, record_id, ai_summary_status')
+        .eq('id', recordId)
+        .maybeSingle();
+
+      if (verifyError) {
+        console.error('❌ Error verifying record:', verifyError);
+        throw new Error(`Failed to verify record: ${verifyError.message}`);
+      }
+
+      if (!existingRecord) {
+        console.error('❌ Record not found during verification:', recordId);
+        throw new Error('Record not found. Please refresh the page and try again.');
+      }
+
+      console.log('✅ Record verified:', existingRecord);
+
+      // Check if already processing
+      if (existingRecord.ai_summary_status === 'processing') {
+        console.log('⚠️ AI summary already processing for this record');
+        toast({
+          title: "AI Summary In Progress",
+          description: "An AI summary is already being generated for this record.",
+        });
+        
+        // Start polling for completion
+        pollForSummaryCompletion(recordId);
+        return;
+      }
+
+      // Mark the record as processing
+      const { error: statusError } = await supabase
         .from('investigation_records')
         .update({ ai_summary_status: 'processing' })
-        .eq('record_id', recordId);
+        .eq('id', recordId);
+
+      if (statusError) {
+        console.error('❌ Error updating status to processing:', statusError);
+        throw new Error(`Failed to update status: ${statusError.message}`);
+      }
 
       // Call our Edge Function which will trigger the Tines webhook
       console.log('📤 Calling AI summary Edge Function');
@@ -42,6 +90,7 @@ export const useAISummary = () => {
       });
 
       if (error) {
+        console.error('❌ Edge Function error:', error);
         throw new Error(`Edge Function failed: ${error.message}`);
       }
 
@@ -59,10 +108,14 @@ export const useAISummary = () => {
       console.error('❌ Error generating AI summary:', error);
       
       // Reset status on error
-      await supabase
-        .from('investigation_records')
-        .update({ ai_summary_status: 'failed' })
-        .eq('record_id', recordId);
+      try {
+        await supabase
+          .from('investigation_records')
+          .update({ ai_summary_status: 'failed' })
+          .eq('id', recordId);
+      } catch (statusError) {
+        console.error('❌ Error updating status to failed:', statusError);
+      }
 
       toast({
         title: "AI Summary Failed",
@@ -77,16 +130,33 @@ export const useAISummary = () => {
   const pollForSummaryCompletion = async (recordId: string) => {
     console.log('🔄 Starting to poll for AI summary completion...');
     
+    let pollCount = 0;
+    const maxPolls = 100; // 5 minutes at 3-second intervals
+    
     const pollInterval = setInterval(async () => {
       try {
+        pollCount++;
+        console.log(`🔄 Polling attempt ${pollCount}/${maxPolls}`);
+        
         const { data, error } = await supabase
           .from('investigation_records')
           .select('ai_summary, ai_summary_previous, ai_summary_generated_at, ai_summary_status')
-          .eq('record_id', recordId)
-          .single();
+          .eq('id', recordId)
+          .maybeSingle();
 
         if (error) {
-          console.error('Error polling for summary:', error);
+          console.error('❌ Error polling for summary:', error);
+          
+          // Don't fail immediately on polling errors, just log and continue
+          if (pollCount >= maxPolls) {
+            clearInterval(pollInterval);
+            setIsGenerating(false);
+            toast({
+              title: "AI Summary Timeout",
+              description: "Unable to check summary status. Please refresh to see if it completed.",
+              variant: "destructive",
+            });
+          }
           return;
         }
 
@@ -113,45 +183,77 @@ export const useAISummary = () => {
               description: "The AI summary generation failed. Please try again.",
               variant: "destructive",
             });
+          } else if (pollCount >= maxPolls) {
+            // Timeout reached
+            console.log('⏰ Polling timeout reached');
+            clearInterval(pollInterval);
+            setIsGenerating(false);
+            
+            toast({
+              title: "AI Summary Timeout",
+              description: "The AI summary is taking longer than expected. It may still complete in the background.",
+              variant: "destructive",
+            });
           }
         }
       } catch (error) {
-        console.error('Error during polling:', error);
+        console.error('❌ Error during polling:', error);
+        
+        if (pollCount >= maxPolls) {
+          clearInterval(pollInterval);
+          setIsGenerating(false);
+          
+          toast({
+            title: "AI Summary Error",
+            description: "Error checking summary status. Please refresh the page.",
+            variant: "destructive",
+          });
+        }
       }
     }, 3000); // Poll every 3 seconds
-
-    // Stop polling after 5 minutes to prevent infinite polling
-    setTimeout(() => {
-      clearInterval(pollInterval);
-      if (isGenerating) {
-        setIsGenerating(false);
-        toast({
-          title: "AI Summary Timeout",
-          description: "The AI summary is taking longer than expected. Please try again.",
-          variant: "destructive",
-        });
-      }
-    }, 300000); // 5 minutes timeout
   };
 
   const loadExistingSummary = async (recordId: string) => {
+    if (!recordId) {
+      console.log('⚠️ No record ID provided for loading existing summary');
+      return;
+    }
+
     try {
+      console.log('📖 Loading existing summary for record:', recordId);
+      
       const { data, error } = await supabase
         .from('investigation_records')
         .select('ai_summary, ai_summary_previous, ai_summary_generated_at, ai_summary_status')
-        .eq('record_id', recordId)
-        .single();
+        .eq('id', recordId)
+        .maybeSingle();
 
       if (error) {
-        console.error('Error loading existing summary:', error);
+        console.error('❌ Error loading existing summary:', error);
         return;
       }
 
       if (data) {
+        console.log('✅ Loaded existing summary data:', {
+          has_summary: !!data.ai_summary,
+          has_previous: !!data.ai_summary_previous,
+          status: data.ai_summary_status,
+          generated_at: data.ai_summary_generated_at
+        });
+        
         setSummaryData(data);
+        
+        // If status is processing, start polling
+        if (data.ai_summary_status === 'processing') {
+          console.log('🔄 Found processing status, starting polling...');
+          setIsGenerating(true);
+          pollForSummaryCompletion(recordId);
+        }
+      } else {
+        console.log('⚠️ No existing summary data found');
       }
     } catch (error) {
-      console.error('Error loading existing summary:', error);
+      console.error('❌ Error loading existing summary:', error);
     }
   };
 

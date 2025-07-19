@@ -7,6 +7,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Retry configuration
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 serve(async (req) => {
   console.log('🚀 AI Summary endpoint called with method:', req.method)
   
@@ -43,6 +49,26 @@ serve(async (req) => {
           )
         }
 
+        // Verify the record exists before proceeding
+        console.log('🔍 Verifying record exists:', record_id)
+        const { data: existingRecord, error: verifyError } = await supabase
+          .from('investigation_records')
+          .select('id, record_id')
+          .eq('id', record_id)
+          .maybeSingle()
+
+        if (verifyError || !existingRecord) {
+          console.error('❌ Record verification failed:', verifyError || 'Record not found')
+          return new Response(
+            JSON.stringify({ error: 'Record not found or verification failed' }),
+            { 
+              status: 404, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
+        }
+
+        console.log('✅ Record verified:', existingRecord)
         console.log('🌐 Calling Tines webhook for AI summary generation...')
         
         // Call the Tines webhook
@@ -113,19 +139,58 @@ serve(async (req) => {
           )
         }
 
-        console.log('🔍 Looking up record:', record_id)
+        console.log('🔍 Looking up record with retry logic:', record_id)
 
-        // First, get the current record to preserve the previous summary
-        const { data: currentRecord, error: fetchError } = await supabase
-          .from('investigation_records')
-          .select('ai_summary')
-          .eq('record_id', record_id)
-          .single()
+        // Retry logic for fetching the current record
+        let currentRecord = null;
+        let fetchError = null;
+        
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+          console.log(`🔄 Attempt ${attempt}/${MAX_RETRIES} to fetch record`)
+          
+          try {
+            const { data, error } = await supabase
+              .from('investigation_records')
+              .select('ai_summary')
+              .eq('id', record_id)
+              .maybeSingle()
 
-        if (fetchError) {
-          console.error('❌ Error fetching current record:', fetchError)
+            if (error) {
+              fetchError = error;
+              console.warn(`⚠️ Attempt ${attempt} failed:`, error);
+              
+              if (attempt < MAX_RETRIES) {
+                const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1); // Exponential backoff
+                console.log(`⏳ Waiting ${delay}ms before retry...`);
+                await sleep(delay);
+                continue;
+              }
+            } else {
+              currentRecord = data;
+              fetchError = null;
+              console.log(`✅ Successfully fetched record on attempt ${attempt}`);
+              break;
+            }
+          } catch (networkError) {
+            console.error(`❌ Network error on attempt ${attempt}:`, networkError);
+            fetchError = networkError;
+            
+            if (attempt < MAX_RETRIES) {
+              const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+              console.log(`⏳ Waiting ${delay}ms before retry...`);
+              await sleep(delay);
+            }
+          }
+        }
+
+        if (fetchError || !currentRecord) {
+          console.error('❌ Failed to fetch record after all retries:', fetchError)
           return new Response(
-            JSON.stringify({ error: 'Record not found' }),
+            JSON.stringify({ 
+              error: 'Record not found after retries',
+              details: fetchError?.message || 'Unknown error',
+              record_id: record_id
+            }),
             { 
               status: 404, 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -148,16 +213,57 @@ serve(async (req) => {
 
         console.log('💾 Updating record with AI summary...')
 
-        // Update the record with the AI summary
-        const { error: updateError } = await supabase
-          .from('investigation_records')
-          .update(updateData)
-          .eq('record_id', record_id)
+        // Retry logic for updating the record
+        let updateError = null;
+        let updateResult = null;
+        
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+          console.log(`🔄 Update attempt ${attempt}/${MAX_RETRIES}`)
+          
+          try {
+            const { data, error } = await supabase
+              .from('investigation_records')
+              .update(updateData)
+              .eq('id', record_id)
+              .select()
+              .maybeSingle()
+
+            if (error) {
+              updateError = error;
+              console.warn(`⚠️ Update attempt ${attempt} failed:`, error);
+              
+              if (attempt < MAX_RETRIES) {
+                const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+                console.log(`⏳ Waiting ${delay}ms before retry...`);
+                await sleep(delay);
+                continue;
+              }
+            } else {
+              updateResult = data;
+              updateError = null;
+              console.log(`✅ Successfully updated record on attempt ${attempt}`);
+              break;
+            }
+          } catch (networkError) {
+            console.error(`❌ Network error on update attempt ${attempt}:`, networkError);
+            updateError = networkError;
+            
+            if (attempt < MAX_RETRIES) {
+              const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+              console.log(`⏳ Waiting ${delay}ms before retry...`);
+              await sleep(delay);
+            }
+          }
+        }
 
         if (updateError) {
-          console.error('❌ Error updating record:', updateError)
+          console.error('❌ Failed to update record after all retries:', updateError)
           return new Response(
-            JSON.stringify({ error: 'Failed to update record' }),
+            JSON.stringify({ 
+              error: 'Failed to update record after retries',
+              details: updateError.message,
+              record_id: record_id
+            }),
             { 
               status: 500, 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -193,7 +299,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('💥 Unexpected error in ai-summary function:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
