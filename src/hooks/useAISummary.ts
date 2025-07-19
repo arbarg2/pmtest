@@ -24,8 +24,8 @@ export const useAISummary = () => {
   const successToastShown = useRef<Set<string>>(new Set());
   const loadingRecords = useRef<Set<string>>(new Set());
 
-  const generateAISummary = async (recordId: string, walletData: any) => {
-    if (!recordId) {
+  const generateAISummary = async (recordIdOrUuid: string, walletData: any) => {
+    if (!recordIdOrUuid) {
       console.error('❌ No record ID provided for AI summary generation');
       toast({
         title: "Error",
@@ -36,16 +36,26 @@ export const useAISummary = () => {
     }
 
     setIsGenerating(true);
-    console.log('🤖 Starting AI summary generation for record:', recordId);
+    console.log('🤖 Starting AI summary generation for record:', recordIdOrUuid);
 
     try {
-      // Verify the record exists first - query by UUID id field
+      // Verify the record exists first - handle both UUID and record_id
       console.log('🔍 Verifying record exists before AI generation...');
-      const { data: existingRecord, error: verifyError } = await supabase
+      
+      // Check if it's a UUID or record_id string
+      const isUuid = recordIdOrUuid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+      
+      let query = supabase
         .from('investigation_records')
-        .select('id, record_id, ai_summary_status')
-        .eq('id', recordId)
-        .maybeSingle();
+        .select('id, record_id, ai_summary_status');
+      
+      if (isUuid) {
+        query = query.eq('id', recordIdOrUuid);
+      } else {
+        query = query.eq('record_id', recordIdOrUuid);
+      }
+      
+      const { data: existingRecord, error: verifyError } = await query.maybeSingle();
 
       if (verifyError) {
         console.error('❌ Error verifying record:', verifyError);
@@ -53,7 +63,7 @@ export const useAISummary = () => {
       }
 
       if (!existingRecord) {
-        console.error('❌ Record not found during verification:', recordId);
+        console.error('❌ Record not found during verification:', recordIdOrUuid);
         throw new Error('Record not found. Please refresh the page and try again.');
       }
 
@@ -67,8 +77,8 @@ export const useAISummary = () => {
           description: "An AI summary is already being generated for this record.",
         });
         
-        // Start polling for completion
-        pollForSummaryCompletion(recordId);
+        // Start polling for completion using the UUID
+        pollForSummaryCompletion(existingRecord.id);
         return;
       }
 
@@ -76,7 +86,7 @@ export const useAISummary = () => {
       const { error: statusError } = await supabase
         .from('investigation_records')
         .update({ ai_summary_status: 'processing' })
-        .eq('id', recordId);
+        .eq('id', existingRecord.id);
 
       if (statusError) {
         console.error('❌ Error updating status to processing:', statusError);
@@ -105,18 +115,27 @@ export const useAISummary = () => {
         description: "Holly is analyzing your data. This may take a few moments...",
       });
 
-      // Start polling for the completed summary
-      pollForSummaryCompletion(recordId);
+      // Start polling for the completed summary using the UUID
+      pollForSummaryCompletion(existingRecord.id);
 
     } catch (error) {
       console.error('❌ Error generating AI summary:', error);
       
-      // Reset status on error
+      // Reset status on error - we need to get the UUID first if we have a record_id
       try {
-        await supabase
-          .from('investigation_records')
-          .update({ ai_summary_status: 'failed' })
-          .eq('id', recordId);
+        const isUuid = recordIdOrUuid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+        
+        if (isUuid) {
+          await supabase
+            .from('investigation_records')
+            .update({ ai_summary_status: 'failed' })
+            .eq('id', recordIdOrUuid);
+        } else {
+          await supabase
+            .from('investigation_records')
+            .update({ ai_summary_status: 'failed' })
+            .eq('record_id', recordIdOrUuid);
+        }
       } catch (statusError) {
         console.error('❌ Error updating status to failed:', statusError);
       }
