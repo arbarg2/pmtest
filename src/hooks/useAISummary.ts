@@ -20,10 +20,8 @@ export const useAISummary = () => {
   });
   const { toast } = useToast();
   
-  // Ref to track if success toast was already shown
+  // Refs must be declared at the top level consistently
   const successToastShown = useRef<Set<string>>(new Set());
-  
-  // Ref to track loading states to prevent duplicate calls
   const loadingRecords = useRef<Set<string>>(new Set());
 
   const generateAISummary = async (recordId: string, walletData: any) => {
