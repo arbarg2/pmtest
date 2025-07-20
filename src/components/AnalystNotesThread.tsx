@@ -77,6 +77,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
     const loadNoteHistory = useCallback(async () => {
       if (!recordId || !user) return;
 
+      console.log('📖 Loading note history for recordId:', recordId, 'userId:', user.id);
       setIsLoading(true);
       try {
         const result = await supabaseLookupRecords.getLookupRecordById(recordId, user.id);
@@ -85,6 +86,12 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
           const record = result.record as any;
           const existingNotes = record.analyst_notes ?? '';
           const status = record.investigation_status || 'pending';
+
+          console.log('📝 Loaded from DB:', {
+            recordId,
+            analyst_notes: existingNotes ? 'Present' : 'Empty',
+            investigation_status: status
+          });
 
           setCurrentStatus(status);
 
@@ -108,8 +115,10 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
           }
 
           setNoteHistory(parsedNotes);
+          console.log('📋 Set note history with', parsedNotes.length, 'notes');
         }
       } catch (error) {
+        console.error('❌ Error loading note history:', error);
         toast({
           title: 'Error',
           description: 'Failed to load note history',
@@ -135,6 +144,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
     const handleAddNote = async () => {
       if (!currentNote.trim() || !recordId || !user) return;
 
+      console.log('💾 Adding note for recordId:', recordId);
       setIsSaving(true);
 
       const newNote: AnalystNote = {
@@ -157,6 +167,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
           throw error;
         }
 
+        console.log('✅ Note saved successfully for recordId:', recordId);
         setCurrentNote('');
         setNoteHistory(updatedNotes);
         setRefreshTrigger(prev => prev + 1);
@@ -168,6 +179,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
 
         onNotesUpdate?.(updatedNotes, currentStatus);
       } catch (err) {
+        console.error('❌ Error saving note:', err);
         toast({
           title: 'Error Saving',
           description: 'Note could not be saved.',
@@ -181,6 +193,8 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
     const handleStatusChange = async (newStatus: string) => {
       if (!recordId || !user) return;
 
+      console.log('🔄 Changing status for recordId:', recordId, 'to:', newStatus);
+
       try {
         const { error } = await updateRawRecord(recordId, {
           investigation_status: newStatus
@@ -190,6 +204,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
           throw error;
         }
 
+        console.log('✅ Status updated successfully for recordId:', recordId);
         setCurrentStatus(newStatus as any);
         toast({
           title: 'Status Updated',
@@ -198,6 +213,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
 
         onNotesUpdate?.(noteHistory, newStatus);
       } catch (err) {
+        console.error('❌ Error updating status:', err);
         toast({
           title: 'Error Updating Status',
           description: 'Status could not be updated.',
@@ -305,4 +321,3 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
 AnalystNotesThread.displayName = 'AnalystNotesThread';
 
 export default AnalystNotesThread;
-

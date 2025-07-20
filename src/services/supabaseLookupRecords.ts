@@ -237,12 +237,13 @@ class SupabaseLookupRecordsService {
 
   async getLookupRecordById(id: string, userId: string) {
     try {
-      console.log('Fetching record by ID:', id, 'for user:', userId);
+      console.log('🔍 Fetching record by ID:', id, 'for user:', userId);
       
       // Try by record_id first (the display ID), then by internal id
+      // Explicitly select all fields including analyst_notes and investigation_status
       let { data: record, error } = await supabase
         .from('investigation_records')
-        .select('*')
+        .select('id, record_id, wallet_address, network, risk_score, risk_level, analysis_data, analyst_notes, investigation_status, tags, user_id, created_at, updated_at, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous, is_case, case_id, case_status, case_created_at, assigned_to, analyst_id, reviewed_at')
         .eq('record_id', id)
         .eq('user_id', userId)
         .maybeSingle();
@@ -254,10 +255,10 @@ class SupabaseLookupRecordsService {
 
       // If not found by record_id, try by internal id
       if (!record) {
-        console.log('Not found by record_id, trying by internal id');
+        console.log('🔄 Not found by record_id, trying by internal id');
         const result = await supabase
           .from('investigation_records')
-          .select('*')
+          .select('id, record_id, wallet_address, network, risk_score, risk_level, analysis_data, analyst_notes, investigation_status, tags, user_id, created_at, updated_at, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous, is_case, case_id, case_status, case_created_at, assigned_to, analyst_id, reviewed_at')
           .eq('id', id)
           .eq('user_id', userId)
           .maybeSingle();
@@ -270,11 +271,17 @@ class SupabaseLookupRecordsService {
       }
 
       if (!record) {
-        console.log('Record not found with either ID');
+        console.log('❌ Record not found with either ID');
         return { success: false, error: 'Record not found' };
       }
 
-      console.log('Found record:', record);
+      console.log('✅ Found record:', {
+        id: record.id,
+        record_id: record.record_id,
+        analyst_notes: record.analyst_notes ? 'Present' : 'Empty',
+        investigation_status: record.investigation_status
+      });
+      
       return { success: true, record };
     } catch (error) {
       console.error('Error in getLookupRecordById:', error);
