@@ -1,13 +1,12 @@
-
 import { useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface SummaryData {
-  ai_summary?: string;
-  ai_summary_status?: 'pending' | 'processing' | 'completed' | 'failed';
-  ai_summary_generated_at?: string;
-  ai_summary_previous?: string;
+  ai_summary?: string | null;
+  ai_summary_status?: 'pending' | 'processing' | 'completed' | 'failed' | null;
+  ai_summary_generated_at?: string | null;
+  ai_summary_previous?: string | null;
 }
 
 export const useAISummary = () => {
@@ -188,10 +187,10 @@ export const useAISummary = () => {
 
       console.log('📊 Record found, AI status:', record.ai_summary_status);
 
-      // Update the summaryData with all the fields
+      // Update the summaryData with all the fields, ensuring proper type handling
       setSummaryData({
         ai_summary: record.ai_summary,
-        ai_summary_status: record.ai_summary_status,
+        ai_summary_status: record.ai_summary_status as 'pending' | 'processing' | 'completed' | 'failed' | null,
         ai_summary_generated_at: record.ai_summary_generated_at,
         ai_summary_previous: record.ai_summary_previous
       });
@@ -245,7 +244,7 @@ export const useAISummary = () => {
           console.log('✅ AI summary completed!');
           setSummaryData({
             ai_summary: record.ai_summary,
-            ai_summary_status: record.ai_summary_status,
+            ai_summary_status: record.ai_summary_status as 'completed',
             ai_summary_generated_at: record.ai_summary_generated_at,
             ai_summary_previous: record.ai_summary_previous
           });
