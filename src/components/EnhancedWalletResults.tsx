@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,7 @@ const EnhancedWalletResults = ({
   const [caseId, setCaseId] = useState<string | undefined>();
   const [caseStatus, setCaseStatus] = useState('open');
   const [caseCreatedAt, setCaseCreatedAt] = useState<string | undefined>();
+  const [notesKey, setNotesKey] = useState(0); // Add key to force refresh of AnalystNotesThread
 
   // Initialize case data from wallet/record data
   useEffect(() => {
@@ -98,6 +100,13 @@ const EnhancedWalletResults = ({
     }, 500);
   };
 
+  // Add callback to refresh notes when Holly AI adds a note
+  const handleNotesUpdated = () => {
+    console.log('Holly AI note added, refreshing notes list...');
+    // Force AnalystNotesThread to refresh by updating its key
+    setNotesKey(prev => prev + 1);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Header */}
@@ -147,7 +156,11 @@ const EnhancedWalletResults = ({
 
         {/* AI Analysis Section - Only Holly AI Analysis */}
         <div className="mb-8">
-          <HollyAIAnalysis walletData={wallet} recordId={recordId} />
+          <HollyAIAnalysis 
+            walletData={wallet} 
+            recordId={recordId} 
+            onNotesUpdated={handleNotesUpdated}
+          />
         </div>
 
         {/* Second Row - Entity Attribution and Geographic Risk */}
@@ -189,8 +202,9 @@ const EnhancedWalletResults = ({
         {/* Bottom Row - Analyst Notes and Export Actions (only show if it's a case) */}
         {isCase && (
           <div className="grid lg:grid-cols-2 gap-6">
-            {/* Analyst Notes Thread */}
+            {/* Analyst Notes Thread - use key to force refresh */}
             <AnalystNotesThread
+              key={notesKey}
               recordId={recordId}
               onNotesUpdate={handleNotesUpdate}
             />

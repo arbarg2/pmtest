@@ -34,9 +34,10 @@ import remarkGfm from 'remark-gfm';
 interface HollyAIAnalysisProps {
   walletData?: any;
   recordId?: string;
+  onNotesUpdated?: () => void; // Add callback to notify parent of notes update
 }
 
-export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) {
+export function HollyAIAnalysis({ walletData, recordId, onNotesUpdated }: HollyAIAnalysisProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isAddingToNotes, setIsAddingToNotes] = useState(false);
@@ -102,6 +103,11 @@ export function HollyAIAnalysis({ walletData, recordId }: HollyAIAnalysisProps) 
           title: "✅ Added to Case Notes",
           description: "Holly AI summary has been saved to case notes.",
         });
+        
+        // Notify parent component to refresh notes list
+        if (onNotesUpdated) {
+          onNotesUpdated();
+        }
       } else {
         throw new Error(addNoteResult.error || 'Failed to add note');
       }
