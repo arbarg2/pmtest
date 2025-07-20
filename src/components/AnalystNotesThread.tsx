@@ -1,3 +1,4 @@
+
 import React, {
   useState,
   useEffect,
@@ -9,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
@@ -48,12 +50,18 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
     const loadNoteHistory = useCallback(async () => {
       if (!recordId || !user) return;
 
+      console.log('🔄 loadNoteHistory called with recordId:', recordId);
       setIsLoading(true);
       try {
         const result = await supabaseLookupRecords.getLookupRecordById(recordId, user.id);
 
         if (result.success && result.record) {
           const record = result.record as any;
+          console.log('📊 Fresh record from DB:', {
+            analyst_notes: record.analyst_notes ? 'Present' : 'Empty',
+            investigation_status: record.investigation_status
+          });
+          
           const existingNotes = record.analyst_notes ?? '';
           const status = record.investigation_status || 'pending';
           setCurrentStatus(status);
@@ -113,6 +121,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
     const handleAddNote = async () => {
       if (!currentNote.trim() || !recordId || !user) return;
 
+      console.log('💾 handleAddNote called with recordId:', recordId);
       setIsSaving(true);
       const newNote: AnalystNote = {
         id: Date.now().toString(),
@@ -125,7 +134,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
       const updatedNotes = [...noteHistory, newNote];
 
       try {
-        const { error } = await supabaseLookupRecords.updateRawRecord(recordId, {
+        const { error } = await supabaseLookupRecords.updateLookupRecord(recordId, user.id, {
           analyst_notes: JSON.stringify(updatedNotes),
           investigation_status: currentStatus,
         });
@@ -137,10 +146,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
         // Force clear before refresh to trigger re-render
         setNoteHistory([]);
         setTimeout(() => {
-          if (ref?.current) {
-            console.log('⏱️ Triggering refreshNotes...');
-            ref.current.refreshNotes();
-          }
+          setRefreshTrigger((prev) => prev + 1);
         }, 50);
 
         toast({ title: 'Note Added', description: 'Your note has been saved.' });
@@ -160,8 +166,10 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
     const handleStatusChange = async (newStatus: string) => {
       if (!recordId || !user) return;
 
+      console.log('🔄 handleStatusChange called with recordId:', recordId, 'status:', newStatus);
+
       try {
-        const { error } = await supabaseLookupRecords.updateRawRecord(recordId, {
+        const { error } = await supabaseLookupRecords.updateLookupRecord(recordId, user.id, {
           investigation_status: newStatus,
         });
 

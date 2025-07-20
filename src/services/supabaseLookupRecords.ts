@@ -33,6 +33,8 @@ export interface CreateLookupRecordData {
     tags: string[];
     attachments: string[];
   };
+  analyst_notes?: string;
+  investigation_status?: string;
 }
 
 class SupabaseLookupRecordsService {
@@ -321,9 +323,11 @@ class SupabaseLookupRecordsService {
       console.log('Updating record:', recordId, 'for user:', userId);
       
       const updateData = {
-        analyst_notes: updates.analyst_fields?.case_notes,
-        investigation_status: updates.analyst_fields?.analyst_decision,
-        tags: updates.analyst_fields?.tags,
+        ...(updates.analyst_notes !== undefined && { analyst_notes: updates.analyst_notes }),
+        ...(updates.investigation_status !== undefined && { investigation_status: updates.investigation_status }),
+        ...(updates.analyst_fields?.case_notes !== undefined && { analyst_notes: updates.analyst_fields.case_notes }),
+        ...(updates.analyst_fields?.analyst_decision !== undefined && { investigation_status: updates.analyst_fields.analyst_decision }),
+        ...(updates.analyst_fields?.tags !== undefined && { tags: updates.analyst_fields.tags }),
         updated_at: new Date().toISOString()
       };
 
