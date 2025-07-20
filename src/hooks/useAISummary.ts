@@ -3,8 +3,15 @@ import { useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface SummaryData {
+  ai_summary?: string;
+  ai_summary_status?: 'pending' | 'processing' | 'completed' | 'failed';
+  ai_summary_generated_at?: string;
+  ai_summary_previous?: string;
+}
+
 export const useAISummary = () => {
-  const [summary, setSummary] = useState<string>('');
+  const [summaryData, setSummaryData] = useState<SummaryData>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   const successToastShown = useRef<Set<string>>(new Set());
@@ -79,6 +86,12 @@ export const useAISummary = () => {
         throw statusError;
       }
 
+      // Update local state to show processing
+      setSummaryData(prev => ({
+        ...prev,
+        ai_summary_status: 'processing'
+      }));
+
       // Call the edge function with record_id (string) - this is what the edge function expects
       console.log('🚀 Calling edge function with record_id:', existingRecord.record_id);
       const { data, error } = await supabase.functions.invoke('ai-summary', {
@@ -125,6 +138,11 @@ export const useAISummary = () => {
         console.error('❌ Error updating status to failed:', statusError);
       }
 
+      setSummaryData(prev => ({
+        ...prev,
+        ai_summary_status: 'failed'
+      }));
+
       setIsGenerating(false);
       toast({
         title: "AI Analysis Failed",
@@ -148,7 +166,7 @@ export const useAISummary = () => {
       
       let query = supabase
         .from('investigation_records')
-        .select('id, record_id, ai_summary, ai_summary_status');
+        .select('id, record_id, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous');
       
       if (isUuid) {
         query = query.eq('id', recordIdOrUuid);
@@ -170,10 +188,15 @@ export const useAISummary = () => {
 
       console.log('📊 Record found, AI status:', record.ai_summary_status);
 
-      if (record.ai_summary) {
-        console.log('✅ Found existing AI summary');
-        setSummary(record.ai_summary);
-      } else if (record.ai_summary_status === 'processing') {
+      // Update the summaryData with all the fields
+      setSummaryData({
+        ai_summary: record.ai_summary,
+        ai_summary_status: record.ai_summary_status,
+        ai_summary_generated_at: record.ai_summary_generated_at,
+        ai_summary_previous: record.ai_summary_previous
+      });
+
+      if (record.ai_summary_status === 'processing') {
         console.log('⏳ AI summary is being processed, starting polling');
         setIsGenerating(true);
         pollForSummaryCompletion(record.id); // Use UUID for polling
@@ -196,7 +219,7 @@ export const useAISummary = () => {
 
         const { data: record, error } = await supabase
           .from('investigation_records')
-          .select('ai_summary, ai_summary_status')
+          .select('ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous')
           .eq('id', recordUuid) // Always use UUID for polling
           .maybeSingle();
 
@@ -220,7 +243,12 @@ export const useAISummary = () => {
 
         if (record.ai_summary_status === 'completed' && record.ai_summary) {
           console.log('✅ AI summary completed!');
-          setSummary(record.ai_summary);
+          setSummaryData({
+            ai_summary: record.ai_summary,
+            ai_summary_status: record.ai_summary_status,
+            ai_summary_generated_at: record.ai_summary_generated_at,
+            ai_summary_previous: record.ai_summary_previous
+          });
           setIsGenerating(false);
           
           if (!successToastShown.current.has(recordUuid)) {
@@ -232,6 +260,10 @@ export const useAISummary = () => {
           }
         } else if (record.ai_summary_status === 'failed') {
           console.error('❌ AI summary failed');
+          setSummaryData(prev => ({
+            ...prev,
+            ai_summary_status: 'failed'
+          }));
           setIsGenerating(false);
           toast({
             title: "AI Analysis Failed",
@@ -262,8 +294,7 @@ export const useAISummary = () => {
   };
 
   return {
-    summary,
-    setSummary,
+    summaryData,
     isGenerating,
     generateAISummary,
     loadExistingSummary,
