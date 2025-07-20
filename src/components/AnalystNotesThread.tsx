@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,15 +60,15 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
         author: user?.email || 'Unknown'
       }]);
     }
-  }, [recordId, user, initialNotes, initialStatus, refreshTrigger]);
+  }, [recordId, user, initialNotes, initialStatus]);
 
-  // Add effect to trigger refresh when the component key changes
+  // Add effect to trigger refresh when refreshTrigger changes
   useEffect(() => {
-    if (recordId && user) {
-      console.log('Component key changed, refreshing notes...');
+    if (recordId && user && refreshTrigger > 0) {
+      console.log('RefreshTrigger changed, reloading notes...', refreshTrigger);
       loadNoteHistory();
     }
-  }, [recordId, user]);
+  }, [refreshTrigger, recordId, user]);
 
   const loadNoteHistory = async () => {
     if (!recordId || !user) return;
@@ -91,27 +92,35 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
           try {
             const parsedNotes = JSON.parse(existingNotes);
             if (Array.isArray(parsedNotes)) {
+              console.log('Setting note history from parsed JSON:', parsedNotes);
               setNoteHistory(parsedNotes);
             } else {
               // Single note format
-              setNoteHistory([{
+              const singleNote = [{
                 id: Date.now().toString(),
                 content: existingNotes,
                 status: status,
                 timestamp: result.record.created_at,
                 author: user.email || 'Unknown'
-              }]);
+              }];
+              console.log('Setting note history from single note:', singleNote);
+              setNoteHistory(singleNote);
             }
           } catch {
             // Plain text note
-            setNoteHistory([{
+            const plainNote = [{
               id: Date.now().toString(),
               content: existingNotes,
               status: status,
               timestamp: result.record.created_at,
               author: user.email || 'Unknown'
-            }]);
+            }];
+            console.log('Setting note history from plain text:', plainNote);
+            setNoteHistory(plainNote);
           }
+        } else {
+          console.log('No existing notes found, clearing history');
+          setNoteHistory([]);
         }
       } else {
         console.log('Failed to load record for notes:', result.error);
@@ -136,7 +145,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
   // Expose refreshNotes method to parent component via ref
   useImperativeHandle(ref, () => ({
     refreshNotes: () => {
-      console.log('External refresh trigger activated');
+      console.log('External refresh trigger activated - incrementing refreshTrigger');
       setRefreshTrigger(prev => prev + 1);
     }
   }));
@@ -189,7 +198,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
       );
 
       if (result.success) {
-        console.log('Successfully saved note');
+        console.log('Successfully saved note, updating local state');
         setNoteHistory(updatedHistory);
         setCurrentNote('');
         

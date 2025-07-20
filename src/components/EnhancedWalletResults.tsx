@@ -103,14 +103,13 @@ const EnhancedWalletResults = ({
   // Update callback to refresh notes when Holly AI adds a note
   const handleNotesUpdated = () => {
     console.log('Holly AI note added, refreshing notes list...');
-    // Force AnalystNotesThread to refresh by updating its key AND triggering reload
-    setNotesKey(prev => prev + 1);
-    // Also trigger a delayed reload to ensure the new data is fetched
+    // Add a 300ms delay to avoid race conditions with Supabase eventually consistent reads
     setTimeout(() => {
+      console.log('Triggering refresh after delay...');
       if (analystNotesRef.current) {
         analystNotesRef.current.refreshNotes();
       }
-    }, 500);
+    }, 300);
   };
 
   return (
