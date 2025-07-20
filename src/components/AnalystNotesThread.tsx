@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -62,15 +62,8 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
     }
   }, [recordId, user, initialNotes, initialStatus]);
 
-  // Effect to trigger refresh when refreshTrigger changes
-  useEffect(() => {
-    if (recordId && user && refreshTrigger > 0) {
-      console.log('RefreshTrigger changed to:', refreshTrigger, 'reloading notes...');
-      loadNoteHistory();
-    }
-  }, [refreshTrigger]);
-
-  const loadNoteHistory = async () => {
+  // Memoize loadNoteHistory to prevent unnecessary re-renders
+  const loadNoteHistory = useCallback(async () => {
     if (!recordId || !user) return;
     
     setIsLoading(true);
@@ -178,7 +171,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
           }
         }
         
-        console.log('Final note history:', parsedNotes);
+        console.log('Final note history (setting state):', parsedNotes);
         setNoteHistory(parsedNotes);
       } else {
         console.log('Failed to load record for notes:', result.error);
@@ -198,7 +191,15 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [recordId, user, toast]);
+
+  // Effect to trigger refresh when refreshTrigger changes
+  useEffect(() => {
+    if (recordId && user && refreshTrigger > 0) {
+      console.log('RefreshTrigger changed to:', refreshTrigger, 'reloading notes...');
+      loadNoteHistory();
+    }
+  }, [refreshTrigger, loadNoteHistory, recordId, user]);
 
   // Expose refreshNotes method to parent component via ref
   useImperativeHandle(ref, () => ({
