@@ -357,6 +357,8 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
     );
   }
 
+  console.log('AnalystNotesThread render - noteHistory length:', noteHistory.length, 'notes:', noteHistory);
+
   return (
     <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur shadow-lg border-0">
       <CardHeader>
@@ -397,8 +399,8 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
           <div className="space-y-3">
             <Label className="text-sm font-medium">Investigation History</Label>
             <div className="max-h-60 overflow-y-auto space-y-3 border rounded-lg p-3 bg-slate-50 dark:bg-slate-900">
-              {noteHistory.map((note, index) => (
-                <div key={note.id} className="border-l-2 border-primary pl-3 pb-2">
+              {noteHistory.map((note) => (
+                <div key={`${note.id}-${note.timestamp}`} className="border-l-2 border-primary pl-3 pb-2">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center space-x-2">
                       <User className="w-3 h-3 text-slate-400" />
