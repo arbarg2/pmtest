@@ -81,8 +81,8 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
       if (result.success && result.record) {
         console.log('Loaded record for notes:', result.record);
         
-        // Read from analyst_fields.case_notes (exact same place that handleAddNote writes to)
-        const existingNotes = result.record.analyst_fields?.case_notes || '';
+        // Read from analyst_notes (where handleAddNote actually saves the notes)
+        const existingNotes = result.record.analyst_notes || '';
         const status = result.record.investigation_status || 'pending';
         
         setCurrentStatus(status as any);
