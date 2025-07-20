@@ -43,7 +43,6 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
     const [noteHistory, setNoteHistory] = useState<AnalystNote[]>([]);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const { toast } = useToast();
     const { user } = useAuth();
 
@@ -98,7 +97,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
       } finally {
         setIsLoading(false);
       }
-    }, [recordId, user]);
+    }, [recordId, user, toast]);
 
     useEffect(() => {
       if (recordId && user) {
@@ -106,16 +105,8 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
       }
     }, [recordId, user, loadNoteHistory]);
 
-    useEffect(() => {
-      if (recordId && user && refreshTrigger > 0) {
-        loadNoteHistory();
-      }
-    }, [refreshTrigger, loadNoteHistory, recordId, user]);
-
     useImperativeHandle(ref, () => ({
-      refreshNotes: () => {
-        setRefreshTrigger((prev) => prev + 1);
-      },
+      refreshNotes: loadNoteHistory,
     }));
 
     const handleAddNote = async () => {
@@ -123,6 +114,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
 
       console.log('💾 handleAddNote called with recordId:', recordId);
       setIsSaving(true);
+      
       const newNote: AnalystNote = {
         id: Date.now().toString(),
         content: currentNote.trim(),
@@ -133,6 +125,10 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
 
       const updatedNotes = [...noteHistory, newNote];
 
+      // Optimistically update the UI immediately
+      setNoteHistory(updatedNotes);
+      setCurrentNote('');
+
       try {
         const { error } = await supabaseLookupRecords.updateLookupRecord(recordId, user.id, {
           analyst_notes: JSON.stringify(updatedNotes),
@@ -141,18 +137,15 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
 
         if (error) throw error;
 
-        setCurrentNote('');
-
-        // Force clear before refresh to trigger re-render
-        setNoteHistory([]);
-        setTimeout(() => {
-          setRefreshTrigger((prev) => prev + 1);
-        }, 50);
-
         toast({ title: 'Note Added', description: 'Your note has been saved.' });
         onNotesUpdate?.(updatedNotes, currentStatus);
       } catch (err) {
         console.error('❌ Error saving note:', err);
+        
+        // Rollback the optimistic update on error
+        setNoteHistory(noteHistory);
+        setCurrentNote(currentNote.trim());
+        
         toast({
           title: 'Error Saving',
           description: 'Note could not be saved.',
@@ -168,6 +161,10 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
 
       console.log('🔄 handleStatusChange called with recordId:', recordId, 'status:', newStatus);
 
+      // Optimistically update the UI immediately
+      const previousStatus = currentStatus;
+      setCurrentStatus(newStatus as any);
+
       try {
         const { error } = await supabaseLookupRecords.updateLookupRecord(recordId, user.id, {
           investigation_status: newStatus,
@@ -175,13 +172,17 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
 
         if (error) throw error;
 
-        setCurrentStatus(newStatus as any);
         toast({
           title: 'Status Updated',
           description: `Investigation status changed to ${newStatus}`,
         });
         onNotesUpdate?.(noteHistory, newStatus);
       } catch (err) {
+        console.error('❌ Error updating status:', err);
+        
+        // Rollback the optimistic update on error
+        setCurrentStatus(previousStatus);
+        
         toast({
           title: 'Error Updating Status',
           description: 'Status could not be updated.',
