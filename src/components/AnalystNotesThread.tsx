@@ -135,13 +135,29 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
               console.log('Found case notes:', caseNotes);
               
               // Convert case notes to analyst note format and add to existing notes
-              const caseNotesFormatted = caseNotes.map(note => ({
-                id: note.id,
-                content: note.details?.note || 'Case note',
-                status: status,
-                timestamp: note.created_at,
-                author: note.details?.author || 'System'
-              }));
+              const caseNotesFormatted = caseNotes.map(note => {
+                // Safely extract note content and author from details JSON
+                let noteContent = 'Case note';
+                let noteAuthor = 'System';
+                
+                if (note.details && typeof note.details === 'object' && note.details !== null) {
+                  const details = note.details as Record<string, any>;
+                  if (details.note && typeof details.note === 'string') {
+                    noteContent = details.note;
+                  }
+                  if (details.author && typeof details.author === 'string') {
+                    noteAuthor = details.author;
+                  }
+                }
+                
+                return {
+                  id: note.id,
+                  content: noteContent,
+                  status: status,
+                  timestamp: note.created_at,
+                  author: noteAuthor
+                };
+              });
               
               // Combine and sort all notes by timestamp
               parsedNotes = [...parsedNotes, ...caseNotesFormatted].sort((a, b) => 
