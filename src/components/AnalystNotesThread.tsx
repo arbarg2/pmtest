@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { useAuth } from '@/contexts/AuthContext';
 import { MessageSquare, Clock, User } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AnalystNote {
   id: string;
@@ -87,41 +87,74 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
         
         setCurrentStatus(status as any);
         
+        let parsedNotes: AnalystNote[] = [];
+        
         if (existingNotes) {
           // Try to parse as JSON for threaded format, fallback to single note
           try {
-            const parsedNotes = JSON.parse(existingNotes);
-            if (Array.isArray(parsedNotes)) {
-              console.log('Setting note history from parsed JSON:', parsedNotes);
-              setNoteHistory(parsedNotes);
+            const parsed = JSON.parse(existingNotes);
+            if (Array.isArray(parsed)) {
+              console.log('Setting note history from parsed JSON:', parsed);
+              parsedNotes = parsed;
             } else {
               // Single note format
-              const singleNote = [{
+              parsedNotes = [{
                 id: Date.now().toString(),
                 content: existingNotes,
                 status: status,
                 timestamp: result.record.created_at,
                 author: user.email || 'Unknown'
               }];
-              console.log('Setting note history from single note:', singleNote);
-              setNoteHistory(singleNote);
             }
           } catch {
             // Plain text note
-            const plainNote = [{
+            parsedNotes = [{
               id: Date.now().toString(),
               content: existingNotes,
               status: status,
               timestamp: result.record.created_at,
               author: user.email || 'Unknown'
             }];
-            console.log('Setting note history from plain text:', plainNote);
-            setNoteHistory(plainNote);
           }
-        } else {
-          console.log('No existing notes found, clearing history');
-          setNoteHistory([]);
         }
+
+        // If this is a case, also fetch case notes
+        if (result.record.is_case && result.record.case_id) {
+          console.log('Fetching case notes for case:', result.record.case_id);
+          try {
+            const { data: caseNotes, error } = await supabase
+              .from('case_audit_log')
+              .select('*')
+              .eq('case_id', result.record.case_id)
+              .eq('action', 'note_added')
+              .order('created_at', { ascending: true });
+
+            if (error) {
+              console.error('Error fetching case notes:', error);
+            } else if (caseNotes && caseNotes.length > 0) {
+              console.log('Found case notes:', caseNotes);
+              
+              // Convert case notes to analyst note format and add to existing notes
+              const caseNotesFormatted = caseNotes.map(note => ({
+                id: note.id,
+                content: note.details?.note || 'Case note',
+                status: status,
+                timestamp: note.created_at,
+                author: note.details?.author || 'System'
+              }));
+              
+              // Combine and sort all notes by timestamp
+              parsedNotes = [...parsedNotes, ...caseNotesFormatted].sort((a, b) => 
+                new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+              );
+            }
+          } catch (caseError) {
+            console.error('Error fetching case notes:', caseError);
+          }
+        }
+        
+        console.log('Final note history:', parsedNotes);
+        setNoteHistory(parsedNotes);
       } else {
         console.log('Failed to load record for notes:', result.error);
         toast({
