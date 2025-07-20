@@ -81,8 +81,8 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
       if (result.success && result.record) {
         console.log('Loaded record for notes:', result.record);
         
-        // Parse existing notes into thread format
-        const existingNotes = result.record.analyst_notes || '';
+        // Read from analyst_fields.case_notes instead of analyst_notes
+        const existingNotes = result.record.analyst_fields?.case_notes || '';
         const status = result.record.investigation_status || 'pending';
         
         setCurrentStatus(status as any);
