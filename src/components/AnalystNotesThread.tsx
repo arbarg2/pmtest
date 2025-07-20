@@ -81,9 +81,18 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
       if (result.success && result.record) {
         console.log('Loaded record for notes:', result.record);
         
-        // Read from analyst_notes (where handleAddNote actually saves the notes)
-        const existingNotes = result.record.analyst_notes || '';
-        const status = result.record.investigation_status || 'pending';
+        // Cast the record to access analyst_fields
+        const record = result.record as {
+          analyst_fields?: { case_notes?: string };
+          investigation_status?: string;
+          created_at: string;
+          is_case?: boolean;
+          case_id?: string;
+        };
+        
+        // Read from analyst_fields.case_notes (exact same place that handleAddNote writes to)
+        const existingNotes = record.analyst_fields?.case_notes ?? '';
+        const status = record.investigation_status || 'pending';
         
         setCurrentStatus(status as any);
         
@@ -102,7 +111,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
                 id: Date.now().toString(),
                 content: existingNotes,
                 status: status,
-                timestamp: result.record.created_at,
+                timestamp: record.created_at,
                 author: user.email || 'Unknown'
               }];
             }
@@ -112,20 +121,20 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
               id: Date.now().toString(),
               content: existingNotes,
               status: status,
-              timestamp: result.record.created_at,
+              timestamp: record.created_at,
               author: user.email || 'Unknown'
             }];
           }
         }
 
         // If this is a case, also fetch case notes
-        if (result.record.is_case && result.record.case_id) {
-          console.log('Fetching case notes for case:', result.record.case_id);
+        if (record.is_case && record.case_id) {
+          console.log('Fetching case notes for case:', record.case_id);
           try {
             const { data: caseNotes, error } = await supabase
               .from('case_audit_log')
               .select('*')
-              .eq('case_id', result.record.case_id)
+              .eq('case_id', record.case_id)
               .eq('action', 'note_added')
               .order('created_at', { ascending: true });
 
