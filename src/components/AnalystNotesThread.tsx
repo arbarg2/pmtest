@@ -261,10 +261,15 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
       );
 
       if (result.success) {
-        console.log('Successfully saved note, updating local state immediately');
-        // Update local state immediately for instant UI feedback
-        setNoteHistory(updatedHistory);
+        console.log('Successfully saved note, refreshing data from backend');
+        
+        // Clear the input
         setCurrentNote('');
+        
+        // Refresh notes from backend to ensure UI reflects latest data
+        if (ref && 'current' in ref && ref.current) {
+          ref.current.refreshNotes();
+        }
         
         // Notify parent component
         if (onNotesUpdate) {
