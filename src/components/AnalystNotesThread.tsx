@@ -81,21 +81,8 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
       if (result.success && result.record) {
         console.log('Loaded record for notes:', result.record);
         
-        // Read from analysis_data.analyst_fields.case_notes if it exists, otherwise fallback to analyst_notes
-        let existingNotes = '';
-        if (result.record.analysis_data && typeof result.record.analysis_data === 'object' && result.record.analysis_data !== null) {
-          const analysisData = result.record.analysis_data as Record<string, any>;
-          if (analysisData.analyst_fields && typeof analysisData.analyst_fields === 'object' && analysisData.analyst_fields !== null) {
-            const analystFields = analysisData.analyst_fields as Record<string, any>;
-            existingNotes = analystFields.case_notes || '';
-          }
-        }
-        
-        // Fallback to analyst_notes if no case_notes found
-        if (!existingNotes) {
-          existingNotes = result.record.analyst_notes || '';
-        }
-        
+        // Read from analyst_fields.case_notes (exact same place that handleAddNote writes to)
+        const existingNotes = result.record.analyst_fields?.case_notes || '';
         const status = result.record.investigation_status || 'pending';
         
         setCurrentStatus(status as any);
