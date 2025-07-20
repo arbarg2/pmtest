@@ -14,7 +14,7 @@ import TransactionFlowPreview from '@/components/dashboard/TransactionFlowPrevie
 import ExportActions from '@/components/dashboard/ExportActions';
 import RiskFactorsBreakdown from '@/components/RiskFactorsBreakdown';
 import SanctionsScreening from '@/components/SanctionsScreening';
-import AnalystNotesThread from '@/components/AnalystNotesThread';
+import AnalystNotesThread, { AnalystNotesThreadRef } from '@/components/AnalystNotesThread';
 import CaseManagement from '@/components/CaseManagement';
 import { HollyAIAnalysis } from '@/components/HollyAIAnalysis';
 
@@ -45,7 +45,7 @@ const EnhancedWalletResults = ({
   const [caseStatus, setCaseStatus] = useState('open');
   const [caseCreatedAt, setCaseCreatedAt] = useState<string | undefined>();
   const [notesKey, setNotesKey] = useState(0);
-  const analystNotesRef = useRef<any>(null);
+  const analystNotesRef = useRef<AnalystNotesThreadRef>(null);
 
   // Initialize case data from wallet/record data
   useEffect(() => {
@@ -107,7 +107,7 @@ const EnhancedWalletResults = ({
     setNotesKey(prev => prev + 1);
     // Also trigger a delayed reload to ensure the new data is fetched
     setTimeout(() => {
-      if (analystNotesRef.current && typeof analystNotesRef.current.refreshNotes === 'function') {
+      if (analystNotesRef.current) {
         analystNotesRef.current.refreshNotes();
       }
     }, 500);

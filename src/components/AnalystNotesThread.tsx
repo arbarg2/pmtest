@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,15 +23,18 @@ interface AnalystNotesThreadProps {
   initialNotes?: string;
   initialStatus?: string;
   onNotesUpdate?: (notes: AnalystNote[], status: string) => void;
-  key?: number; // Add key prop to handle forced refreshes
 }
 
-const AnalystNotesThread = ({ 
+export interface AnalystNotesThreadRef {
+  refreshNotes: () => void;
+}
+
+const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadProps>(({ 
   recordId, 
   initialNotes = '', 
   initialStatus = 'pending',
   onNotesUpdate 
-}: AnalystNotesThreadProps) => {
+}, ref) => {
   const [currentNote, setCurrentNote] = useState('');
   const [currentStatus, setCurrentStatus] = useState<'pending' | 'cleared' | 'blocked' | 'escalated'>(initialStatus as any);
   const [noteHistory, setNoteHistory] = useState<AnalystNote[]>([]);
@@ -130,11 +133,13 @@ const AnalystNotesThread = ({
     }
   };
 
-  // Add public method to refresh notes (called by parent component)
-  const refreshNotes = () => {
-    console.log('External refresh trigger activated');
-    setRefreshTrigger(prev => prev + 1);
-  };
+  // Expose refreshNotes method to parent component via ref
+  useImperativeHandle(ref, () => ({
+    refreshNotes: () => {
+      console.log('External refresh trigger activated');
+      setRefreshTrigger(prev => prev + 1);
+    }
+  }));
 
   const handleAddNote = async () => {
     if (!currentNote.trim()) {
@@ -383,6 +388,8 @@ const AnalystNotesThread = ({
       </CardContent>
     </Card>
   );
-};
+});
+
+AnalystNotesThread.displayName = 'AnalystNotesThread';
 
 export default AnalystNotesThread;
