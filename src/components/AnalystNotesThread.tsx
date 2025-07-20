@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +23,7 @@ interface AnalystNotesThreadProps {
   initialNotes?: string;
   initialStatus?: string;
   onNotesUpdate?: (notes: AnalystNote[], status: string) => void;
+  key?: number; // Add key prop to handle forced refreshes
 }
 
 const AnalystNotesThread = ({ 
@@ -37,10 +37,11 @@ const AnalystNotesThread = ({
   const [noteHistory, setNoteHistory] = useState<AnalystNote[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Load existing notes when component mounts
+  // Load existing notes when component mounts or when recordId/user changes
   useEffect(() => {
     if (recordId && user) {
       console.log('Loading note history for record:', recordId);
@@ -55,7 +56,15 @@ const AnalystNotesThread = ({
         author: user?.email || 'Unknown'
       }]);
     }
-  }, [recordId, user, initialNotes, initialStatus]);
+  }, [recordId, user, initialNotes, initialStatus, refreshTrigger]);
+
+  // Add effect to trigger refresh when the component key changes
+  useEffect(() => {
+    if (recordId && user) {
+      console.log('Component key changed, refreshing notes...');
+      loadNoteHistory();
+    }
+  }, [recordId, user]);
 
   const loadNoteHistory = async () => {
     if (!recordId || !user) return;
@@ -119,6 +128,12 @@ const AnalystNotesThread = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Add public method to refresh notes (called by parent component)
+  const refreshNotes = () => {
+    console.log('External refresh trigger activated');
+    setRefreshTrigger(prev => prev + 1);
   };
 
   const handleAddNote = async () => {

@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WalletRiskResponse } from '@/services/api';
@@ -45,7 +44,8 @@ const EnhancedWalletResults = ({
   const [caseId, setCaseId] = useState<string | undefined>();
   const [caseStatus, setCaseStatus] = useState('open');
   const [caseCreatedAt, setCaseCreatedAt] = useState<string | undefined>();
-  const [notesKey, setNotesKey] = useState(0); // Add key to force refresh of AnalystNotesThread
+  const [notesKey, setNotesKey] = useState(0);
+  const analystNotesRef = useRef<any>(null);
 
   // Initialize case data from wallet/record data
   useEffect(() => {
@@ -100,11 +100,17 @@ const EnhancedWalletResults = ({
     }, 500);
   };
 
-  // Add callback to refresh notes when Holly AI adds a note
+  // Update callback to refresh notes when Holly AI adds a note
   const handleNotesUpdated = () => {
     console.log('Holly AI note added, refreshing notes list...');
-    // Force AnalystNotesThread to refresh by updating its key
+    // Force AnalystNotesThread to refresh by updating its key AND triggering reload
     setNotesKey(prev => prev + 1);
+    // Also trigger a delayed reload to ensure the new data is fetched
+    setTimeout(() => {
+      if (analystNotesRef.current && typeof analystNotesRef.current.refreshNotes === 'function') {
+        analystNotesRef.current.refreshNotes();
+      }
+    }, 500);
   };
 
   return (
@@ -205,6 +211,7 @@ const EnhancedWalletResults = ({
             {/* Analyst Notes Thread - use key to force refresh */}
             <AnalystNotesThread
               key={notesKey}
+              ref={analystNotesRef}
               recordId={recordId}
               onNotesUpdate={handleNotesUpdate}
             />

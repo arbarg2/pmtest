@@ -125,7 +125,7 @@ const CaseManagementPage = () => {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" onClick={() => navigate('/')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+              <Button variant="ghost" onClick={() => navigate('/dashboard')} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div className="flex items-center">
