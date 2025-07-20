@@ -199,7 +199,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
       }
     };
 
-    if (!user) return <div>Please log in to add analyst notes</div>;
+    if (!user || !recordId) return <div>Loading analyst notes...</div>;
 
     console.log('🔁 Rendering noteHistory:', noteHistory);
 
