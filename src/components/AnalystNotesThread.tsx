@@ -62,13 +62,13 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
     }
   }, [recordId, user, initialNotes, initialStatus]);
 
-  // Add effect to trigger refresh when refreshTrigger changes
+  // Effect to trigger refresh when refreshTrigger changes
   useEffect(() => {
     if (recordId && user && refreshTrigger > 0) {
-      console.log('RefreshTrigger changed, reloading notes...', refreshTrigger);
+      console.log('RefreshTrigger changed to:', refreshTrigger, 'reloading notes...');
       loadNoteHistory();
     }
-  }, [refreshTrigger, recordId, user]);
+  }, [refreshTrigger]);
 
   const loadNoteHistory = async () => {
     if (!recordId || !user) return;
@@ -195,7 +195,11 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
   useImperativeHandle(ref, () => ({
     refreshNotes: () => {
       console.log('External refresh trigger activated - incrementing refreshTrigger');
-      setRefreshTrigger(prev => prev + 1);
+      setRefreshTrigger(prev => {
+        const newValue = prev + 1;
+        console.log('Setting refreshTrigger to:', newValue);
+        return newValue;
+      });
     }
   }));
 
