@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -6,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Folder, Search, Filter, Eye, Calendar, Shield, ArrowLeft } from 'lucide-react';
+import { Folder, Search, Filter, Eye, Calendar, Shield, ArrowLeft, ChevronUp, ChevronDown } from 'lucide-react';
 import { caseManagementService } from '@/services/caseManagement';
 import { UserDropdown } from '@/components/UserDropdown';
+import { CaseChartsPanel } from '@/components/charts/CaseChartsPanel';
 
 interface CaseRecord {
   id: string;
@@ -30,6 +32,7 @@ const CaseManagementPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [riskFilter, setRiskFilter] = useState('all');
+  const [showCharts, setShowCharts] = useState(true);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -143,6 +146,27 @@ const CaseManagementPage = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Charts Panel with Toggle */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Case Analytics</h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCharts(!showCharts)}
+            >
+              {showCharts ? <ChevronUp className="w-4 h-4 mr-2" /> : <ChevronDown className="w-4 h-4 mr-2" />}
+              {showCharts ? 'Hide' : 'Show'} Charts
+            </Button>
+          </div>
+          
+          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
+            showCharts ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+          }`}>
+            <CaseChartsPanel />
+          </div>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card className="bg-white/90 backdrop-blur">

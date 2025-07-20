@@ -221,7 +221,7 @@ export function AnalystDashboard() {
                 <CardTitle>Active Cases</CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{cases.length} cases</Badge>
-                  <Button variant="outline" size="sm" onClick={() => navigate('/all-cases')}>
+                  <Button variant="outline" size="sm" onClick={() => navigate('/cases')}>
                     <Eye className="w-4 h-4 mr-2" />
                     View All Cases
                   </Button>
