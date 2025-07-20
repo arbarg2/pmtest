@@ -198,7 +198,8 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
       );
 
       if (result.success) {
-        console.log('Successfully saved note, updating local state');
+        console.log('Successfully saved note, updating local state immediately');
+        // Update local state immediately for instant UI feedback
         setNoteHistory(updatedHistory);
         setCurrentNote('');
         
