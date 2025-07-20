@@ -251,12 +251,8 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
         recordId,
         user.id,
         {
-          analyst_fields: {
-            case_notes: JSON.stringify(updatedHistory),
-            analyst_decision: currentStatus,
-            tags: [],
-            attachments: []
-          }
+          analyst_notes: JSON.stringify(updatedHistory),
+          investigation_status: currentStatus
         }
       );
 
@@ -309,12 +305,8 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
         recordId,
         user.id,
         {
-          analyst_fields: {
-            case_notes: JSON.stringify(noteHistory),
-            analyst_decision: newStatus as any,
-            tags: [],
-            attachments: []
-          }
+          analyst_notes: JSON.stringify(noteHistory),
+          investigation_status: newStatus
         }
       );
 
