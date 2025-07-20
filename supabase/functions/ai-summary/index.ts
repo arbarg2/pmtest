@@ -32,29 +32,18 @@ serve(async (req) => {
       const body = await req.json()
       console.log('📥 Received payload:', body)
       
-      // Check if this is a generation request or a callback
-      if (body.action === 'generate') {
+      // Check if this is a generation request (has recordId and walletData) or a callback (has record_id and ai_summary)
+      if (body.recordId && body.walletData) {
         console.log('🎯 Processing AI summary generation request')
         
-        const { record_id, wallet_data } = body
+        const { recordId, walletData } = body
 
-        if (!record_id || !wallet_data) {
-          console.error('❌ Missing required fields in generation request')
-          return new Response(
-            JSON.stringify({ error: 'record_id and wallet_data are required' }),
-            { 
-              status: 400, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          )
-        }
-
-        // Verify the record exists before proceeding
-        console.log('🔍 Verifying record exists:', record_id)
+        // Verify the record exists before proceeding - recordId is the record_id string
+        console.log('🔍 Verifying record exists:', recordId)
         const { data: existingRecord, error: verifyError } = await supabase
           .from('investigation_records')
           .select('id, record_id')
-          .eq('record_id', record_id)
+          .eq('record_id', recordId)
           .maybeSingle()
 
         if (verifyError || !existingRecord) {
@@ -76,7 +65,7 @@ serve(async (req) => {
         
         const webhookPayload = {
           record_id: existingRecord.id, // Use the UUID for callback
-          wallet_data: wallet_data,
+          wallet_data: walletData,
           callback_url: `${supabaseUrl}/functions/v1/ai-summary`
         }
 
@@ -103,7 +92,7 @@ serve(async (req) => {
           JSON.stringify({ 
             success: true, 
             message: 'AI summary generation initiated',
-            record_id: record_id,
+            record_id: recordId,
             webhook_response: webhookResult
           }),
           { 
@@ -111,22 +100,11 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           }
         )
-      } else {
+      } else if (body.record_id && body.ai_summary) {
         // This is a callback from Tines with AI summary result
         console.log('🎯 Processing AI summary callback from Tines')
         
         const { record_id, ai_summary } = body
-
-        if (!record_id) {
-          console.error('❌ Missing record_id in callback')
-          return new Response(
-            JSON.stringify({ error: 'record_id is required' }),
-            { 
-              status: 400, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          )
-        }
 
         if (!ai_summary) {
           console.error('❌ Missing ai_summary in callback')
@@ -281,6 +259,18 @@ serve(async (req) => {
           }),
           { 
             status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      } else {
+        console.error('❌ Invalid request payload - missing required fields')
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid request payload',
+            details: 'Expected either (recordId + walletData) for generation or (record_id + ai_summary) for callback'
+          }),
+          { 
+            status: 400, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           }
         )
