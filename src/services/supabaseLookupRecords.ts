@@ -37,12 +37,6 @@ export interface CreateLookupRecordData {
   investigation_status?: string;
 }
 
-// Helper function to detect if a string is a UUID
-function isUUID(str: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
-}
-
 class SupabaseLookupRecordsService {
   async createLookupRecord(data: CreateLookupRecordData, userId: string) {
     try {
@@ -247,20 +241,39 @@ class SupabaseLookupRecordsService {
     try {
       console.log('🔍 Fetching record by ID:', id, 'for user:', userId);
       
-      const { data: record, error } = await supabase
+      // Try by record_id first (the display ID), then by internal id
+      // Explicitly select all fields including analyst_notes and investigation_status
+      let { data: record, error } = await supabase
         .from('investigation_records')
         .select('id, record_id, wallet_address, network, risk_score, risk_level, analysis_data, analyst_notes, investigation_status, tags, user_id, created_at, updated_at, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous, is_case, case_id, case_status, case_created_at, assigned_to, analyst_id, reviewed_at')
-        .or(`record_id.eq.${id},id.eq.${id}`)
+        .eq('record_id', id)
         .eq('user_id', userId)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching lookup record:', error);
+        console.error('Error fetching lookup record by record_id:', error);
         return { success: false, error: error.message };
       }
 
+      // If not found by record_id, try by internal id
       if (!record) {
-        console.log('❌ Record not found');
+        console.log('🔄 Not found by record_id, trying by internal id');
+        const result = await supabase
+          .from('investigation_records')
+          .select('id, record_id, wallet_address, network, risk_score, risk_level, analysis_data, analyst_notes, investigation_status, tags, user_id, created_at, updated_at, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous, is_case, case_id, case_status, case_created_at, assigned_to, analyst_id, reviewed_at')
+          .eq('id', id)
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        record = result.data;
+        if (result.error && result.error.code !== 'PGRST116') {
+          console.error('Error fetching lookup record by id:', result.error);
+          return { success: false, error: result.error.message };
+        }
+      }
+
+      if (!record) {
+        console.log('❌ Record not found with either ID');
         return { success: false, error: 'Record not found' };
       }
 
