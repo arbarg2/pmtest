@@ -142,12 +142,7 @@ const AnalystNotesThread = forwardRef<AnalystNotesThreadRef, AnalystNotesThreadP
         if (error) throw error;
 
         setCurrentNote('');
-
-        // Force clear before refresh to trigger re-render
-        setNoteHistory([]);
-        setTimeout(() => {
-          setRefreshTrigger((prev) => prev + 1);
-        }, 50);
+        setNoteHistory(updatedNotes);
 
         toast({ title: 'Note Added', description: 'Your note has been saved.' });
         onNotesUpdate?.(updatedNotes, currentStatus);
