@@ -247,33 +247,12 @@ class SupabaseLookupRecordsService {
     try {
       console.log('🔍 Fetching record by ID:', id, 'for user:', userId);
       
-      let record;
-      let error;
-
-      // Determine query type based on ID format
-      if (isUUID(id)) {
-        console.log('🔍 ID is UUID, querying by internal id');
-        const result = await supabase
-          .from('investigation_records')
-          .select('id, record_id, wallet_address, network, risk_score, risk_level, analysis_data, analyst_notes, investigation_status, tags, user_id, created_at, updated_at, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous, is_case, case_id, case_status, case_created_at, assigned_to, analyst_id, reviewed_at')
-          .eq('id', id)
-          .eq('user_id', userId)
-          .maybeSingle();
-        
-        record = result.data;
-        error = result.error;
-      } else {
-        console.log('🔍 ID is not UUID, querying by record_id');
-        const result = await supabase
-          .from('investigation_records')
-          .select('id, record_id, wallet_address, network, risk_score, risk_level, analysis_data, analyst_notes, investigation_status, tags, user_id, created_at, updated_at, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous, is_case, case_id, case_status, case_created_at, assigned_to, analyst_id, reviewed_at')
-          .eq('record_id', id)
-          .eq('user_id', userId)
-          .maybeSingle();
-        
-        record = result.data;
-        error = result.error;
-      }
+      const { data: record, error } = await supabase
+        .from('investigation_records')
+        .select('id, record_id, wallet_address, network, risk_score, risk_level, analysis_data, analyst_notes, investigation_status, tags, user_id, created_at, updated_at, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous, is_case, case_id, case_status, case_created_at, assigned_to, analyst_id, reviewed_at')
+        .or(`record_id.eq.${id},id.eq.${id}`)
+        .eq('user_id', userId)
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching lookup record:', error);
