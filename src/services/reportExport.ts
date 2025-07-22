@@ -19,129 +19,153 @@ class ReportExportService {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.width;
       const pageHeight = doc.internal.pageSize.height;
-      const margin = 20;
-      let yPosition = 30;
+      const margin = 15;
+      let yPosition = 25;
 
-      // Helper function to add new page if needed
-      const checkPageSpace = (requiredSpace: number) => {
-        if (yPosition + requiredSpace > pageHeight - 40) {
-          doc.addPage();
-          yPosition = 30;
-        }
+      // Helper function to draw rounded rectangle
+      const drawRoundedRect = (x: number, y: number, width: number, height: number, radius: number = 3) => {
+        doc.roundedRect(x, y, width, height, radius, radius, 'FD');
       };
 
-      // Helper function to draw progress bar
+      // Helper function to draw progress bar with rounded corners
       const drawProgressBar = (x: number, y: number, width: number, height: number, percentage: number, color: [number, number, number]) => {
-        // Background bar
-        doc.setFillColor(240, 240, 240);
-        doc.rect(x, y, width, height, 'F');
+        // Background
+        doc.setFillColor(245, 245, 245);
+        drawRoundedRect(x, y, width, height, 2);
         
         // Progress fill
         const fillWidth = Math.max(0, Math.min(width, (percentage / 100) * width));
-        doc.setFillColor(...color);
-        doc.rect(x, y, fillWidth, height, 'F');
+        if (fillWidth > 0) {
+          doc.setFillColor(...color);
+          drawRoundedRect(x, y, fillWidth, height, 2);
+        }
         
         // Border
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.1);
-        doc.rect(x, y, width, height);
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.2);
+        doc.roundedRect(x, y, width, height, 2, 2);
       };
 
-      // Header Section
+      // Helper function to draw badge
+      const drawBadge = (x: number, y: number, text: string, bgColor: [number, number, number], textColor: [number, number, number] = [255, 255, 255]) => {
+        const textWidth = doc.getTextWidth(text);
+        const badgeWidth = textWidth + 8;
+        const badgeHeight = 6;
+        
+        doc.setFillColor(...bgColor);
+        drawRoundedRect(x, y, badgeWidth, badgeHeight, 3);
+        
+        doc.setTextColor(...textColor);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'bold');
+        doc.text(text, x + 4, y + 4);
+        
+        return badgeWidth;
+      };
+
+      // HEADER SECTION
       doc.setFillColor(51, 65, 85); // slate-700
-      doc.rect(0, 0, pageWidth, 40, 'F');
+      doc.rect(0, 0, pageWidth, 35, 'F');
       
-      // Company Logo (circle with R)
+      // Logo circle
       doc.setFillColor(59, 130, 246); // blue-500
-      doc.circle(margin + 8, 20, 8, 'F');
+      doc.circle(margin + 6, 17, 6, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(14);
+      doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
-      doc.text('R', margin + 5, 24);
+      doc.text('R', margin + 4, 20);
       
-      // Main Title
-      doc.setFontSize(24);
-      doc.setFont(undefined, 'bold');
-      doc.text('Rìan Intelligence Report', margin + 25, 20);
+      // Main title
+      doc.setFontSize(20);
+      doc.text('Rìan Intelligence Report', margin + 18, 15);
       
-      // Report Metadata
-      doc.setFontSize(10);
+      // Header metadata
+      doc.setFontSize(8);
       doc.setFont(undefined, 'normal');
       const reportDate = new Date(data.timestamp).toLocaleString();
-      doc.text(`Generated: ${reportDate}`, pageWidth - margin - 70, 12);
-      doc.text(`Report ID: ${data.recordId}`, pageWidth - margin - 70, 20);
-      doc.text(`Network: ${data.wallet.network?.toUpperCase() || 'Unknown'}`, pageWidth - margin - 70, 28);
+      doc.text(`Generated: ${reportDate}`, pageWidth - margin - 50, 10);
+      doc.text(`Report ID: ${data.recordId}`, pageWidth - margin - 50, 16);
+      doc.text(`Network: ${data.wallet.network?.toUpperCase() || 'Unknown'}`, pageWidth - margin - 50, 22);
+      doc.text(`Status: ${data.investigationStatus?.toUpperCase() || 'PENDING'}`, pageWidth - margin - 50, 28);
       
-      yPosition = 55;
+      yPosition = 45;
 
-      // Executive Summary Section
-      doc.setFillColor(248, 250, 252); // slate-50
-      doc.setDrawColor(203, 213, 225); // slate-300
+      // EXECUTIVE SUMMARY CARD
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(229, 231, 235);
       doc.setLineWidth(0.5);
-      doc.rect(margin, yPosition, pageWidth - 2 * margin, 100, 'FD');
+      drawRoundedRect(margin, yPosition, pageWidth - 2 * margin, 65, 4);
       
-      doc.setTextColor(15, 23, 42); // slate-900
-      doc.setFontSize(18);
+      // Card header
+      doc.setFillColor(248, 250, 252);
+      drawRoundedRect(margin, yPosition, pageWidth - 2 * margin, 12, 4);
+      doc.setTextColor(51, 65, 85);
+      doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
-      doc.text('Executive Summary', margin + 10, yPosition + 15);
+      doc.text('EXECUTIVE SUMMARY', margin + 6, yPosition + 8);
       
-      // Wallet Address
-      doc.setFontSize(11);
-      doc.setFont(undefined, 'normal');
-      doc.setTextColor(71, 85, 105); // slate-600
-      doc.text('Wallet Address:', margin + 10, yPosition + 30);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(15, 23, 42);
+      yPosition += 18;
+      
+      // Left column - Wallet Info
+      doc.setTextColor(71, 85, 105);
       doc.setFontSize(9);
-      doc.text(data.wallet.address, margin + 10, yPosition + 38);
+      doc.setFont(undefined, 'normal');
+      doc.text('Wallet Address:', margin + 6, yPosition);
+      doc.setFont('courier', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(8);
+      doc.text(data.wallet.address.substring(0, 35) + '...', margin + 6, yPosition + 6);
       
-      // Risk Score Section
-      doc.setFontSize(11);
+      // Risk Score
       doc.setFont(undefined, 'normal');
       doc.setTextColor(71, 85, 105);
-      doc.text('Risk Score:', margin + 10, yPosition + 52);
+      doc.setFontSize(9);
+      doc.text('Risk Assessment:', margin + 6, yPosition + 16);
       
       const riskScore = data.wallet.risk_score || 0;
       const riskPercentage = (riskScore / 10) * 100;
-      let riskColor: [number, number, number] = [34, 197, 94]; // green-500
-      if (riskScore >= 7) riskColor = [239, 68, 68]; // red-500
-      else if (riskScore >= 4) riskColor = [245, 158, 11]; // amber-500
+      let riskColor: [number, number, number] = [34, 197, 94]; // green
+      if (riskScore >= 7) riskColor = [239, 68, 68]; // red
+      else if (riskScore >= 4) riskColor = [245, 158, 11]; // amber
       
-      drawProgressBar(margin + 10, yPosition + 56, 60, 8, riskPercentage, riskColor);
+      drawProgressBar(margin + 6, yPosition + 20, 50, 6, riskPercentage, riskColor);
       
       doc.setFont(undefined, 'bold');
       doc.setTextColor(15, 23, 42);
-      doc.setFontSize(12);
-      doc.text(`${riskScore.toFixed(1)}/10.0`, margin + 75, yPosition + 62);
+      doc.setFontSize(10);
+      doc.text(`${riskScore.toFixed(1)}/10`, margin + 60, yPosition + 24);
       
       // Risk Level Badge
       const riskLevel = data.wallet.risk_level || 'Unknown';
-      let badgeColor: [number, number, number] = [34, 197, 94]; // green-500
-      if (riskLevel === 'High' || riskLevel === 'Critical') badgeColor = [239, 68, 68]; // red-500
-      else if (riskLevel === 'Medium') badgeColor = [245, 158, 11]; // amber-500
+      let badgeColor: [number, number, number] = [34, 197, 94];
+      if (riskLevel === 'High' || riskLevel === 'Critical') badgeColor = [239, 68, 68];
+      else if (riskLevel === 'Medium') badgeColor = [245, 158, 11];
       
-      doc.setFillColor(...badgeColor);
-      doc.roundedRect(margin + 10, yPosition + 68, 30, 10, 2, 2, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(8);
-      doc.setFont(undefined, 'bold');
-      doc.text(riskLevel.toUpperCase(), margin + 12, yPosition + 75);
+      drawBadge(margin + 75, yPosition + 20, riskLevel.toUpperCase(), badgeColor);
       
-      // Investigation Status
-      doc.setTextColor(71, 85, 105);
-      doc.setFont(undefined, 'normal');
-      doc.setFontSize(11);
-      doc.text('Status:', margin + 45, yPosition + 75);
-      doc.setTextColor(15, 23, 42);
-      doc.setFont(undefined, 'bold');
-      doc.text((data.investigationStatus || 'Pending').toUpperCase(), margin + 65, yPosition + 75);
+      // Entity Attribution
+      if (data.wallet.entity_attribution) {
+        doc.setTextColor(71, 85, 105);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(9);
+        doc.text('Entity:', margin + 6, yPosition + 34);
+        doc.setTextColor(15, 23, 42);
+        doc.setFont(undefined, 'bold');
+        doc.text(data.wallet.entity_attribution.type || 'Unknown', margin + 25, yPosition + 34);
+        
+        const confidence = (data.wallet.entity_attribution.confidence || 0) * 100;
+        doc.setTextColor(71, 85, 105);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        doc.text(`${confidence.toFixed(0)}% confidence`, margin + 6, yPosition + 41);
+      }
 
-      // Right side - Volume Intelligence
-      const rightColumnX = margin + 100;
+      // Right column - Volume Intelligence
+      const rightX = margin + 100;
       doc.setTextColor(71, 85, 105);
       doc.setFont(undefined, 'normal');
-      doc.setFontSize(11);
-      doc.text('Volume Intelligence:', rightColumnX, yPosition + 30);
+      doc.setFontSize(9);
+      doc.text('Transaction Volume:', rightX, yPosition);
       
       if (data.wallet.volume_metrics?.lifetime_value) {
         const inbound = data.wallet.volume_metrics.lifetime_value.inbound || 0;
@@ -149,232 +173,178 @@ class ReportExportService {
         const usdValue = data.wallet.volume_metrics.lifetime_value.usd_equivalent || 0;
         const currency = data.wallet.network === 'bitcoin' ? 'BTC' : 'ETH';
         
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(15, 23, 42);
-        doc.setFontSize(10);
-        doc.text(`Inbound: ${inbound.toFixed(4)} ${currency}`, rightColumnX, yPosition + 40);
-        doc.text(`Outbound: ${outbound.toFixed(4)} ${currency}`, rightColumnX, yPosition + 48);
-        doc.setFontSize(11);
-        doc.text(`USD Value: $${usdValue.toLocaleString()}`, rightColumnX, yPosition + 58);
-      } else {
-        doc.setTextColor(107, 114, 128);
-        doc.setFontSize(9);
-        doc.text('No volume data available', rightColumnX, yPosition + 40);
-      }
-
-      // Entity Attribution
-      if (data.wallet.entity_attribution) {
-        doc.setTextColor(71, 85, 105);
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(11);
-        doc.text('Entity Type:', rightColumnX, yPosition + 70);
-        doc.setTextColor(15, 23, 42);
-        doc.setFont(undefined, 'bold');
-        doc.text(data.wallet.entity_attribution.type || 'Unknown', rightColumnX + 35, yPosition + 70);
+        // Volume display in a compact format
+        doc.setFillColor(248, 250, 252);
+        drawRoundedRect(rightX, yPosition + 4, 80, 30, 3);
         
-        // Attribution Confidence
-        const confidence = (data.wallet.entity_attribution.confidence || 0) * 100;
-        doc.setTextColor(71, 85, 105);
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(9);
-        doc.text('Confidence:', rightColumnX, yPosition + 80);
-        drawProgressBar(rightColumnX + 30, yPosition + 78, 40, 4, confidence, [59, 130, 246]);
+        doc.setTextColor(15, 23, 42);
+        doc.setFont(undefined, 'bold');
         doc.setFontSize(8);
-        doc.text(`${confidence.toFixed(0)}%`, rightColumnX + 75, yPosition + 81);
+        doc.text(`IN: ${inbound.toFixed(4)} ${currency}`, rightX + 4, yPosition + 12);
+        doc.text(`OUT: ${outbound.toFixed(4)} ${currency}`, rightX + 4, yPosition + 20);
+        doc.setFontSize(9);
+        doc.text(`≈ $${usdValue.toLocaleString()}`, rightX + 4, yPosition + 28);
       }
-      
-      yPosition += 115;
 
-      // Transaction Count and Activity
-      checkPageSpace(40);
-      doc.setFillColor(239, 246, 255); // blue-50
-      doc.setDrawColor(191, 219, 254); // blue-200
-      doc.rect(margin, yPosition, pageWidth - 2 * margin, 30, 'FD');
-      
-      doc.setTextColor(30, 64, 175); // blue-800
-      doc.setFontSize(14);
-      doc.setFont(undefined, 'bold');
-      doc.text('Transaction Activity', margin + 10, yPosition + 12);
-      
-      doc.setTextColor(15, 23, 42);
-      doc.setFontSize(10);
+      // Transaction Activity - bottom section
+      doc.setTextColor(71, 85, 105);
       doc.setFont(undefined, 'normal');
-      doc.text(`Total Transactions: ${data.wallet.transaction_count?.toLocaleString() || '0'}`, margin + 10, yPosition + 22);
-      
-      if (data.wallet.last_activity) {
-        const lastActivity = new Date(data.wallet.last_activity).toLocaleDateString();
-        doc.text(`Last Activity: ${lastActivity}`, margin + 80, yPosition + 22);
-      }
+      doc.setFontSize(8);
+      doc.text(`Transactions: ${data.wallet.transaction_count?.toLocaleString() || '0'}`, margin + 6, yPosition + 52);
       
       if (data.wallet.temporal_patterns?.first_seen) {
         const firstSeen = new Date(data.wallet.temporal_patterns.first_seen).toLocaleDateString();
-        doc.text(`First Seen: ${firstSeen}`, margin + 10, yPosition + 30);
+        doc.text(`First Seen: ${firstSeen}`, margin + 45, yPosition + 52);
       }
       
-      yPosition += 40;
+      if (data.wallet.last_activity) {
+        const lastActivity = new Date(data.wallet.last_activity).toLocaleDateString();
+        doc.text(`Last Activity: ${lastActivity}`, margin + 90, yPosition + 52);
+      }
 
-      // Risk Factors Section
+      yPosition += 75;
+
+      // RISK FACTORS SECTION
       if (data.riskFactors.length > 0) {
-        checkPageSpace(60);
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(229, 231, 235);
+        drawRoundedRect(margin, yPosition, pageWidth - 2 * margin, 40, 4);
         
-        doc.setFillColor(254, 242, 242); // red-50
-        doc.setDrawColor(252, 165, 165); // red-300
-        doc.rect(margin, yPosition, pageWidth - 2 * margin, 20, 'FD');
-        
-        doc.setTextColor(185, 28, 28); // red-800
-        doc.setFontSize(14);
+        // Section header
+        doc.setFillColor(254, 242, 242);
+        drawRoundedRect(margin, yPosition, pageWidth - 2 * margin, 10, 4);
+        doc.setTextColor(185, 28, 28);
+        doc.setFontSize(11);
         doc.setFont(undefined, 'bold');
-        doc.text('Risk Factors Analysis', margin + 10, yPosition + 13);
+        doc.text('RISK FACTORS', margin + 6, yPosition + 7);
         
-        yPosition += 30;
+        yPosition += 15;
         
-        data.riskFactors.forEach((factor) => {
-          checkPageSpace(25);
+        // Display top 3 risk factors in columns
+        const topFactors = data.riskFactors.slice(0, 3);
+        const columnWidth = (pageWidth - 2 * margin - 20) / 3;
+        
+        topFactors.forEach((factor, index) => {
+          const xPos = margin + 6 + (index * columnWidth);
           
-          // Risk Factor Card
-          doc.setFillColor(255, 255, 255);
-          doc.setDrawColor(229, 231, 235); // gray-200
-          doc.rect(margin, yPosition, pageWidth - 2 * margin, 22, 'FD');
-          
-          // Severity Indicator (left border)
-          let severityColor: [number, number, number] = [34, 197, 94]; // green-500
-          if (factor.severity === 'high') severityColor = [239, 68, 68]; // red-500
-          else if (factor.severity === 'medium') severityColor = [245, 158, 11]; // amber-500
-          
-          doc.setFillColor(...severityColor);
-          doc.rect(margin, yPosition, 3, 22, 'F');
-          
-          // Risk Factor Name
+          // Factor name
           doc.setTextColor(15, 23, 42);
-          doc.setFontSize(11);
           doc.setFont(undefined, 'bold');
-          doc.text(factor.factor_type.replace(/_/g, ' ').toUpperCase(), margin + 8, yPosition + 10);
+          doc.setFontSize(8);
+          doc.text(factor.factor_type.replace(/_/g, ' ').toUpperCase(), xPos, yPosition);
           
-          // Score
-          doc.setTextColor(71, 85, 105);
-          doc.setFont(undefined, 'normal');
-          doc.setFontSize(10);
-          doc.text(`Score: ${factor.score.toFixed(1)}/10`, margin + 8, yPosition + 18);
+          // Score bar
+          let severityColor: [number, number, number] = [34, 197, 94];
+          if (factor.severity === 'high') severityColor = [239, 68, 68];
+          else if (factor.severity === 'medium') severityColor = [245, 158, 11];
           
-          // Progress Bar for Score
           const scorePercentage = (factor.score / 10) * 100;
-          drawProgressBar(margin + 60, yPosition + 15, 50, 5, scorePercentage, severityColor);
+          drawProgressBar(xPos, yPosition + 3, columnWidth - 10, 4, scorePercentage, severityColor);
           
-          // Description
-          if (factor.description) {
-            doc.setFontSize(9);
-            doc.setTextColor(107, 114, 128);
-            const descText = factor.description.length > 80 ? 
-              factor.description.substring(0, 80) + '...' : factor.description;
-            doc.text(descText, margin + 120, yPosition + 12);
-          }
-          
-          yPosition += 27;
-        });
-      }
-
-      // Sanctions Alerts
-      if (data.sanctionsMatches.length > 0) {
-        checkPageSpace(40);
-        
-        doc.setFillColor(254, 226, 226); // red-50
-        doc.setDrawColor(248, 113, 113); // red-400
-        doc.rect(margin, yPosition, pageWidth - 2 * margin, 25, 'FD');
-        
-        doc.setTextColor(185, 28, 28); // red-800
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.text('⚠️ SANCTIONS EXPOSURE DETECTED', margin + 10, yPosition + 16);
-        
-        yPosition += 35;
-        
-        data.sanctionsMatches.forEach(match => {
-          checkPageSpace(15);
-          doc.setTextColor(15, 23, 42);
-          doc.setFontSize(10);
-          doc.text(`• ${match.entity_name} (${match.entity_type})`, margin + 10, yPosition);
-          doc.text(`Match: ${match.match_type} | Confidence: ${(match.confidence_score * 100).toFixed(0)}%`, 
-                   margin + 15, yPosition + 8);
-          yPosition += 18;
-        });
-      }
-
-      // Counterparties Section
-      if (data.wallet.top_counterparties && data.wallet.top_counterparties.length > 0) {
-        checkPageSpace(60);
-        
-        doc.setFillColor(240, 253, 244); // green-50
-        doc.setDrawColor(134, 239, 172); // green-300
-        doc.rect(margin, yPosition, pageWidth - 2 * margin, 20, 'FD');
-        
-        doc.setTextColor(20, 83, 45); // green-800
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.text('Top Counterparties', margin + 10, yPosition + 13);
-        
-        yPosition += 30;
-        
-        data.wallet.top_counterparties.slice(0, 5).forEach((counterparty, index) => {
-          checkPageSpace(15);
-          
-          doc.setTextColor(15, 23, 42);
-          doc.setFontSize(9);
-          doc.setFont(undefined, 'bold');
-          doc.text(`${index + 1}. ${counterparty.entity_name || 'Unknown Entity'}`, margin + 10, yPosition);
-          
-          doc.setFont(undefined, 'normal');
           doc.setTextColor(71, 85, 105);
-          doc.text(`Risk: ${counterparty.risk_level} | Transactions: ${counterparty.transaction_count}`, 
-                   margin + 15, yPosition + 8);
-          
-          yPosition += 18;
+          doc.setFont(undefined, 'normal');
+          doc.setFontSize(7);
+          doc.text(`${factor.score.toFixed(1)}/10`, xPos, yPosition + 12);
         });
+        
+        yPosition += 25;
       }
 
-      // AI Summary Section
-      if (data.wallet.ai_summary || data.analystNotes) {
-        checkPageSpace(50);
+      // SANCTIONS ALERTS (if any)
+      if (data.sanctionsMatches.length > 0) {
+        yPosition += 5;
+        doc.setFillColor(254, 226, 226);
+        doc.setDrawColor(248, 113, 113);
+        drawRoundedRect(margin, yPosition, pageWidth - 2 * margin, 15, 4);
         
-        doc.setFillColor(236, 254, 255); // cyan-50
-        doc.setDrawColor(103, 232, 249); // cyan-300
-        doc.rect(margin, yPosition, pageWidth - 2 * margin, 40, 'FD');
-        
-        doc.setTextColor(8, 145, 178); // cyan-700
-        doc.setFontSize(12);
+        doc.setTextColor(185, 28, 28);
+        doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
-        doc.text('💡 AI Intelligence Summary', margin + 10, yPosition + 12);
+        doc.text(`⚠️ ${data.sanctionsMatches.length} SANCTIONS EXPOSURE(S) DETECTED`, margin + 6, yPosition + 9);
         
-        doc.setTextColor(15, 23, 42);
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'normal');
+        yPosition += 20;
+      }
+
+      // TOP COUNTERPARTIES
+      if (data.wallet.top_counterparties && data.wallet.top_counterparties.length > 0) {
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(229, 231, 235);
+        drawRoundedRect(margin, yPosition, pageWidth - 2 * margin, 35, 4);
+        
+        // Section header
+        doc.setFillColor(240, 253, 244);
+        drawRoundedRect(margin, yPosition, pageWidth - 2 * margin, 10, 4);
+        doc.setTextColor(20, 83, 45);
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.text('TOP COUNTERPARTIES', margin + 6, yPosition + 7);
+        
+        yPosition += 15;
+        
+        // Display top 3 counterparties
+        data.wallet.top_counterparties.slice(0, 3).forEach((counterparty, index) => {
+          const yPos = yPosition + (index * 6);
+          
+          doc.setTextColor(15, 23, 42);
+          doc.setFont(undefined, 'bold');
+          doc.setFontSize(8);
+          doc.text(`${index + 1}. ${counterparty.entity_name || 'Unknown Entity'}`, margin + 6, yPos);
+          
+          // Risk badge
+          let riskBadgeColor: [number, number, number] = [34, 197, 94];
+          if (counterparty.risk_level === 'High') riskBadgeColor = [239, 68, 68];
+          else if (counterparty.risk_level === 'Medium') riskBadgeColor = [245, 158, 11];
+          
+          drawBadge(margin + 70, yPos - 3, counterparty.risk_level.toUpperCase(), riskBadgeColor);
+          
+          doc.setTextColor(71, 85, 105);
+          doc.setFont(undefined, 'normal');
+          doc.setFontSize(7);
+          doc.text(`${counterparty.transaction_count} txns`, margin + 110, yPos);
+        });
+        
+        yPosition += 25;
+      }
+
+      // AI SUMMARY (if available)
+      if (data.wallet.ai_summary || data.analystNotes) {
+        yPosition += 5;
+        doc.setFillColor(236, 254, 255);
+        doc.setDrawColor(103, 232, 249);
+        drawRoundedRect(margin, yPosition, pageWidth - 2 * margin, 25, 4);
+        
+        doc.setTextColor(8, 145, 178);
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text('💡 AI INTELLIGENCE SUMMARY', margin + 6, yPosition + 9);
         
         const summaryText = data.wallet.ai_summary || data.analystNotes || '';
-        const lines = doc.splitTextToSize(summaryText, pageWidth - margin * 2 - 20);
-        doc.text(lines.slice(0, 4), margin + 10, yPosition + 22);
-        
-        yPosition += 50;
+        doc.setTextColor(15, 23, 42);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        const lines = doc.splitTextToSize(summaryText, pageWidth - margin * 2 - 12);
+        doc.text(lines.slice(0, 2), margin + 6, yPosition + 16);
       }
 
-      // Footer Section
-      const footerY = pageHeight - 25;
+      // FOOTER
+      const footerY = pageHeight - 20;
       doc.setDrawColor(203, 213, 225);
-      doc.setLineWidth(0.5);
+      doc.setLineWidth(0.3);
       doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
       
-      doc.setFillColor(51, 65, 85);
-      doc.rect(0, footerY, pageWidth, 25, 'F');
+      doc.setFillColor(248, 250, 252);
+      doc.rect(0, footerY, pageWidth, 20, 'F');
       
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.setFontSize(7);
       doc.setFont(undefined, 'normal');
-      doc.text('Generated by Rìan Compliance Platform', margin, footerY + 8);
-      doc.text(`© ${new Date().getFullYear()} Rìan. Confidential & Proprietary.`, margin, footerY + 16);
+      doc.text('Generated by Rìan Compliance Platform', margin, footerY + 6);
+      doc.text(`© ${new Date().getFullYear()} Rìan. Confidential & Proprietary.`, margin, footerY + 12);
       
-      // Page numbering
-      doc.text('Page 1 of 1', pageWidth - margin - 25, footerY + 8);
-      doc.text(`Export Date: ${new Date().toLocaleDateString()}`, pageWidth - margin - 40, footerY + 16);
+      doc.text('Page 1 of 1', pageWidth - margin - 20, footerY + 6);
+      doc.text(`Export: ${new Date().toLocaleDateString()}`, pageWidth - margin - 30, footerY + 12);
 
-      // Generate filename and save
+      // Generate and save
       const filename = `rian-intelligence-report-${data.recordId}-${Date.now()}.pdf`;
       doc.save(filename);
 
