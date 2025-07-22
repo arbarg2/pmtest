@@ -1,8 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WalletRiskResponse } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import { reportExportService } from '@/services/reportExport';
 
 // Import all dashboard components
 import WalletOverview from '@/components/dashboard/WalletOverview';
@@ -38,6 +41,7 @@ const EnhancedWalletResults = ({
   sanctionsMatches = []
 }: EnhancedWalletResultsProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [investigationStatus, setInvestigationStatus] = useState('pending');
   const [analystNotes, setAnalystNotes] = useState('');
   const [isCase, setIsCase] = useState(false);
@@ -45,6 +49,7 @@ const EnhancedWalletResults = ({
   const [caseStatus, setCaseStatus] = useState('open');
   const [caseCreatedAt, setCaseCreatedAt] = useState<string | undefined>();
   const [notesKey, setNotesKey] = useState(0);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const analystNotesRef = useRef<AnalystNotesThreadRef>(null);
 
   // Initialize case data from wallet/record data
@@ -69,6 +74,39 @@ const EnhancedWalletResults = ({
       if (onViewFlow) {
         onViewFlow();
       }
+    }
+  };
+
+  // Fixed handleGenerateReport function to actually generate the PDF
+  const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    try {
+      const exportData = {
+        wallet,
+        recordId: recordId || 'unknown',
+        riskFactors,
+        sanctionsMatches,
+        analystNotes,
+        investigationStatus,
+        tags: [],
+        timestamp: new Date().toISOString()
+      };
+
+      await reportExportService.exportToPDF(exportData);
+      
+      toast({
+        title: "Report Generated",
+        description: "PDF report has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Report generation failed:', error);
+      toast({
+        title: "Report Generation Failed",
+        description: "Failed to generate PDF report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingReport(false);
     }
   };
 
@@ -143,9 +181,13 @@ const EnhancedWalletResults = ({
                 </div>
               </div>
             </div>
-            <Button onClick={onGenerateReport} className="bg-accent hover:bg-accent/90 text-white">
+            <Button 
+              onClick={handleGenerateReport} 
+              disabled={isGeneratingReport}
+              className="bg-accent hover:bg-accent/90 text-white"
+            >
               <FileText className="w-4 h-4 mr-2" />
-              Generate Report
+              {isGeneratingReport ? 'Generating...' : 'Generate Report'}
             </Button>
           </div>
         </div>
