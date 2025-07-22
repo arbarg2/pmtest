@@ -37,65 +37,69 @@ class ReportExportService {
         doc.rect(x, y, width, height, 'F');
         
         // Progress fill
-        const fillWidth = (percentage / 100) * width;
+        const fillWidth = Math.max(0, Math.min(width, (percentage / 100) * width));
         doc.setFillColor(...color);
         doc.rect(x, y, fillWidth, height, 'F');
         
         // Border
         doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.1);
         doc.rect(x, y, width, height);
       };
 
-      // Header Section with Modern Branding
-      doc.setFillColor(15, 23, 42); // slate-900
-      doc.rect(0, 0, pageWidth, 35, 'F');
+      // Header Section
+      doc.setFillColor(51, 65, 85); // slate-700
+      doc.rect(0, 0, pageWidth, 40, 'F');
       
-      // Company Logo Placeholder (circle)
+      // Company Logo (circle with R)
       doc.setFillColor(59, 130, 246); // blue-500
-      doc.circle(margin + 8, 17, 8, 'F');
+      doc.circle(margin + 8, 20, 8, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
+      doc.setFontSize(14);
       doc.setFont(undefined, 'bold');
-      doc.text('R', margin + 5, 21);
+      doc.text('R', margin + 5, 24);
       
       // Main Title
-      doc.setFontSize(22);
+      doc.setFontSize(24);
       doc.setFont(undefined, 'bold');
-      doc.text('Rìan Intelligence Report', margin + 25, 22);
+      doc.text('Rìan Intelligence Report', margin + 25, 20);
       
-      // Report Metadata (top right)
+      // Report Metadata
       doc.setFontSize(10);
       doc.setFont(undefined, 'normal');
       const reportDate = new Date(data.timestamp).toLocaleString();
-      doc.text(`Generated: ${reportDate}`, pageWidth - margin - 60, 15);
-      doc.text(`Report ID: ${data.recordId}`, pageWidth - margin - 60, 22);
-      doc.text(`Network: ${data.wallet.network?.toUpperCase() || 'Unknown'}`, pageWidth - margin - 60, 29);
+      doc.text(`Generated: ${reportDate}`, pageWidth - margin - 70, 12);
+      doc.text(`Report ID: ${data.recordId}`, pageWidth - margin - 70, 20);
+      doc.text(`Network: ${data.wallet.network?.toUpperCase() || 'Unknown'}`, pageWidth - margin - 70, 28);
       
-      yPosition = 50;
+      yPosition = 55;
 
-      // Executive Summary Card
+      // Executive Summary Section
       doc.setFillColor(248, 250, 252); // slate-50
-      doc.setDrawColor(226, 232, 240); // slate-200
-      doc.rect(margin, yPosition, pageWidth - 2 * margin, 85, 'FD');
+      doc.setDrawColor(203, 213, 225); // slate-300
+      doc.setLineWidth(0.5);
+      doc.rect(margin, yPosition, pageWidth - 2 * margin, 100, 'FD');
       
       doc.setTextColor(15, 23, 42); // slate-900
-      doc.setFontSize(16);
+      doc.setFontSize(18);
       doc.setFont(undefined, 'bold');
       doc.text('Executive Summary', margin + 10, yPosition + 15);
       
       // Wallet Address
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.setFont(undefined, 'normal');
       doc.setTextColor(71, 85, 105); // slate-600
-      doc.text('Wallet Address:', margin + 10, yPosition + 28);
+      doc.text('Wallet Address:', margin + 10, yPosition + 30);
       doc.setFont(undefined, 'bold');
       doc.setTextColor(15, 23, 42);
-      doc.text(data.wallet.address, margin + 10, yPosition + 35);
+      doc.setFontSize(9);
+      doc.text(data.wallet.address, margin + 10, yPosition + 38);
       
-      // Risk Score with Progress Bar
+      // Risk Score Section
+      doc.setFontSize(11);
       doc.setFont(undefined, 'normal');
       doc.setTextColor(71, 85, 105);
-      doc.text('Risk Score:', margin + 10, yPosition + 48);
+      doc.text('Risk Score:', margin + 10, yPosition + 52);
       
       const riskScore = data.wallet.risk_score || 0;
       const riskPercentage = (riskScore / 10) * 100;
@@ -103,140 +107,176 @@ class ReportExportService {
       if (riskScore >= 7) riskColor = [239, 68, 68]; // red-500
       else if (riskScore >= 4) riskColor = [245, 158, 11]; // amber-500
       
-      drawProgressBar(margin + 10, yPosition + 52, 80, 6, riskPercentage, riskColor);
+      drawProgressBar(margin + 10, yPosition + 56, 60, 8, riskPercentage, riskColor);
       
       doc.setFont(undefined, 'bold');
       doc.setTextColor(15, 23, 42);
-      doc.text(`${riskScore.toFixed(1)}/10.0`, margin + 95, yPosition + 56);
+      doc.setFontSize(12);
+      doc.text(`${riskScore.toFixed(1)}/10.0`, margin + 75, yPosition + 62);
       
       // Risk Level Badge
       const riskLevel = data.wallet.risk_level || 'Unknown';
       let badgeColor: [number, number, number] = [34, 197, 94]; // green-500
-      if (riskLevel === 'High') badgeColor = [239, 68, 68]; // red-500
+      if (riskLevel === 'High' || riskLevel === 'Critical') badgeColor = [239, 68, 68]; // red-500
       else if (riskLevel === 'Medium') badgeColor = [245, 158, 11]; // amber-500
       
       doc.setFillColor(...badgeColor);
-      doc.roundedRect(margin + 10, yPosition + 62, 35, 12, 2, 2, 'F');
+      doc.roundedRect(margin + 10, yPosition + 68, 30, 10, 2, 2, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(8);
       doc.setFont(undefined, 'bold');
-      doc.text(riskLevel.toUpperCase(), margin + 12, yPosition + 70);
+      doc.text(riskLevel.toUpperCase(), margin + 12, yPosition + 75);
       
       // Investigation Status
       doc.setTextColor(71, 85, 105);
       doc.setFont(undefined, 'normal');
-      doc.setFontSize(10);
-      doc.text('Status:', margin + 55, yPosition + 70);
+      doc.setFontSize(11);
+      doc.text('Status:', margin + 45, yPosition + 75);
       doc.setTextColor(15, 23, 42);
       doc.setFont(undefined, 'bold');
-      doc.text((data.investigationStatus || 'Pending').toUpperCase(), margin + 75, yPosition + 70);
+      doc.text((data.investigationStatus || 'Pending').toUpperCase(), margin + 65, yPosition + 75);
 
-      // Volume Intelligence (Right Side)
-      const volumeX = margin + 100;
+      // Right side - Volume Intelligence
+      const rightColumnX = margin + 100;
       doc.setTextColor(71, 85, 105);
       doc.setFont(undefined, 'normal');
-      doc.text('Volume Intelligence:', volumeX, yPosition + 28);
+      doc.setFontSize(11);
+      doc.text('Volume Intelligence:', rightColumnX, yPosition + 30);
       
       if (data.wallet.volume_metrics?.lifetime_value) {
         const inbound = data.wallet.volume_metrics.lifetime_value.inbound || 0;
         const outbound = data.wallet.volume_metrics.lifetime_value.outbound || 0;
         const usdValue = data.wallet.volume_metrics.lifetime_value.usd_equivalent || 0;
+        const currency = data.wallet.network === 'bitcoin' ? 'BTC' : 'ETH';
         
         doc.setFont(undefined, 'bold');
         doc.setTextColor(15, 23, 42);
-        doc.setFontSize(12);
-        doc.text(`Inbound: ${inbound.toFixed(4)} ${data.wallet.network === 'bitcoin' ? 'BTC' : 'ETH'}`, volumeX, yPosition + 38);
-        doc.text(`Outbound: ${outbound.toFixed(4)} ${data.wallet.network === 'bitcoin' ? 'BTC' : 'ETH'}`, volumeX, yPosition + 46);
-        doc.text(`USD Value: $${usdValue.toLocaleString()}`, volumeX, yPosition + 54);
+        doc.setFontSize(10);
+        doc.text(`Inbound: ${inbound.toFixed(4)} ${currency}`, rightColumnX, yPosition + 40);
+        doc.text(`Outbound: ${outbound.toFixed(4)} ${currency}`, rightColumnX, yPosition + 48);
+        doc.setFontSize(11);
+        doc.text(`USD Value: $${usdValue.toLocaleString()}`, rightColumnX, yPosition + 58);
       } else {
         doc.setTextColor(107, 114, 128);
-        doc.text('No volume data available', volumeX, yPosition + 38);
+        doc.setFontSize(9);
+        doc.text('No volume data available', rightColumnX, yPosition + 40);
       }
 
       // Entity Attribution
       if (data.wallet.entity_attribution) {
         doc.setTextColor(71, 85, 105);
         doc.setFont(undefined, 'normal');
-        doc.setFontSize(10);
-        doc.text('Entity Type:', volumeX, yPosition + 65);
+        doc.setFontSize(11);
+        doc.text('Entity Type:', rightColumnX, yPosition + 70);
         doc.setTextColor(15, 23, 42);
         doc.setFont(undefined, 'bold');
-        doc.text(data.wallet.entity_attribution.type || 'Unknown', volumeX + 30, yPosition + 65);
+        doc.text(data.wallet.entity_attribution.type || 'Unknown', rightColumnX + 35, yPosition + 70);
         
-        // Attribution Confidence Bar
+        // Attribution Confidence
         const confidence = (data.wallet.entity_attribution.confidence || 0) * 100;
-        drawProgressBar(volumeX, yPosition + 70, 60, 4, confidence, [59, 130, 246]);
+        doc.setTextColor(71, 85, 105);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(9);
+        doc.text('Confidence:', rightColumnX, yPosition + 80);
+        drawProgressBar(rightColumnX + 30, yPosition + 78, 40, 4, confidence, [59, 130, 246]);
         doc.setFontSize(8);
-        doc.text(`${confidence.toFixed(0)}% confidence`, volumeX + 65, yPosition + 74);
+        doc.text(`${confidence.toFixed(0)}%`, rightColumnX + 75, yPosition + 81);
       }
       
-      yPosition += 100;
+      yPosition += 115;
+
+      // Transaction Count and Activity
+      checkPageSpace(40);
+      doc.setFillColor(239, 246, 255); // blue-50
+      doc.setDrawColor(191, 219, 254); // blue-200
+      doc.rect(margin, yPosition, pageWidth - 2 * margin, 30, 'FD');
+      
+      doc.setTextColor(30, 64, 175); // blue-800
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('Transaction Activity', margin + 10, yPosition + 12);
+      
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Total Transactions: ${data.wallet.transaction_count?.toLocaleString() || '0'}`, margin + 10, yPosition + 22);
+      
+      if (data.wallet.last_activity) {
+        const lastActivity = new Date(data.wallet.last_activity).toLocaleDateString();
+        doc.text(`Last Activity: ${lastActivity}`, margin + 80, yPosition + 22);
+      }
+      
+      if (data.wallet.temporal_patterns?.first_seen) {
+        const firstSeen = new Date(data.wallet.temporal_patterns.first_seen).toLocaleDateString();
+        doc.text(`First Seen: ${firstSeen}`, margin + 10, yPosition + 30);
+      }
+      
+      yPosition += 40;
 
       // Risk Factors Section
       if (data.riskFactors.length > 0) {
         checkPageSpace(60);
         
-        // Section Header
-        doc.setFillColor(239, 246, 255); // blue-50
-        doc.setDrawColor(191, 219, 254); // blue-200
+        doc.setFillColor(254, 242, 242); // red-50
+        doc.setDrawColor(252, 165, 165); // red-300
         doc.rect(margin, yPosition, pageWidth - 2 * margin, 20, 'FD');
         
-        doc.setTextColor(30, 64, 175); // blue-800
+        doc.setTextColor(185, 28, 28); // red-800
         doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
         doc.text('Risk Factors Analysis', margin + 10, yPosition + 13);
         
         yPosition += 30;
         
-        data.riskFactors.forEach((factor, index) => {
+        data.riskFactors.forEach((factor) => {
           checkPageSpace(25);
           
           // Risk Factor Card
           doc.setFillColor(255, 255, 255);
           doc.setDrawColor(229, 231, 235); // gray-200
-          doc.rect(margin, yPosition, pageWidth - 2 * margin, 20, 'FD');
+          doc.rect(margin, yPosition, pageWidth - 2 * margin, 22, 'FD');
           
-          // Severity Indicator
+          // Severity Indicator (left border)
           let severityColor: [number, number, number] = [34, 197, 94]; // green-500
           if (factor.severity === 'high') severityColor = [239, 68, 68]; // red-500
           else if (factor.severity === 'medium') severityColor = [245, 158, 11]; // amber-500
           
           doc.setFillColor(...severityColor);
-          doc.rect(margin, yPosition, 4, 20, 'F');
+          doc.rect(margin, yPosition, 3, 22, 'F');
           
           // Risk Factor Name
           doc.setTextColor(15, 23, 42);
           doc.setFontSize(11);
           doc.setFont(undefined, 'bold');
-          doc.text(factor.factor_type.replace(/_/g, ' ').toUpperCase(), margin + 10, yPosition + 8);
+          doc.text(factor.factor_type.replace(/_/g, ' ').toUpperCase(), margin + 8, yPosition + 10);
           
           // Score
           doc.setTextColor(71, 85, 105);
           doc.setFont(undefined, 'normal');
-          doc.text(`Score: ${factor.score.toFixed(1)}/10`, margin + 10, yPosition + 15);
+          doc.setFontSize(10);
+          doc.text(`Score: ${factor.score.toFixed(1)}/10`, margin + 8, yPosition + 18);
           
           // Progress Bar for Score
           const scorePercentage = (factor.score / 10) * 100;
-          drawProgressBar(margin + 60, yPosition + 12, 40, 4, scorePercentage, severityColor);
+          drawProgressBar(margin + 60, yPosition + 15, 50, 5, scorePercentage, severityColor);
           
-          // Description (if available)
+          // Description
           if (factor.description) {
             doc.setFontSize(9);
             doc.setTextColor(107, 114, 128);
-            const descText = factor.description.length > 60 ? 
-              factor.description.substring(0, 60) + '...' : factor.description;
-            doc.text(descText, margin + 110, yPosition + 12);
+            const descText = factor.description.length > 80 ? 
+              factor.description.substring(0, 80) + '...' : factor.description;
+            doc.text(descText, margin + 120, yPosition + 12);
           }
           
-          yPosition += 25;
+          yPosition += 27;
         });
       }
 
-      // Sanctions Alerts (if any)
+      // Sanctions Alerts
       if (data.sanctionsMatches.length > 0) {
         checkPageSpace(40);
         
-        // Alert Header
         doc.setFillColor(254, 226, 226); // red-50
         doc.setDrawColor(248, 113, 113); // red-400
         doc.rect(margin, yPosition, pageWidth - 2 * margin, 25, 'FD');
@@ -254,19 +294,50 @@ class ReportExportService {
           doc.setFontSize(10);
           doc.text(`• ${match.entity_name} (${match.entity_type})`, margin + 10, yPosition);
           doc.text(`Match: ${match.match_type} | Confidence: ${(match.confidence_score * 100).toFixed(0)}%`, 
-                   margin + 15, yPosition + 7);
-          yPosition += 15;
+                   margin + 15, yPosition + 8);
+          yPosition += 18;
+        });
+      }
+
+      // Counterparties Section
+      if (data.wallet.top_counterparties && data.wallet.top_counterparties.length > 0) {
+        checkPageSpace(60);
+        
+        doc.setFillColor(240, 253, 244); // green-50
+        doc.setDrawColor(134, 239, 172); // green-300
+        doc.rect(margin, yPosition, pageWidth - 2 * margin, 20, 'FD');
+        
+        doc.setTextColor(20, 83, 45); // green-800
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text('Top Counterparties', margin + 10, yPosition + 13);
+        
+        yPosition += 30;
+        
+        data.wallet.top_counterparties.slice(0, 5).forEach((counterparty, index) => {
+          checkPageSpace(15);
+          
+          doc.setTextColor(15, 23, 42);
+          doc.setFontSize(9);
+          doc.setFont(undefined, 'bold');
+          doc.text(`${index + 1}. ${counterparty.entity_name || 'Unknown Entity'}`, margin + 10, yPosition);
+          
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(71, 85, 105);
+          doc.text(`Risk: ${counterparty.risk_level} | Transactions: ${counterparty.transaction_count}`, 
+                   margin + 15, yPosition + 8);
+          
+          yPosition += 18;
         });
       }
 
       // AI Summary Section
       if (data.wallet.ai_summary || data.analystNotes) {
-        checkPageSpace(40);
+        checkPageSpace(50);
         
-        // AI Summary Card
         doc.setFillColor(236, 254, 255); // cyan-50
         doc.setDrawColor(103, 232, 249); // cyan-300
-        doc.rect(margin, yPosition, pageWidth - 2 * margin, 35, 'FD');
+        doc.rect(margin, yPosition, pageWidth - 2 * margin, 40, 'FD');
         
         doc.setTextColor(8, 145, 178); // cyan-700
         doc.setFontSize(12);
@@ -274,33 +345,34 @@ class ReportExportService {
         doc.text('💡 AI Intelligence Summary', margin + 10, yPosition + 12);
         
         doc.setTextColor(15, 23, 42);
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setFont(undefined, 'normal');
         
         const summaryText = data.wallet.ai_summary || data.analystNotes || '';
         const lines = doc.splitTextToSize(summaryText, pageWidth - margin * 2 - 20);
-        doc.text(lines.slice(0, 3), margin + 10, yPosition + 22); // Limit to 3 lines
+        doc.text(lines.slice(0, 4), margin + 10, yPosition + 22);
         
-        yPosition += 45;
+        yPosition += 50;
       }
 
       // Footer Section
-      const footerY = pageHeight - 30;
-      doc.setDrawColor(226, 232, 240);
-      doc.line(margin, footerY, pageWidth - margin, footerY);
+      const footerY = pageHeight - 25;
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
       
-      doc.setFillColor(71, 85, 105);
-      doc.rect(0, footerY + 5, pageWidth, 25, 'F');
+      doc.setFillColor(51, 65, 85);
+      doc.rect(0, footerY, pageWidth, 25, 'F');
       
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(9);
       doc.setFont(undefined, 'normal');
-      doc.text('Generated by Rìan Compliance Platform', margin, footerY + 15);
-      doc.text(`© ${new Date().getFullYear()} Rìan. Confidential & Proprietary.`, margin, footerY + 22);
+      doc.text('Generated by Rìan Compliance Platform', margin, footerY + 8);
+      doc.text(`© ${new Date().getFullYear()} Rìan. Confidential & Proprietary.`, margin, footerY + 16);
       
       // Page numbering
-      doc.text('Page 1 of 1', pageWidth - margin - 25, footerY + 15);
-      doc.text(`Export Date: ${new Date().toLocaleDateString()}`, pageWidth - margin - 40, footerY + 22);
+      doc.text('Page 1 of 1', pageWidth - margin - 25, footerY + 8);
+      doc.text(`Export Date: ${new Date().toLocaleDateString()}`, pageWidth - margin - 40, footerY + 16);
 
       // Generate filename and save
       const filename = `rian-intelligence-report-${data.recordId}-${Date.now()}.pdf`;
