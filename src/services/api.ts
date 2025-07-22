@@ -114,6 +114,7 @@ export interface WalletRiskResponse {
       usd_value: number;
     };
   };
+  ai_summary?: string;
 }
 
 // Mock implementation - to be replaced with real API calls
