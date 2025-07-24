@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WalletRiskResponse } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
@@ -49,7 +48,7 @@ const EnhancedWalletResults = ({
   const [caseStatus, setCaseStatus] = useState('open');
   const [caseCreatedAt, setCaseCreatedAt] = useState<string | undefined>();
   const [notesKey, setNotesKey] = useState(0);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isEmailingReport, setIsEmailingReport] = useState(false);
   const analystNotesRef = useRef<AnalystNotesThreadRef>(null);
 
   // Initialize case data from wallet/record data
@@ -77,11 +76,11 @@ const EnhancedWalletResults = ({
     }
   };
 
-  // Fixed handleGenerateReport function to actually generate the PDF
-  const handleGenerateReport = async () => {
-    setIsGeneratingReport(true);
+  // Updated function to send data to Tines webhook
+  const handleEmailReport = async () => {
+    setIsEmailingReport(true);
     try {
-      const exportData = {
+      const reportData = {
         wallet,
         recordId: recordId || 'unknown',
         riskFactors,
@@ -89,24 +88,37 @@ const EnhancedWalletResults = ({
         analystNotes,
         investigationStatus,
         tags: [],
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        // Additional context for the webhook
+        reportType: 'wallet_intelligence',
+        source: 'rian_platform'
       };
 
-      await reportExportService.exportToPDF(exportData);
-      
-      toast({
-        title: "Report Generated",
-        description: "PDF report has been downloaded successfully.",
+      const response = await fetch('https://pat.tines.com/webhook/aml-buddy-bot-2/010e55b671e752ae9888806bfb8d0e2d', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reportData),
       });
+
+      if (response.ok) {
+        toast({
+          title: "Report Emailed",
+          description: "Wallet intelligence report has been sent successfully.",
+        });
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
     } catch (error) {
-      console.error('Report generation failed:', error);
+      console.error('Email report failed:', error);
       toast({
-        title: "Report Generation Failed",
-        description: "Failed to generate PDF report. Please try again.",
+        title: "Email Failed",
+        description: "Failed to send report. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsGeneratingReport(false);
+      setIsEmailingReport(false);
     }
   };
 
@@ -182,12 +194,13 @@ const EnhancedWalletResults = ({
               </div>
             </div>
             <Button 
-              onClick={handleGenerateReport} 
-              disabled={isGeneratingReport}
+              onClick={handleEmailReport} 
+              disabled={isEmailingReport}
+              size="sm"
               className="bg-accent hover:bg-accent/90 text-white"
             >
-              <FileText className="w-4 h-4 mr-2" />
-              {isGeneratingReport ? 'Generating...' : 'Generate Report'}
+              <Mail className="w-4 h-4 mr-2" />
+              {isEmailingReport ? 'Sending...' : 'Email Report'}
             </Button>
           </div>
         </div>
