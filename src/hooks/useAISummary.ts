@@ -35,11 +35,20 @@ export const useAISummary = (recordId?: string) => {
       try {
         console.log('📖 Loading existing AI summary for record:', recordId);
         
-        const { data, error } = await supabase
+        // Check if recordId is a UUID or record_id string
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
+        
+        let query = supabase
           .from('investigation_records')
-          .select('id, record_id, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous')
-          .eq('id', recordId)
-          .single();
+          .select('id, record_id, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous');
+        
+        if (isUUID) {
+          query = query.eq('id', recordId);
+        } else {
+          query = query.eq('record_id', recordId);
+        }
+
+        const { data, error } = await query.single();
 
         if (error) {
           console.error('Error loading AI summary:', error);
@@ -79,11 +88,20 @@ export const useAISummary = (recordId?: string) => {
     try {
       console.log('🤖 Generating AI summary for record:', recordId);
       
-      // Update status to generating
-      await supabase
+      // Check if recordId is a UUID or record_id string
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
+      
+      let updateQuery = supabase
         .from('investigation_records')
-        .update({ ai_summary_status: 'pending' })
-        .eq('id', recordId);
+        .update({ ai_summary_status: 'pending' });
+      
+      if (isUUID) {
+        updateQuery = updateQuery.eq('id', recordId);
+      } else {
+        updateQuery = updateQuery.eq('record_id', recordId);
+      }
+
+      await updateQuery;
 
       // Call the Edge Function to generate summary
       const { data, error } = await supabase.functions.invoke('ai-summary', {
@@ -97,11 +115,17 @@ export const useAISummary = (recordId?: string) => {
       console.log('✅ AI summary generated successfully');
       
       // Reload the summary data
-      const { data: updatedData } = await supabase
+      let selectQuery = supabase
         .from('investigation_records')
-        .select('id, record_id, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous')
-        .eq('id', recordId)
-        .single();
+        .select('id, record_id, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous');
+      
+      if (isUUID) {
+        selectQuery = selectQuery.eq('id', recordId);
+      } else {
+        selectQuery = selectQuery.eq('record_id', recordId);
+      }
+
+      const { data: updatedData } = await selectQuery.single();
 
       if (updatedData) {
         const normalizedStatus = updatedData.ai_summary_status === 'processing' ? 'pending' : 
@@ -118,10 +142,19 @@ export const useAISummary = (recordId?: string) => {
       console.error('❌ AI summary generation failed:', error);
       
       // Update status to failed
-      await supabase
+      let failedQuery = supabase
         .from('investigation_records')
-        .update({ ai_summary_status: 'failed' })
-        .eq('id', recordId);
+        .update({ ai_summary_status: 'failed' });
+      
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
+      
+      if (isUUID) {
+        failedQuery = failedQuery.eq('id', recordId);
+      } else {
+        failedQuery = failedQuery.eq('record_id', recordId);
+      }
+
+      await failedQuery;
         
       toast.error('Failed to generate AI analysis');
     } finally {
