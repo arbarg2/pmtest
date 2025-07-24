@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { WalletRiskResponse } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // Import all dashboard components
 import WalletOverview from '@/components/dashboard/WalletOverview';
@@ -74,7 +75,7 @@ const EnhancedWalletResults = ({
     }
   };
 
-  // Function to send all data to Tines webhook
+  // Updated function to use Supabase Edge Function
   const handleEmailReport = async () => {
     setIsEmailingReport(true);
     try {
@@ -94,21 +95,25 @@ const EnhancedWalletResults = ({
         source: 'rian_platform'
       };
 
-      const response = await fetch('https://pat.tines.com/webhook/aml-buddy-bot-2/010e55b671e752ae9888806bfb8d0e2d', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(reportData),
+      console.log('📧 Sending report via Edge Function...');
+      
+      const { data, error } = await supabase.functions.invoke('send-report-webhook', {
+        body: reportData
       });
 
-      if (response.ok) {
+      if (error) {
+        console.error('Edge Function error:', error);
+        throw new Error(error.message || 'Failed to send report');
+      }
+
+      if (data?.success) {
+        console.log('✅ Report sent successfully');
         toast.success("Report sent successfully to webhook.");
       } else {
-        throw new Error(`Failed to send report: ${response.status} ${response.statusText}`);
+        throw new Error(data?.error || 'Failed to send report');
       }
     } catch (error) {
-      console.error('Failed to send report:', error);
+      console.error('❌ Failed to send report:', error);
       toast.error("Failed to send report. Please try again.");
     } finally {
       setIsEmailingReport(false);
