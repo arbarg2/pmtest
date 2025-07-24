@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WalletRiskResponse } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { reportExportService } from '@/services/reportExport';
 
 // Import all dashboard components
 import WalletOverview from '@/components/dashboard/WalletOverview';
@@ -76,7 +76,7 @@ const EnhancedWalletResults = ({
     }
   };
 
-  // Updated function to send data to Tines webhook
+  // Function to send all data to Tines webhook
   const handleEmailReport = async () => {
     setIsEmailingReport(true);
     try {
@@ -87,9 +87,11 @@ const EnhancedWalletResults = ({
         sanctionsMatches,
         analystNotes,
         investigationStatus,
-        tags: [],
+        isCase,
+        caseId,
+        caseStatus,
+        caseCreatedAt,
         timestamp: new Date().toISOString(),
-        // Additional context for the webhook
         reportType: 'wallet_intelligence',
         source: 'rian_platform'
       };
@@ -104,17 +106,17 @@ const EnhancedWalletResults = ({
 
       if (response.ok) {
         toast({
-          title: "Report Emailed",
-          description: "Wallet intelligence report has been sent successfully.",
+          title: "Report Sent Successfully",
+          description: "Wallet intelligence report has been sent to the webhook.",
         });
       } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`Failed to send report: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
-      console.error('Email report failed:', error);
+      console.error('Failed to send report:', error);
       toast({
-        title: "Email Failed",
-        description: "Failed to send report. Please try again.",
+        title: "Failed to Send Report",
+        description: "There was an error sending the report. Please try again.",
         variant: "destructive",
       });
     } finally {
