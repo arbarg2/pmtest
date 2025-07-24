@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WalletRiskResponse } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 // Import all dashboard components
 import WalletOverview from '@/components/dashboard/WalletOverview';
@@ -40,7 +39,6 @@ const EnhancedWalletResults = ({
   sanctionsMatches = []
 }: EnhancedWalletResultsProps) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [investigationStatus, setInvestigationStatus] = useState('pending');
   const [analystNotes, setAnalystNotes] = useState('');
   const [isCase, setIsCase] = useState(false);
@@ -105,20 +103,13 @@ const EnhancedWalletResults = ({
       });
 
       if (response.ok) {
-        toast({
-          title: "Report Sent Successfully",
-          description: "Wallet intelligence report has been sent to the webhook.",
-        });
+        toast.success("Report sent successfully to webhook.");
       } else {
         throw new Error(`Failed to send report: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
       console.error('Failed to send report:', error);
-      toast({
-        title: "Failed to Send Report",
-        description: "There was an error sending the report. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to send report. Please try again.");
     } finally {
       setIsEmailingReport(false);
     }
