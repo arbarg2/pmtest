@@ -38,13 +38,22 @@ serve(async (req) => {
         
         const { recordId, walletData } = body
 
-        // Verify the record exists before proceeding - recordId is the record_id string
-        console.log('🔍 Verifying record exists:', recordId)
-        const { data: existingRecord, error: verifyError } = await supabase
+        // Check if recordId is a UUID or record_id string
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
+        
+        console.log('🔍 Verifying record exists:', recordId, 'isUUID:', isUUID)
+        
+        let query = supabase
           .from('investigation_records')
-          .select('id, record_id')
-          .eq('record_id', recordId)
-          .maybeSingle()
+          .select('id, record_id');
+        
+        if (isUUID) {
+          query = query.eq('id', recordId);
+        } else {
+          query = query.eq('record_id', recordId);
+        }
+
+        const { data: existingRecord, error: verifyError } = await query.maybeSingle();
 
         if (verifyError || !existingRecord) {
           console.error('❌ Record verification failed:', verifyError || 'Record not found')
@@ -92,7 +101,7 @@ serve(async (req) => {
           JSON.stringify({ 
             success: true, 
             message: 'AI summary generation initiated',
-            record_id: recordId,
+            record_id: existingRecord.record_id,
             webhook_response: webhookResult
           }),
           { 
