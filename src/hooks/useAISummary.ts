@@ -1,301 +1,125 @@
-import { useState, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 
-interface SummaryData {
-  ai_summary?: string | null;
-  ai_summary_status?: 'pending' | 'processing' | 'completed' | 'failed' | null;
-  ai_summary_generated_at?: string | null;
-  ai_summary_previous?: string | null;
+import { useState, useEffect, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface AISummaryData {
+  id: string;
+  record_id: string;
+  ai_summary: string | null;
+  ai_summary_status: 'pending' | 'completed' | 'failed';
+  ai_summary_generated_at: string | null;
+  ai_summary_previous: string | null;
 }
 
-export const useAISummary = () => {
-  const [summaryData, setSummaryData] = useState<SummaryData>({});
+export const useAISummary = (recordId?: string) => {
+  const [summaryData, setSummaryData] = useState<AISummaryData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const { toast } = useToast();
-  const successToastShown = useRef<Set<string>>(new Set());
-  const loadingRecords = useRef<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(false);
+  const loadingRef = useRef(false);
+  const lastRecordIdRef = useRef<string | undefined>();
 
-  const generateAISummary = async (recordIdOrUuid: string, walletData: any) => {
-    if (!recordIdOrUuid) {
-      console.error('❌ No record ID provided for AI summary generation');
-      toast({
-        title: "Error",
-        description: "No record ID provided for AI summary generation",
-        variant: "destructive",
-      });
+  // Load existing summary with proper debouncing
+  useEffect(() => {
+    if (!recordId || loadingRef.current || lastRecordIdRef.current === recordId) {
       return;
     }
 
-    setIsGenerating(true);
-    console.log('🤖 Starting AI summary generation for record:', recordIdOrUuid);
-
-    try {
-      // Verify the record exists first - handle both UUID and record_id
-      console.log('🔍 Verifying record exists before AI generation...');
+    const loadExistingSummary = async () => {
+      if (loadingRef.current) return;
       
-      // Check if it's a UUID or record_id string
-      const isUuid = recordIdOrUuid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
-      
-      let query = supabase
-        .from('investigation_records')
-        .select('id, record_id, ai_summary_status');
-      
-      if (isUuid) {
-        query = query.eq('id', recordIdOrUuid);
-      } else {
-        query = query.eq('record_id', recordIdOrUuid);
-      }
-      
-      const { data: existingRecord, error: verifyError } = await query.maybeSingle();
+      loadingRef.current = true;
+      setIsLoading(true);
+      lastRecordIdRef.current = recordId;
 
-      if (verifyError) {
-        console.error('❌ Error verifying record:', verifyError);
-        throw verifyError;
-      }
-
-      if (!existingRecord) {
-        console.error('❌ Record not found during verification:', recordIdOrUuid);
-        throw new Error('Record not found. Please refresh the page and try again.');
-      }
-
-      console.log('✅ Record verified, current AI status:', existingRecord.ai_summary_status);
-
-      // Check if AI summary is already being processed
-      if (existingRecord.ai_summary_status === 'processing') {
-        console.log('⏳ AI summary already processing for record:', existingRecord.id);
-        toast({
-          title: "AI Summary In Progress",
-          description: "An AI summary is already being generated for this record.",
-        });
-        
-        // Start polling for completion using the UUID
-        pollForSummaryCompletion(existingRecord.id);
-        return;
-      }
-
-      // Update status to processing
-      const { error: statusError } = await supabase
-        .from('investigation_records')
-        .update({ ai_summary_status: 'processing' })
-        .eq('id', existingRecord.id);
-
-      if (statusError) {
-        console.error('❌ Error updating status to processing:', statusError);
-        throw statusError;
-      }
-
-      // Update local state to show processing
-      setSummaryData(prev => ({
-        ...prev,
-        ai_summary_status: 'processing'
-      }));
-
-      // Call the edge function with record_id (string) - this is what the edge function expects
-      console.log('🚀 Calling edge function with record_id:', existingRecord.record_id);
-      const { data, error } = await supabase.functions.invoke('ai-summary', {
-        body: { 
-          recordId: existingRecord.record_id, // Use record_id string for edge function
-          walletData 
-        }
-      });
-
-      if (error) {
-        console.error('❌ Edge function error:', error);
-        throw error;
-      }
-
-      console.log('✅ Edge function called successfully:', data);
-
-      toast({
-        title: "AI Analysis Started",
-        description: "Holly is analyzing your data. This may take a few moments...",
-      });
-
-      // Start polling for the completed summary using the UUID
-      pollForSummaryCompletion(existingRecord.id);
-
-    } catch (error) {
-      console.error('❌ Error generating AI summary:', error);
-      
-      // Reset status on error - we need to get the UUID first if we have a record_id
       try {
-        const isUuid = recordIdOrUuid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+        console.log('📖 Loading existing AI summary for record:', recordId);
         
-        if (isUuid) {
-          await supabase
-            .from('investigation_records')
-            .update({ ai_summary_status: 'failed' })
-            .eq('id', recordIdOrUuid);
-        } else {
-          await supabase
-            .from('investigation_records')
-            .update({ ai_summary_status: 'failed' })
-            .eq('record_id', recordIdOrUuid);
-        }
-      } catch (statusError) {
-        console.error('❌ Error updating status to failed:', statusError);
-      }
-
-      setSummaryData(prev => ({
-        ...prev,
-        ai_summary_status: 'failed'
-      }));
-
-      setIsGenerating(false);
-      toast({
-        title: "AI Analysis Failed",
-        description: error instanceof Error ? error.message : "Failed to generate AI summary. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const loadExistingSummary = async (recordIdOrUuid: string) => {
-    if (!recordIdOrUuid || loadingRecords.current.has(recordIdOrUuid)) {
-      return;
-    }
-
-    try {
-      loadingRecords.current.add(recordIdOrUuid);
-      console.log('📖 Loading existing AI summary for record:', recordIdOrUuid);
-
-      // Check if it's a UUID or record_id string
-      const isUuid = recordIdOrUuid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
-      
-      let query = supabase
-        .from('investigation_records')
-        .select('id, record_id, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous');
-      
-      if (isUuid) {
-        query = query.eq('id', recordIdOrUuid);
-      } else {
-        query = query.eq('record_id', recordIdOrUuid);
-      }
-      
-      const { data: record, error } = await query.maybeSingle();
-
-      if (error) {
-        console.error('❌ Error loading existing summary:', error);
-        return;
-      }
-
-      if (!record) {
-        console.error('❌ Record not found when loading summary:', recordIdOrUuid);
-        return;
-      }
-
-      console.log('📊 Record found, AI status:', record.ai_summary_status);
-
-      // Update the summaryData with all the fields, ensuring proper type handling
-      setSummaryData({
-        ai_summary: record.ai_summary,
-        ai_summary_status: record.ai_summary_status as 'pending' | 'processing' | 'completed' | 'failed' | null,
-        ai_summary_generated_at: record.ai_summary_generated_at,
-        ai_summary_previous: record.ai_summary_previous
-      });
-
-      if (record.ai_summary_status === 'processing') {
-        console.log('⏳ AI summary is being processed, starting polling');
-        setIsGenerating(true);
-        pollForSummaryCompletion(record.id); // Use UUID for polling
-      }
-    } catch (error) {
-      console.error('❌ Error in loadExistingSummary:', error);
-    } finally {
-      loadingRecords.current.delete(recordIdOrUuid);
-    }
-  };
-
-  const pollForSummaryCompletion = async (recordUuid: string, maxAttempts: number = 30) => {
-    console.log('🔄 Starting polling for AI summary completion, UUID:', recordUuid);
-    let attempts = 0;
-
-    const poll = async () => {
-      try {
-        attempts++;
-        console.log(`🔄 Polling attempt ${attempts}/${maxAttempts} for record UUID:`, recordUuid);
-
-        const { data: record, error } = await supabase
+        const { data, error } = await supabase
           .from('investigation_records')
-          .select('ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous')
-          .eq('id', recordUuid) // Always use UUID for polling
-          .maybeSingle();
+          .select('id, record_id, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous')
+          .eq('id', recordId)
+          .single();
 
         if (error) {
-          console.error('❌ Polling error:', error);
-          if (attempts < maxAttempts) {
-            setTimeout(poll, 3000);
-          } else {
-            setIsGenerating(false);
-          }
+          console.error('Error loading AI summary:', error);
           return;
         }
 
-        if (!record) {
-          console.error('❌ Record not found during polling');
-          setIsGenerating(false);
-          return;
-        }
-
-        console.log('📊 Polling status:', record.ai_summary_status);
-
-        if (record.ai_summary_status === 'completed' && record.ai_summary) {
-          console.log('✅ AI summary completed!');
-          setSummaryData({
-            ai_summary: record.ai_summary,
-            ai_summary_status: record.ai_summary_status as 'completed',
-            ai_summary_generated_at: record.ai_summary_generated_at,
-            ai_summary_previous: record.ai_summary_previous
-          });
-          setIsGenerating(false);
-          
-          if (!successToastShown.current.has(recordUuid)) {
-            successToastShown.current.add(recordUuid);
-            toast({
-              title: "AI Analysis Complete",
-              description: "Holly has finished analyzing your data!",
-            });
-          }
-        } else if (record.ai_summary_status === 'failed') {
-          console.error('❌ AI summary failed');
-          setSummaryData(prev => ({
-            ...prev,
-            ai_summary_status: 'failed'
-          }));
-          setIsGenerating(false);
-          toast({
-            title: "AI Analysis Failed",
-            description: "Holly encountered an error while analyzing your data. Please try again.",
-            variant: "destructive",
-          });
-        } else if (attempts < maxAttempts) {
-          setTimeout(poll, 3000);
-        } else {
-          console.log('⏰ Polling timeout reached');
-          setIsGenerating(false);
-          toast({
-            title: "Analysis Taking Longer Than Expected",
-            description: "Holly is still working on your analysis. Please check back in a few minutes.",
-          });
+        if (data) {
+          console.log('📊 Record found, AI status:', data.ai_summary_status);
+          setSummaryData(data);
         }
       } catch (error) {
-        console.error('❌ Polling error:', error);
-        if (attempts < maxAttempts) {
-          setTimeout(poll, 3000);
-        } else {
-          setIsGenerating(false);
-        }
+        console.error('Failed to load AI summary:', error);
+      } finally {
+        setIsLoading(false);
+        loadingRef.current = false;
       }
     };
 
-    poll();
+    // Add a small delay to prevent rapid consecutive calls
+    const timeoutId = setTimeout(loadExistingSummary, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [recordId]);
+
+  const generateSummary = async (walletData: any) => {
+    if (!recordId || isGenerating) return;
+
+    setIsGenerating(true);
+    
+    try {
+      console.log('🤖 Generating AI summary for record:', recordId);
+      
+      // Update status to generating
+      await supabase
+        .from('investigation_records')
+        .update({ ai_summary_status: 'pending' })
+        .eq('id', recordId);
+
+      // Call the Edge Function to generate summary
+      const { data, error } = await supabase.functions.invoke('ai-summary', {
+        body: { recordId, walletData }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('✅ AI summary generated successfully');
+      
+      // Reload the summary data
+      const { data: updatedData } = await supabase
+        .from('investigation_records')
+        .select('id, record_id, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous')
+        .eq('id', recordId)
+        .single();
+
+      if (updatedData) {
+        setSummaryData(updatedData);
+      }
+
+      toast.success('AI analysis completed successfully');
+    } catch (error) {
+      console.error('❌ AI summary generation failed:', error);
+      
+      // Update status to failed
+      await supabase
+        .from('investigation_records')
+        .update({ ai_summary_status: 'failed' })
+        .eq('id', recordId);
+        
+      toast.error('Failed to generate AI analysis');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return {
     summaryData,
     isGenerating,
-    generateAISummary,
-    loadExistingSummary,
+    isLoading,
+    generateSummary
   };
 };
