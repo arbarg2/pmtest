@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,24 +46,18 @@ export function HollyAIAnalysis({ walletData, recordId, onNotesUpdated }: HollyA
   const { 
     isGenerating, 
     summaryData, 
-    generateAISummary, 
-    loadExistingSummary 
-  } = useAISummary();
-
-  useEffect(() => {
-    if (recordId) {
-      loadExistingSummary(recordId);
-    }
-  }, [recordId, loadExistingSummary]);
+    generateSummary, 
+    isLoading 
+  } = useAISummary(recordId);
 
   const handleGenerateAISummary = () => {
     if (recordId && walletData) {
-      generateAISummary(recordId, walletData);
+      generateSummary(walletData);
     }
   };
 
   const handleAddToCaseNotes = async () => {
-    if (!user || !recordId || !summaryData.ai_summary) {
+    if (!user || !recordId || !summaryData?.ai_summary) {
       toast({
         title: "Error",
         description: "Unable to add summary to case notes. Missing required data.",
@@ -124,10 +117,12 @@ export function HollyAIAnalysis({ walletData, recordId, onNotesUpdated }: HollyA
   };
 
   const getStatusIcon = () => {
+    if (!summaryData) return <Clock className="w-4 h-4 text-gray-500" />;
+    
     switch (summaryData.ai_summary_status) {
       case 'completed':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'processing':
+      case 'pending':
         return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
       case 'failed':
         return <XCircle className="w-4 h-4 text-red-500" />;
@@ -171,7 +166,7 @@ export function HollyAIAnalysis({ walletData, recordId, onNotesUpdated }: HollyA
   const aiInsights = {
     behavioralAnomalies: [
       "Unusual transaction frequency spike detected in last 7 days (+340%)",
-      "Atypical interaction with privacy-focused protocols",
+      "Atypical interaction with privacy-focused protocols", 
       "Pattern deviation from historical transaction timing"
     ],
     riskBreakdown: {
@@ -267,10 +262,10 @@ export function HollyAIAnalysis({ walletData, recordId, onNotesUpdated }: HollyA
               <div className="flex items-center space-x-2">
                 <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 <h4 className="font-semibold text-indigo-800 dark:text-indigo-200">Holly AI Intelligence Summary</h4>
-                {summaryData.ai_summary_status && getStatusIcon()}
+                {getStatusIcon()}
               </div>
               <div className="flex items-center space-x-2">
-                {summaryData.ai_summary_previous && (
+                {summaryData?.ai_summary_previous && (
                   <Badge variant="outline" className="text-xs">
                     Previous Available
                   </Badge>
@@ -286,7 +281,7 @@ export function HollyAIAnalysis({ walletData, recordId, onNotesUpdated }: HollyA
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Regenerating...
                     </>
-                  ) : summaryData.ai_summary ? (
+                  ) : summaryData?.ai_summary ? (
                     <>
                       <RefreshCw className="w-4 h-4 mr-2" />
                       Regenerate Summary
@@ -303,7 +298,7 @@ export function HollyAIAnalysis({ walletData, recordId, onNotesUpdated }: HollyA
 
             {isGenerating ? (
               <HollyLoadingAnimation />
-            ) : summaryData.ai_summary ? (
+            ) : summaryData?.ai_summary ? (
               <div className="space-y-3">
                 <div className="bg-white/60 dark:bg-slate-800/60 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">

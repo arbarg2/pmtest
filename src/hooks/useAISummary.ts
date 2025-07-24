@@ -48,7 +48,14 @@ export const useAISummary = (recordId?: string) => {
 
         if (data) {
           console.log('📊 Record found, AI status:', data.ai_summary_status);
-          setSummaryData(data);
+          // Ensure the status is properly typed
+          const normalizedStatus = data.ai_summary_status === 'processing' ? 'pending' : 
+                                  (data.ai_summary_status as 'pending' | 'completed' | 'failed');
+          
+          setSummaryData({
+            ...data,
+            ai_summary_status: normalizedStatus
+          });
         }
       } catch (error) {
         console.error('Failed to load AI summary:', error);
@@ -97,7 +104,13 @@ export const useAISummary = (recordId?: string) => {
         .single();
 
       if (updatedData) {
-        setSummaryData(updatedData);
+        const normalizedStatus = updatedData.ai_summary_status === 'processing' ? 'pending' : 
+                                (updatedData.ai_summary_status as 'pending' | 'completed' | 'failed');
+        
+        setSummaryData({
+          ...updatedData,
+          ai_summary_status: normalizedStatus
+        });
       }
 
       toast.success('AI analysis completed successfully');
