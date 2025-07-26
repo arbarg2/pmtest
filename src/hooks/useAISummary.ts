@@ -35,6 +35,13 @@ export const useAISummary = (recordId?: string) => {
     return query;
   };
 
+  // Helper function to normalize status
+  const normalizeStatus = (status: string): 'pending' | 'completed' | 'failed' => {
+    if (status === 'processing') return 'pending';
+    if (status === 'completed' || status === 'failed') return status as 'pending' | 'completed' | 'failed';
+    return 'pending'; // default fallback
+  };
+
   // Load existing summary with proper debouncing
   useEffect(() => {
     if (!recordId || loadingRef.current || lastRecordIdRef.current === recordId) {
@@ -60,13 +67,10 @@ export const useAISummary = (recordId?: string) => {
 
         if (data) {
           console.log('📊 Record found, AI status:', data.ai_summary_status);
-          // Ensure the status is properly typed
-          const normalizedStatus = data.ai_summary_status === 'processing' ? 'pending' : 
-                                  (data.ai_summary_status as 'pending' | 'completed' | 'failed');
           
           setSummaryData({
             ...data,
-            ai_summary_status: normalizedStatus
+            ai_summary_status: normalizeStatus(data.ai_summary_status)
           });
         }
       } catch (error) {
@@ -131,12 +135,9 @@ export const useAISummary = (recordId?: string) => {
           const { data: updatedData } = await buildQuery(recordId).single();
 
           if (updatedData && updatedData.ai_summary_status === 'completed') {
-            const normalizedStatus = updatedData.ai_summary_status === 'processing' ? 'pending' : 
-                                    (updatedData.ai_summary_status as 'pending' | 'completed' | 'failed');
-            
             setSummaryData({
               ...updatedData,
-              ai_summary_status: normalizedStatus
+              ai_summary_status: normalizeStatus(updatedData.ai_summary_status)
             });
             break;
           } else {
