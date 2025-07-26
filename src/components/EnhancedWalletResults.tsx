@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import RegulatorJustification from './RegulatorJustification';
 import { regulatorReportExportService } from '@/services/regulatorReportExport';
+import EmailReportDialog from './EmailReportDialog';
 
 // Import all dashboard components
 import WalletOverview from '@/components/dashboard/WalletOverview';
@@ -50,6 +51,7 @@ const EnhancedWalletResults = ({
   const [caseCreatedAt, setCaseCreatedAt] = useState<string | undefined>();
   const [notesKey, setNotesKey] = useState(0);
   const [isEmailingReport, setIsEmailingReport] = useState(false);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const analystNotesRef = useRef<AnalystNotesThreadRef>(null);
 
   // Initialize case data from wallet/record data
@@ -77,8 +79,8 @@ const EnhancedWalletResults = ({
     }
   };
 
-  // Updated function to use Supabase Edge Function
-  const handleEmailReport = async () => {
+  // Updated function to handle email addresses
+  const handleEmailReport = async (emailAddresses: string[]) => {
     setIsEmailingReport(true);
     try {
       const reportData = {
@@ -94,10 +96,11 @@ const EnhancedWalletResults = ({
         caseCreatedAt,
         timestamp: new Date().toISOString(),
         reportType: 'wallet_intelligence',
-        source: 'rian_platform'
+        source: 'rian_platform',
+        emailAddresses: emailAddresses // Add email addresses to the payload
       };
 
-      console.log('📧 Sending report via Edge Function...');
+      console.log('📧 Sending report via Edge Function with email addresses:', emailAddresses);
       
       const { data, error } = await supabase.functions.invoke('send-report-webhook', {
         body: reportData
@@ -110,7 +113,8 @@ const EnhancedWalletResults = ({
 
       if (data?.success) {
         console.log('✅ Report sent successfully');
-        toast.success("Report sent successfully to webhook.");
+        toast.success(`Report sent successfully to ${emailAddresses.length} recipient(s).`);
+        setIsEmailDialogOpen(false);
       } else {
         throw new Error(data?.error || 'Failed to send report');
       }
@@ -217,7 +221,7 @@ const EnhancedWalletResults = ({
               </div>
             </div>
             <Button 
-              onClick={handleEmailReport} 
+              onClick={() => setIsEmailDialogOpen(true)}
               disabled={isEmailingReport}
               size="sm"
               className="bg-accent hover:bg-accent/90 text-white"
@@ -316,6 +320,14 @@ const EnhancedWalletResults = ({
           </div>
         )}
       </div>
+
+      {/* Email Report Dialog */}
+      <EmailReportDialog
+        isOpen={isEmailDialogOpen}
+        onClose={() => setIsEmailDialogOpen(false)}
+        onSendReport={handleEmailReport}
+        isLoading={isEmailingReport}
+      />
     </div>
   );
 };
