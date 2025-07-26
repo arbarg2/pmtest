@@ -5,6 +5,8 @@ import { WalletRiskResponse } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import RegulatorJustification from './RegulatorJustification';
+import { regulatorReportExportService } from '@/services/regulatorReportExport';
 
 // Import all dashboard components
 import WalletOverview from '@/components/dashboard/WalletOverview';
@@ -148,6 +150,29 @@ const EnhancedWalletResults = ({
     }, 500);
   };
 
+  // Add new handler for regulator report download
+  const handleDownloadRegulatorReport = async () => {
+    try {
+      const reportData = {
+        wallet,
+        recordId: recordId || 'unknown',
+        caseId: caseId,
+        aiSummary: wallet.ai_summary || undefined,
+        analystJustification: analystNotes,
+        analystName: 'Current Analyst', // In production, get from auth context
+        timestamp: new Date().toISOString(),
+        riskFactors,
+        sanctionsMatches
+      };
+
+      await regulatorReportExportService.exportRegulatorPDF(reportData);
+      toast.success("Regulatory compliance report downloaded successfully");
+    } catch (error) {
+      console.error('Failed to generate regulatory report:', error);
+      toast.error("Failed to generate regulatory report. Please try again.");
+    }
+  };
+
   // Update callback to refresh notes when Holly AI adds a note
   const handleNotesUpdated = () => {
     console.log('Holly AI note added, refreshing notes list...');
@@ -242,6 +267,17 @@ const EnhancedWalletResults = ({
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
           <TransactionFlowPreview wallet={wallet} onViewFlow={handleViewFlow} />
           <CounterpartyIntelligence wallet={wallet} />
+        </div>
+
+        {/* Regulator Justification Section - NEW */}
+        <div className="mb-8">
+          <RegulatorJustification
+            wallet={wallet}
+            recordId={recordId}
+            caseId={caseId}
+            aiSummary={wallet.ai_summary}
+            onDownloadReport={handleDownloadRegulatorReport}
+          />
         </div>
 
         {/* Case Management Section */}

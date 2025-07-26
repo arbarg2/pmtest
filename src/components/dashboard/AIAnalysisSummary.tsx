@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -149,6 +148,32 @@ const AIAnalysisSummary = ({ wallet }: AIAnalysisSummaryProps) => {
                 }
               </Badge>
             </div>
+
+            {/* Updated footer with audit trail information */}
+            <div className="border-t pt-4 mt-6">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-4 text-purple-600 dark:text-purple-400">
+                  <div className="flex items-center space-x-1">
+                    <span>🔍</span>
+                    <span>Generated for audit trail</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span>📅</span>
+                    <span>{new Date().toLocaleString()}</span>
+                  </div>
+                </div>
+                {/* Show case ID if available from wallet data */}
+                {wallet.case_id && (
+                  <div className="text-purple-600 dark:text-purple-400 font-medium">
+                    Case ID: {wallet.case_id}
+                  </div>
+                )}
+              </div>
+              <div className="text-xs text-purple-500 dark:text-purple-400 mt-2 opacity-75">
+                This AI analysis forms part of the official compliance audit documentation
+              </div>
+            </div>
+
           </CardContent>
         </CollapsibleContent>
       </Card>
