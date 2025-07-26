@@ -152,12 +152,12 @@ const BulkAnalysis = () => {
           });
         }
 
-        const records = addresses.map(address => {
+        const records: ParsedRecord[] = addresses.map(address => {
           const validation = validateWalletAddress(address);
           return {
             address: address.trim(),
             type: validation.isValid ? detectAddressType(address) : 'Unknown',
-            status: validation.isValid ? 'Ready' : 'Error',
+            status: validation.isValid ? 'Ready' as const : 'Error' as const,
             error: validation.error
           };
         });
@@ -212,7 +212,7 @@ const BulkAnalysis = () => {
         if (record.status !== 'Ready') continue;
         
         setParsedRecords(prev => prev.map((r, idx) => 
-          idx === i ? { ...r, status: 'Processing' } : r
+          idx === i ? { ...r, status: 'Processing' as const } : r
         ));
 
         try {
@@ -224,7 +224,7 @@ const BulkAnalysis = () => {
             );
             
             if (duplicate) {
-              updatedRecords[i] = { ...record, status: 'Duplicate', recordId: duplicate.record_id };
+              updatedRecords[i] = { ...record, status: 'Duplicate' as const, recordId: duplicate.record_id };
               continue;
             }
           }
@@ -254,20 +254,20 @@ const BulkAnalysis = () => {
           if (result.success && result.record) {
             updatedRecords[i] = { 
               ...record, 
-              status: 'Complete', 
+              status: 'Complete' as const, 
               recordId: result.record.record_id 
             };
           } else {
             updatedRecords[i] = { 
               ...record, 
-              status: 'Error', 
+              status: 'Error' as const, 
               error: result.error || 'Failed to create record' 
             };
           }
         } catch (error) {
           updatedRecords[i] = { 
             ...record, 
-            status: 'Error', 
+            status: 'Error' as const, 
             error: error instanceof Error ? error.message : 'Unknown error' 
           };
         }
