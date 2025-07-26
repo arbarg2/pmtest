@@ -1,14 +1,14 @@
-
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield, ArrowLeft, Upload, FileSpreadsheet, Trash2, Eye, Play } from 'lucide-react';
+import { Shield, ArrowLeft, Upload, FileSpreadsheet, Trash2, Eye, Play, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserDropdown } from '@/components/UserDropdown';
 import { useToast } from '@/hooks/use-toast';
 import { validateWalletAddress } from '@/services/walletValidation';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
+import { logAuditAction } from '@/utils/auditLogger';
 import Papa from 'papaparse';
 
 interface ParsedRecord {
@@ -19,6 +19,15 @@ interface ParsedRecord {
   error?: string;
 }
 
+interface UploadAudit {
+  filename: string;
+  fileSize: number;
+  uploadTime: string;
+  addressCount: number;
+  fileType: string;
+  rawData: string[];
+}
+
 const BulkAnalysis = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -26,6 +35,8 @@ const BulkAnalysis = () => {
   const [parsedRecords, setParsedRecords] = useState<ParsedRecord[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [showRawData, setShowRawData] = useState(false);
+  const [uploadAudit, setUploadAudit] = useState<UploadAudit | null>(null);
 
   React.useEffect(() => {
     if (!loading && !user) {
@@ -47,15 +58,21 @@ const BulkAnalysis = () => {
     return 'Unknown';
   };
 
-  const parseFileContent = useCallback((content: string, fileType: 'csv' | 'json'): ParsedRecord[] => {
+  const parseFileContent = useCallback((content: string, fileType: 'csv' | 'json'): { addresses: string[], rawData: string[] } => {
     try {
       let addresses: string[] = [];
+      let rawData: string[] = [];
 
       if (fileType === 'csv') {
         const result = Papa.parse(content, {
           header: true,
           skipEmptyLines: true
         });
+        
+        // Store raw data for display
+        rawData = result.data.map((row: any, index: number) => 
+          `Row ${index + 1}: ${JSON.stringify(row)}`
+        );
         
         addresses = result.data.map((row: any) => {
           // Try different possible column names
@@ -64,11 +81,17 @@ const BulkAnalysis = () => {
       } else if (fileType === 'json') {
         const data = JSON.parse(content);
         if (Array.isArray(data)) {
+          rawData = data.map((item, index) => 
+            `Item ${index + 1}: ${JSON.stringify(item)}`
+          );
           addresses = data.map(item => {
             if (typeof item === 'string') return item;
             return item.address || item.wallet_address || item.Address;
           }).filter(Boolean);
         } else if (data.addresses && Array.isArray(data.addresses)) {
+          rawData = data.addresses.map((addr: any, index: number) => 
+            `Address ${index + 1}: ${addr}`
+          );
           addresses = data.addresses;
         }
       }
@@ -81,21 +104,13 @@ const BulkAnalysis = () => {
         throw new Error('Maximum 100 addresses allowed per batch');
       }
 
-      return addresses.map(address => {
-        const validation = validateWalletAddress(address);
-        return {
-          address: address.trim(),
-          type: validation.isValid ? detectAddressType(address) : 'Unknown',
-          status: validation.isValid ? 'Ready' : 'Error',
-          error: validation.error
-        };
-      });
+      return { addresses, rawData };
     } catch (error) {
       throw new Error(`Failed to parse file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }, []);
 
-  const handleFileUpload = useCallback((file: File) => {
+  const handleFileUpload = useCallback(async (file: File) => {
     if (!file) return;
 
     const fileExtension = file.name.toLowerCase().split('.').pop();
@@ -109,10 +124,44 @@ const BulkAnalysis = () => {
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
-        const records = parseFileContent(content, fileExtension as 'csv' | 'json');
+        const { addresses, rawData } = parseFileContent(content, fileExtension as 'csv' | 'json');
+        
+        // Create audit record
+        const auditInfo: UploadAudit = {
+          filename: file.name,
+          fileSize: file.size,
+          uploadTime: new Date().toISOString(),
+          addressCount: addresses.length,
+          fileType: fileExtension as string,
+          rawData: rawData
+        };
+        
+        setUploadAudit(auditInfo);
+        
+        // Log the upload audit
+        if (user) {
+          await logAuditAction('bulk_upload', undefined, {
+            filename: file.name,
+            file_size: file.size,
+            address_count: addresses.length,
+            file_type: fileExtension,
+            upload_timestamp: auditInfo.uploadTime
+          });
+        }
+
+        const records = addresses.map(address => {
+          const validation = validateWalletAddress(address);
+          return {
+            address: address.trim(),
+            type: validation.isValid ? detectAddressType(address) : 'Unknown',
+            status: validation.isValid ? 'Ready' : 'Error',
+            error: validation.error
+          };
+        });
+        
         setParsedRecords(records);
         
         toast({
@@ -129,7 +178,7 @@ const BulkAnalysis = () => {
     };
     
     reader.readAsText(file);
-  }, [parseFileContent, toast]);
+  }, [parseFileContent, toast, user]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -230,6 +279,17 @@ const BulkAnalysis = () => {
       const duplicates = updatedRecords.filter(r => r.status === 'Duplicate').length;
       const errors = updatedRecords.filter(r => r.status === 'Error').length;
 
+      // Log processing completion
+      if (user) {
+        await logAuditAction('bulk_processing_complete', undefined, {
+          total_records: updatedRecords.length,
+          successful,
+          duplicates,
+          errors,
+          filename: uploadAudit?.filename
+        });
+      }
+
       toast({
         title: "Bulk Upload Complete",
         description: `${successful} created, ${duplicates} duplicates, ${errors} errors`,
@@ -248,6 +308,8 @@ const BulkAnalysis = () => {
 
   const clearRecords = () => {
     setParsedRecords([]);
+    setUploadAudit(null);
+    setShowRawData(false);
   };
 
   const viewRecord = (recordId: string) => {
@@ -337,6 +399,60 @@ const BulkAnalysis = () => {
                 Choose File
               </label>
             </div>
+
+            {/* Upload Audit Information */}
+            {uploadAudit && (
+              <Card className="bg-blue-50 border border-blue-200">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-blue-900">Upload Details</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-blue-800">File:</span>
+                      <p className="text-blue-700">{uploadAudit.filename}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-blue-800">Size:</span>
+                      <p className="text-blue-700">{(uploadAudit.fileSize / 1024).toFixed(1)} KB</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-blue-800">Addresses:</span>
+                      <p className="text-blue-700">{uploadAudit.addressCount}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-blue-800">Uploaded:</span>
+                      <p className="text-blue-700">{new Date(uploadAudit.uploadTime).toLocaleString()}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Raw Data Toggle */}
+                  <div className="mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowRawData(!showRawData)}
+                      className="text-blue-700 border-blue-300 hover:bg-blue-100"
+                    >
+                      {showRawData ? <ChevronUp className="w-4 h-4 mr-2" /> : <ChevronDown className="w-4 h-4 mr-2" />}
+                      {showRawData ? 'Hide' : 'Show'} Raw Data
+                    </Button>
+                  </div>
+                  
+                  {/* Raw Data Display */}
+                  {showRawData && (
+                    <div className="mt-4 p-4 bg-white border border-blue-200 rounded-lg">
+                      <h4 className="font-medium text-blue-900 mb-2">Raw File Content</h4>
+                      <div className="max-h-60 overflow-y-auto">
+                        <pre className="text-xs text-blue-800 whitespace-pre-wrap">
+                          {uploadAudit.rawData.join('\n')}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Parsed Records Table */}
             {parsedRecords.length > 0 && (
