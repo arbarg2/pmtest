@@ -19,6 +19,22 @@ export const useAISummary = (recordId?: string) => {
   const loadingRef = useRef(false);
   const lastRecordIdRef = useRef<string | undefined>();
 
+  // Helper function to determine query strategy
+  const buildQuery = (id: string) => {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    let query = supabase
+      .from('investigation_records')
+      .select('id, record_id, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous');
+    
+    if (isUUID) {
+      query = query.eq('id', id);
+    } else {
+      query = query.eq('record_id', id);
+    }
+    
+    return query;
+  };
+
   // Load existing summary with proper debouncing
   useEffect(() => {
     if (!recordId || loadingRef.current || lastRecordIdRef.current === recordId) {
@@ -35,20 +51,7 @@ export const useAISummary = (recordId?: string) => {
       try {
         console.log('📖 Loading existing AI summary for record:', recordId);
         
-        // Check if recordId is a UUID or record_id string
-        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
-        
-        let query = supabase
-          .from('investigation_records')
-          .select('id, record_id, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous');
-        
-        if (isUUID) {
-          query = query.eq('id', recordId);
-        } else {
-          query = query.eq('record_id', recordId);
-        }
-
-        const { data, error } = await query.single();
+        const { data, error } = await buildQuery(recordId).single();
 
         if (error) {
           console.error('Error loading AI summary:', error);
@@ -88,7 +91,9 @@ export const useAISummary = (recordId?: string) => {
     try {
       console.log('🤖 Generating AI summary for record:', recordId);
       
-      // Check if recordId is a UUID or record_id string
+      // Update status to pending immediately for better UX
+      setSummaryData(prev => prev ? { ...prev, ai_summary_status: 'pending' } : null);
+      
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
       
       let updateQuery = supabase
@@ -114,27 +119,40 @@ export const useAISummary = (recordId?: string) => {
 
       console.log('✅ AI summary generated successfully');
       
-      // Reload the summary data
-      let selectQuery = supabase
-        .from('investigation_records')
-        .select('id, record_id, ai_summary, ai_summary_status, ai_summary_generated_at, ai_summary_previous');
+      // Add a small delay to ensure the database has been updated
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (isUUID) {
-        selectQuery = selectQuery.eq('id', recordId);
-      } else {
-        selectQuery = selectQuery.eq('record_id', recordId);
-      }
+      // Reload the summary data with retry logic
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          const { data: updatedData } = await buildQuery(recordId).single();
 
-      const { data: updatedData } = await selectQuery.single();
-
-      if (updatedData) {
-        const normalizedStatus = updatedData.ai_summary_status === 'processing' ? 'pending' : 
-                                (updatedData.ai_summary_status as 'pending' | 'completed' | 'failed');
-        
-        setSummaryData({
-          ...updatedData,
-          ai_summary_status: normalizedStatus
-        });
+          if (updatedData && updatedData.ai_summary_status === 'completed') {
+            const normalizedStatus = updatedData.ai_summary_status === 'processing' ? 'pending' : 
+                                    (updatedData.ai_summary_status as 'pending' | 'completed' | 'failed');
+            
+            setSummaryData({
+              ...updatedData,
+              ai_summary_status: normalizedStatus
+            });
+            break;
+          } else {
+            retryCount++;
+            if (retryCount < maxRetries) {
+              console.log(`🔄 Retrying data fetch (${retryCount}/${maxRetries})...`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+        } catch (retryError) {
+          console.error('Retry error:', retryError);
+          retryCount++;
+          if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
       }
 
       toast.success('AI analysis completed successfully');
@@ -142,11 +160,11 @@ export const useAISummary = (recordId?: string) => {
       console.error('❌ AI summary generation failed:', error);
       
       // Update status to failed
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
+      
       let failedQuery = supabase
         .from('investigation_records')
         .update({ ai_summary_status: 'failed' });
-      
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
       
       if (isUUID) {
         failedQuery = failedQuery.eq('id', recordId);
@@ -155,6 +173,9 @@ export const useAISummary = (recordId?: string) => {
       }
 
       await failedQuery;
+      
+      // Update local state immediately
+      setSummaryData(prev => prev ? { ...prev, ai_summary_status: 'failed' } : null);
         
       toast.error('Failed to generate AI analysis');
     } finally {
