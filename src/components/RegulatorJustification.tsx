@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,15 +30,15 @@ const RegulatorJustification = ({
   const complianceSignals = [
     {
       label: 'Sanctions Screening',
-      status: wallet.risk_factors?.sanctioned ? 'warning' : 'complete',
-      icon: wallet.risk_factors?.sanctioned ? AlertTriangle : CheckCircle,
-      description: wallet.risk_factors?.sanctioned ? 'Sanctions exposure detected' : 'No sanctions matches found'
+      status: wallet.risk_factors?.sanctioned?.present ? 'warning' : 'complete',
+      icon: wallet.risk_factors?.sanctioned?.present ? AlertTriangle : CheckCircle,
+      description: wallet.risk_factors?.sanctioned?.present ? 'Sanctions exposure detected' : 'No sanctions matches found'
     },
     {
       label: 'Darknet Exposure',
-      status: wallet.risk_factors?.darknet ? 'blocked' : 'complete',
-      icon: wallet.risk_factors?.darknet ? XCircle : CheckCircle,
-      description: wallet.risk_factors?.darknet ? 'Darknet connections identified' : 'No darknet exposure detected'
+      status: wallet.risk_factors?.dark_market_exposure?.present ? 'blocked' : 'complete',
+      icon: wallet.risk_factors?.dark_market_exposure?.present ? XCircle : CheckCircle,
+      description: wallet.risk_factors?.dark_market_exposure?.present ? 'Dark market connections identified' : 'No darknet exposure detected'
     },
     {
       label: 'Mixer Interaction',
@@ -48,10 +47,10 @@ const RegulatorJustification = ({
       description: wallet.risk_factors?.mixer_usage ? 'Mixer usage flagged' : 'No mixer interactions detected'
     },
     {
-      label: 'High-Risk Geography',
-      status: wallet.risk_factors?.high_risk_jurisdiction ? 'warning' : 'complete',
-      icon: wallet.risk_factors?.high_risk_jurisdiction ? AlertTriangle : CheckCircle,
-      description: wallet.risk_factors?.high_risk_jurisdiction ? 'High-risk jurisdiction exposure' : 'Standard jurisdiction profile'
+      label: 'Geographic Risk',
+      status: wallet.geographic_risk?.geo_risk_score && wallet.geographic_risk.geo_risk_score > 5 ? 'warning' : 'complete',
+      icon: wallet.geographic_risk?.geo_risk_score && wallet.geographic_risk.geo_risk_score > 5 ? AlertTriangle : CheckCircle,
+      description: wallet.geographic_risk?.geo_risk_score && wallet.geographic_risk.geo_risk_score > 5 ? 'High-risk jurisdiction exposure' : 'Standard jurisdiction profile'
     }
   ];
 

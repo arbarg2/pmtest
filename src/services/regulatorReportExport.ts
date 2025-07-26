@@ -107,11 +107,11 @@ class RegulatorReportExportService {
       doc.setFont(undefined, 'normal');
       doc.text('Risk Assessment:', pageWidth - margin - 70, yPosition + 8);
       
-      let riskColor = [34, 197, 94]; // green
+      let riskColor: [number, number, number] = [34, 197, 94]; // green
       if (data.wallet.risk_score >= 7) riskColor = [239, 68, 68]; // red
       else if (data.wallet.risk_score >= 4) riskColor = [245, 158, 11]; // amber
       
-      doc.setFillColor(...riskColor);
+      doc.setFillColor(riskColor[0], riskColor[1], riskColor[2]);
       doc.roundedRect(pageWidth - margin - 70, yPosition + 12, 35, 8, 2, 2, 'F');
       
       doc.setTextColor(255, 255, 255);
@@ -154,8 +154,8 @@ class RegulatorReportExportService {
       yPosition += 8;
 
       const signals = [
-        { label: 'Sanctions Screening', status: data.wallet.risk_factors?.sanctioned ? '⚠️ FLAGGED' : '✅ CLEAR' },
-        { label: 'Darknet Exposure', status: data.wallet.risk_factors?.darknet ? '🚫 DETECTED' : '✅ CLEAR' },
+        { label: 'Sanctions Screening', status: data.wallet.risk_factors?.sanctioned?.present ? '⚠️ FLAGGED' : '✅ CLEAR' },
+        { label: 'Darknet Exposure', status: data.wallet.risk_factors?.dark_market_exposure?.present ? '🚫 DETECTED' : '✅ CLEAR' },
         { label: 'Mixer Interaction', status: data.wallet.risk_factors?.mixer_usage ? '⚠️ FLAGGED' : '✅ CLEAR' },
         { label: 'Entity Attribution', status: data.wallet.entity_attribution?.confidence ? `✅ ${Math.round(data.wallet.entity_attribution.confidence * 100)}%` : '⚠️ LOW' }
       ];
