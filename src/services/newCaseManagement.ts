@@ -236,7 +236,7 @@ export const getCaseLinkedLookups = async (caseId: string, userId: string): Prom
 
 // Service class to match the expected interface
 class NewCaseManagementService {
-  async getAllCases(): Promise<Case[]> => {
+  async getAllCases(): Promise<Case[]> {
     const { data, error } = await supabase
       .from('cases')
       .select('*')
