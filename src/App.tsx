@@ -1,50 +1,44 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Landing from './pages/Landing';
+import AuthPage from './pages/Auth';
+import Index from './pages/Index';
+import WalletTransactionFlow from './pages/WalletTransactionFlow';
+import AllRecords from './pages/AllRecords';
+import BulkAnalysis from './pages/BulkAnalysis';
+import AuditLogs from './pages/AuditLogs';
+import ApiDocs from './pages/ApiDocs';
+import NotFound from './pages/NotFound';
+import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { QueryClient } from 'react-query';
+import CaseManagementPage from './pages/CaseManagement';
+import CasesPage from './pages/Cases';
+import CaseViewPage from './pages/CaseView';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ThemeProvider } from "@/contexts/ThemeContext";
-import Index from "./pages/Index";
-import Landing from "./pages/Landing";
-import CaseManagementPage from "./pages/CaseManagement";
-import NotFound from "./pages/NotFound";
-import ApiDocs from "./pages/ApiDocs";
-import BulkAnalysis from "./pages/BulkAnalysis";
-import AllRecords from "./pages/AllRecords";
-import AuditLogs from "./pages/AuditLogs";
-import WalletTransactionFlow from "./pages/WalletTransactionFlow";
-import { AuthPage } from "./components/auth/AuthPage";
-
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/dashboard" element={<Index />} />
-              <Route path="/record/:recordId" element={<Index />} />
-              <Route path="/wallets/:recordId/flow" element={<WalletTransactionFlow />} />
-              <Route path="/cases" element={<CaseManagementPage />} />
-              <Route path="/all-records" element={<AllRecords />} />
-              <Route path="/bulk-analysis" element={<BulkAnalysis />} />
-              <Route path="/audit-logs" element={<AuditLogs />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/api-docs" element={<ApiDocs />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/dashboard" element={<Index />} />
+            <Route path="/cases" element={<CasesPage />} />
+            <Route path="/case/:caseId" element={<CaseViewPage />} />
+            <Route path="/case-management" element={<CaseManagementPage />} />
+            <Route path="/record/:recordId" element={<WalletTransactionFlow />} />
+            <Route path="/all-records" element={<AllRecords />} />
+            <Route path="/bulk-analysis" element={<BulkAnalysis />} />
+            <Route path="/audit-logs" element={<AuditLogs />} />
+            <Route path="/api-docs" element={<ApiDocs />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
+    </AuthProvider>
+  );
+}
 
 export default App;
