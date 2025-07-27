@@ -1,232 +1,247 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Shield, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  BarChart,
-  CreditCard,
-  Package,
-  FileText,
-  Settings,
-  Folder,
-  MessageSquare,
-  HelpCircle,
-  ListChecks,
-  Network,
-  Database,
-  Lock,
-  Users,
-  AlertTriangle,
-} from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { UserDropdown } from '@/components/UserDropdown';
+import { WalletLookupPanel } from '@/components/WalletLookupPanel';
+import { AnalystDashboard } from '@/components/AnalystDashboard';
+import EnhancedWalletResults from '@/components/EnhancedWalletResults';
+import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
+import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
+import { riskFactorsService } from '@/services/riskFactors';
 
 const Index = () => {
-  const { user, signOut } = useAuth();
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const { recordId } = useParams();
+  const [walletAddress, setWalletAddress] = useState('');
+  const { isAnalyzing, analyzeWallet, generateReport, analysisData } = useWalletAnalysis();
+  const [isLoadingWalletData, setIsLoadingWalletData] = useState(false);
+  const [recordNotFound, setRecordNotFound] = useState(false);
+  const [walletData, setWalletData] = useState<any>(null);
+  const [riskFactors, setRiskFactors] = useState([]);
+  const [sanctionsMatches, setSanctionsMatches] = useState([]);
 
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
 
-    return () => clearInterval(intervalId);
-  }, []);
+  useEffect(() => {
+    if (recordId && user) {
+      console.log('🔄 Loading data for record:', recordId);
 
-  const formattedTime = currentTime.toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+      setIsLoadingWalletData(true);
+      setRecordNotFound(false);
 
-  if (!user) {
+      const loadWalletData = async () => {
+        try {
+          if (analysisData && analysisData.recordId === recordId && analysisData.isTemporary === true) {
+            console.log('✅ Using temporary analysis data from current session');
+            setWalletData(analysisData);
+            setRecordNotFound(false);
+            setIsLoadingWalletData(false);
+            return;
+          }
+
+          const result = await supabaseLookupRecords.getLookupRecordById(recordId, user.id);
+
+          if (result.success && result.record) {
+            console.log('✅ Found record in database:', result.record);
+
+            const loadedWalletData = {
+              recordId: result.record.record_id || result.record.id,
+              address: result.record.wallet_address,
+              network: result.record.network,
+              risk_score: result.record.risk_score,
+              risk_level: result.record.risk_level,
+              is_case: result.record.is_case,
+              case_id: result.record.case_id,
+              case_status: result.record.case_status,
+              case_created_at: result.record.case_created_at,
+              ...(result.record.analysis_data &&
+                typeof result.record.analysis_data === 'object' &&
+                result.record.analysis_data !== null
+                ? result.record.analysis_data
+                : {})
+            };
+
+            setWalletData(loadedWalletData);
+            setRecordNotFound(false);
+
+            // Fetch risk factors data
+            try {
+              console.log('🔍 Fetching risk factors for record:', result.record.id);
+              const fetchedFactors = await riskFactorsService.getRiskFactors(result.record.id);
+              console.log('✅ Risk factors fetched:', fetchedFactors);
+              setRiskFactors(fetchedFactors);
+            } catch (error) {
+              console.error('❌ Failed to fetch risk factors:', error);
+              setRiskFactors([]);
+            }
+
+            // Fetch sanctions screening data
+            try {
+              console.log('🔍 Fetching sanctions screening for record:', result.record.id);
+              const fetchedSanctions = await riskFactorsService.getSanctionsScreening(result.record.id);
+              console.log('✅ Sanctions screening fetched:', fetchedSanctions);
+              setSanctionsMatches(fetchedSanctions);
+            } catch (error) {
+              console.error('❌ Failed to fetch sanctions screening:', error);
+              setSanctionsMatches([]);
+            }
+          } else {
+            console.error('❌ Record not found in database:', result.error);
+            setRecordNotFound(true);
+          }
+        } catch (error) {
+          console.error('Failed to load wallet data:', error);
+          setRecordNotFound(true);
+        } finally {
+          setIsLoadingWalletData(false);
+        }
+      };
+
+      loadWalletData();
+    }
+  }, [recordId, user, analysisData]);
+
+  const handleAnalyze = async () => {
+    if (!walletAddress.trim()) return;
+
+    console.log('🚀 Starting analysis for:', walletAddress);
+    try {
+      const result = await analyzeWallet(walletAddress);
+      if (result && result.recordId) {
+        console.log('🚀 Navigating to results with recordId:', result.recordId);
+        navigate(`/record/${result.recordId}`, { replace: true });
+      }
+    } catch (error) {
+      console.error('Analysis failed:', error);
+    }
+  };
+
+  const handleBack = () => {
+    navigate('/dashboard');
+  };
+
+  const handleViewFlow = () => {
+    console.log('View transaction flow');
+  };
+
+  const handleGenerateReport = () => {
+    generateReport(walletAddress);
+  };
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
-        <Card className="max-w-md w-full p-8 bg-white/90 backdrop-blur dark:bg-slate-900/90 shadow-lg border-0">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center">
-              Authentication Required
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-slate-600 dark:text-slate-400 mb-4">
-              Please <a href="/auth" className="text-blue-500 hover:underline">log in</a> to access the dashboard.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  if (recordId) {
+    if (isLoadingWalletData) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-slate-600 dark:text-slate-400">Loading record data...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (recordNotFound || !walletData) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+              Record Not Found
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 mb-4">
+              Could not load wallet data for record ID: {recordId}
+            </p>
+            <Button onClick={handleBack}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <EnhancedWalletResults
+        wallet={walletData}
+        onBack={handleBack}
+        onViewFlow={handleViewFlow}
+        onGenerateReport={handleGenerateReport}
+        recordId={recordId}
+        riskFactors={riskFactors}
+        sanctionsMatches={sanctionsMatches}
+      />
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/80 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                Dashboard
-              </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Welcome, {user.email}! {formattedTime}
-              </p>
+            <div className="flex items-center">
+              <Shield className="w-6 h-6 mr-3 text-primary" />
+              <div>
+                <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                  <span className="text-blue-600 dark:text-blue-400">Rìan</span> Intelligence
+                </h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Blockchain Investigation Platform
+                </p>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <ThemeToggle />
-              <Button variant="outline" size="sm" onClick={signOut}>
-                Logout
-              </Button>
-            </div>
+            <UserDropdown />
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Navigation */}
-          <Card className="bg-white/90 backdrop-blur dark:bg-slate-900/90">
+        {/* Top Row - Wallet Analysis Panel */}
+        <div className="mb-10">
+          <div className="mb-4 text-sm text-slate-600 dark:text-slate-400 uppercase tracking-wide font-medium">
+            Investigate a Wallet Address
+          </div>
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md shadow-xl border border-slate-200 dark:border-slate-700">
             <CardHeader>
-              <CardTitle>Navigation</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800 dark:text-slate-200">
+                <Shield className="w-5 h-5 text-primary" />
+                Wallet Intelligence Lookup
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
+                  Live
+                </span>
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Button
-                onClick={() => navigate('/dashboard')}
-                className="w-full justify-start bg-primary hover:bg-primary/90 text-white"
-              >
-                <BarChart className="w-4 h-4 mr-2" />
-                Dashboard
-              </Button>
-              <Button
-                onClick={() => navigate('/record/new')}
-                className="w-full justify-start bg-primary hover:bg-primary/90 text-white"
-              >
-                <CreditCard className="w-4 h-4 mr-2" />
-                Wallet Lookup
-              </Button>
-              <Button
-                onClick={() => navigate('/all-records')}
-                className="w-full justify-start bg-primary hover:bg-primary/90 text-white"
-              >
-                <ListChecks className="w-4 h-4 mr-2" />
-                All Records
-              </Button>
-              <Button
-                onClick={() => navigate('/bulk-analysis')}
-                className="w-full justify-start bg-primary hover:bg-primary/90 text-white"
-              >
-                <Package className="w-4 h-4 mr-2" />
-                Bulk Analysis
-              </Button>
-              <Button
-                onClick={() => navigate('/case-management')}
-                className="w-full justify-start bg-primary hover:bg-primary/90 text-white"
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                Case Management
-              </Button>
-              
-              <Button 
-                onClick={() => navigate('/cases')}
-                className="w-full justify-start bg-primary hover:bg-primary/90 text-white"
-              >
-                <Folder className="w-4 h-4 mr-2" />
-                Cases
-              </Button>
-              
-              <Button
-                onClick={() => navigate('/audit-logs')}
-                className="w-full justify-start bg-primary hover:bg-primary/90 text-white"
-              >
-                <Database className="w-4 h-4 mr-2" />
-                Audit Logs
-              </Button>
-              <Button
-                onClick={() => navigate('/api-docs')}
-                className="w-full justify-start bg-primary hover:bg-primary/90 text-white"
-              >
-                <Lock className="w-4 h-4 mr-2" />
-                API Reference
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Support & Resources */}
-          <Card className="bg-white/90 backdrop-blur dark:bg-slate-900/90">
-            <CardHeader>
-              <CardTitle>Support & Resources</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button
-                onClick={() => window.open('https://example.com/community', '_blank')}
-                variant="secondary"
-                className="w-full justify-start"
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Community Forum
-              </Button>
-              <Button
-                onClick={() => window.open('https://example.com/discord', '_blank')}
-                variant="secondary"
-                className="w-full justify-start"
-              >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Join our Discord
-              </Button>
-              <Button
-                onClick={() => window.open('https://example.com/help', '_blank')}
-                variant="secondary"
-                className="w-full justify-start"
-              >
-                <HelpCircle className="w-4 h-4 mr-2" />
-                Help Center
-              </Button>
-              <Button
-                onClick={() => window.open('https://example.com/status', '_blank')}
-                variant="secondary"
-                className="w-full justify-start"
-              >
-                <AlertTriangle className="w-4 h-4 mr-2" />
-                System Status
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Account Settings */}
-          <Card className="bg-white/90 backdrop-blur dark:bg-slate-900/90">
-            <CardHeader>
-              <CardTitle>Account Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button
-                onClick={() => window.open('https://example.com/profile', '_blank')}
-                variant="secondary"
-                className="w-full justify-start"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Manage Profile
-              </Button>
-              <Button
-                onClick={() => window.open('https://example.com/billing', '_blank')}
-                variant="secondary"
-                className="w-full justify-start"
-              >
-                <CreditCard className="w-4 h-4 mr-2" />
-                Billing & Subscription
-              </Button>
-              <Button
-                onClick={() => window.open('https://example.com/preferences', '_blank')}
-                variant="secondary"
-                className="w-full justify-start"
-              >
-                <Network className="w-4 h-4 mr-2" />
-                Preferences
-              </Button>
+            <CardContent>
+              <WalletLookupPanel
+                walletAddress={walletAddress}
+                setWalletAddress={setWalletAddress}
+                onAnalyze={handleAnalyze}
+                isAnalyzing={isAnalyzing}
+              />
             </CardContent>
           </Card>
         </div>
+
+        {/* Main Dashboard Content */}
+        <AnalystDashboard />
       </div>
     </div>
   );
