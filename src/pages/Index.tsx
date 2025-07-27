@@ -22,7 +22,7 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 const Index = () => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
 
@@ -75,7 +75,7 @@ const Index = () => {
             </div>
             <div className="flex items-center space-x-4">
               <ThemeToggle />
-              <Button variant="outline" size="sm" onClick={logout}>
+              <Button variant="outline" size="sm" onClick={signOut}>
                 Logout
               </Button>
             </div>

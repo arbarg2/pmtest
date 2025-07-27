@@ -50,7 +50,7 @@ export async function getAllCases(): Promise<Case[]> {
       throw error;
     }
 
-    return data || [];
+    return (data || []) as Case[];
   } catch (error) {
     console.error('Failed to fetch cases:', error);
     throw error;
@@ -70,7 +70,7 @@ export async function getCaseById(caseId: string): Promise<Case | null> {
       return null;
     }
 
-    return data;
+    return data as Case;
   } catch (error) {
     console.error('Failed to fetch case:', error);
     return null;
@@ -86,8 +86,8 @@ export async function createCase(
       .from('cases')
       .insert({
         case_name: request.case_name,
-        assigned_to: request.assigned_to,
-        overall_risk_level: request.overall_risk_level,
+        assigned_to: request.assigned_to || null,
+        overall_risk_level: request.overall_risk_level || null,
         created_by: userId,
         user_id: userId,
         status: 'new'
@@ -106,7 +106,7 @@ export async function createCase(
       assigned_to: request.assigned_to
     });
 
-    return { success: true, case: data };
+    return { success: true, case: data as Case };
   } catch (error) {
     console.error('Failed to create case:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -137,7 +137,7 @@ export async function updateCase(
     // Log the case update
     await logCaseActivity(caseId, userId, 'case_updated', 'Case updated', request);
 
-    return { success: true, case: data };
+    return { success: true, case: data as Case };
   } catch (error) {
     console.error('Failed to update case:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -183,7 +183,7 @@ export async function getCaseActivityLog(caseId: string): Promise<CaseActivityLo
       throw error;
     }
 
-    return data || [];
+    return (data || []) as CaseActivityLog[];
   } catch (error) {
     console.error('Failed to fetch case activity log:', error);
     throw error;
