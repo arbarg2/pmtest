@@ -121,7 +121,7 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
-          case_id: string
+          case_id?: string
           case_name: string
           created_at?: string
           created_by: string
