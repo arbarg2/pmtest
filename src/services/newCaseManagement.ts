@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { logAuditAction } from '@/utils/auditLogger';
 
 export interface Case {
   id: string;
@@ -21,241 +20,215 @@ export interface CaseActivityLog {
   user_id: string;
   activity_type: string;
   activity_description: string;
-  metadata: any;
+  metadata: Record<string, any>;
   created_at: string;
 }
 
-export interface CreateCaseRequest {
+export interface CreateCaseData {
   case_name: string;
-  assigned_to?: string;
-  overall_risk_level?: 'Low' | 'Medium' | 'High' | 'Critical';
+  assigned_to: string;
+  overall_risk_level: 'Low' | 'Medium' | 'High' | 'Critical';
+  created_by: string;
+  user_id: string;
+  status: 'new' | 'assigned' | 'in_progress' | 'pending_review' | 'cleared' | 'str_filed' | 'closed' | 'on_hold';
 }
 
-export interface UpdateCaseRequest {
+export interface UpdateCaseData {
   case_name?: string;
   status?: 'new' | 'assigned' | 'in_progress' | 'pending_review' | 'cleared' | 'str_filed' | 'closed' | 'on_hold';
   assigned_to?: string;
-  overall_risk_level?: 'Low' | 'Medium' | 'High' | 'Critical';
+  overall_risk_level?: 'Low' | 'Medium' | 'High' | 'Critical' | null;
 }
 
-export async function getAllCases(): Promise<Case[]> {
-  try {
-    const { data, error } = await supabase
-      .from('cases')
-      .select('*')
-      .order('created_at', { ascending: false });
+export const getAllCases = async (userId: string): Promise<Case[]> => {
+  const { data, error } = await supabase
+    .from('cases')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching cases:', error);
-      throw error;
-    }
-
-    return (data || []) as Case[];
-  } catch (error) {
-    console.error('Failed to fetch cases:', error);
+  if (error) {
+    console.error('Error fetching cases:', error);
     throw error;
   }
-}
 
-export async function getCaseById(caseId: string): Promise<Case | null> {
-  try {
-    const { data, error } = await supabase
-      .from('cases')
-      .select('*')
-      .eq('id', caseId)
-      .single();
+  return data as Case[];
+};
 
-    if (error) {
-      console.error('Error fetching case:', error);
+export const getCaseById = async (caseId: string, userId: string): Promise<Case | null> => {
+  const { data, error } = await supabase
+    .from('cases')
+    .select('*')
+    .eq('id', caseId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching case:', error);
+    if (error.code === 'PGRST116') {
       return null;
     }
-
-    return data as Case;
-  } catch (error) {
-    console.error('Failed to fetch case:', error);
-    return null;
-  }
-}
-
-export async function createCase(
-  request: CreateCaseRequest,
-  userId: string
-): Promise<{ success: boolean; case?: Case; error?: string }> {
-  try {
-    const { data, error } = await supabase
-      .from('cases')
-      .insert({
-        case_name: request.case_name,
-        assigned_to: request.assigned_to || null,
-        overall_risk_level: request.overall_risk_level || null,
-        created_by: userId,
-        user_id: userId,
-        status: 'new'
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating case:', error);
-      return { success: false, error: error.message };
-    }
-
-    // Log the case creation
-    await logCaseActivity(data.id, userId, 'case_created', 'Case created', {
-      case_name: request.case_name,
-      assigned_to: request.assigned_to
-    });
-
-    return { success: true, case: data as Case };
-  } catch (error) {
-    console.error('Failed to create case:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
-
-export async function updateCase(
-  caseId: string,
-  request: UpdateCaseRequest,
-  userId: string
-): Promise<{ success: boolean; case?: Case; error?: string }> {
-  try {
-    const { data, error } = await supabase
-      .from('cases')
-      .update({
-        ...request,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', caseId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating case:', error);
-      return { success: false, error: error.message };
-    }
-
-    // Log the case update
-    await logCaseActivity(caseId, userId, 'case_updated', 'Case updated', request);
-
-    return { success: true, case: data as Case };
-  } catch (error) {
-    console.error('Failed to update case:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
-
-export async function logCaseActivity(
-  caseId: string,
-  userId: string,
-  activityType: string,
-  description: string,
-  metadata: any = {}
-): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from('case_activity_log')
-      .insert({
-        case_id: caseId,
-        user_id: userId,
-        activity_type: activityType,
-        activity_description: description,
-        metadata
-      });
-
-    if (error) {
-      console.error('Error logging case activity:', error);
-    }
-  } catch (error) {
-    console.error('Failed to log case activity:', error);
-  }
-}
-
-export async function getCaseActivityLog(caseId: string): Promise<CaseActivityLog[]> {
-  try {
-    const { data, error } = await supabase
-      .from('case_activity_log')
-      .select('*')
-      .eq('case_id', caseId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching case activity log:', error);
-      throw error;
-    }
-
-    return (data || []) as CaseActivityLog[];
-  } catch (error) {
-    console.error('Failed to fetch case activity log:', error);
     throw error;
   }
-}
 
-export async function linkLookupRecordToCase(
-  recordId: string,
-  caseId: string,
-  userId: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase
-      .from('investigation_records')
-      .update({ case_id_v2: caseId })
-      .eq('id', recordId);
+  return data as Case;
+};
 
-    if (error) {
-      console.error('Error linking lookup record to case:', error);
-      return { success: false, error: error.message };
-    }
+export const createCase = async (caseData: CreateCaseData): Promise<Case> => {
+  // Don't include case_id in the insert data - it will be auto-generated by the trigger
+  const insertData = {
+    case_name: caseData.case_name,
+    assigned_to: caseData.assigned_to,
+    overall_risk_level: caseData.overall_risk_level,
+    created_by: caseData.created_by,
+    user_id: caseData.user_id,
+    status: caseData.status
+  };
 
-    // Log the linking activity
-    await logCaseActivity(caseId, userId, 'record_linked', 'Lookup record linked to case', {
-      record_id: recordId
+  const { data, error } = await supabase
+    .from('cases')
+    .insert(insertData)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating case:', error);
+    throw error;
+  }
+
+  const newCase = data as Case;
+
+  // Log the case creation activity
+  await logCaseActivity({
+    case_id: newCase.id,
+    user_id: caseData.user_id,
+    activity_type: 'case_created',
+    activity_description: `Case "${caseData.case_name}" created`,
+    metadata: { case_name: caseData.case_name }
+  });
+
+  return newCase;
+};
+
+export const updateCase = async (caseId: string, updateData: UpdateCaseData, userId: string): Promise<Case> => {
+  const { data, error } = await supabase
+    .from('cases')
+    .update({ ...updateData, updated_at: new Date().toISOString() })
+    .eq('id', caseId)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating case:', error);
+    throw error;
+  }
+
+  const updatedCase = data as Case;
+
+  // Log the case update activity
+  await logCaseActivity({
+    case_id: caseId,
+    user_id: userId,
+    activity_type: 'case_updated',
+    activity_description: `Case updated`,
+    metadata: updateData
+  });
+
+  return updatedCase;
+};
+
+export const deleteCase = async (caseId: string, userId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('cases')
+    .delete()
+    .eq('id', caseId)
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error deleting case:', error);
+    throw error;
+  }
+};
+
+export const getCaseActivityLog = async (caseId: string, userId: string): Promise<CaseActivityLog[]> => {
+  const { data, error } = await supabase
+    .from('case_activity_log')
+    .select('*')
+    .eq('case_id', caseId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching case activity log:', error);
+    throw error;
+  }
+
+  // Verify user has access to this case
+  const caseExists = await getCaseById(caseId, userId);
+  if (!caseExists) {
+    throw new Error('Access denied or case not found');
+  }
+
+  return data as CaseActivityLog[];
+};
+
+export const logCaseActivity = async (activityData: {
+  case_id: string;
+  user_id: string;
+  activity_type: string;
+  activity_description: string;
+  metadata?: Record<string, any>;
+}): Promise<void> => {
+  const { error } = await supabase
+    .from('case_activity_log')
+    .insert({
+      case_id: activityData.case_id,
+      user_id: activityData.user_id,
+      activity_type: activityData.activity_type,
+      activity_description: activityData.activity_description,
+      metadata: activityData.metadata || {}
     });
 
-    return { success: true };
-  } catch (error) {
-    console.error('Failed to link lookup record to case:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  if (error) {
+    console.error('Error logging case activity:', error);
+    throw error;
   }
-}
+};
 
-export async function getCaseWithLookupRecords(caseId: string): Promise<{
-  case: Case;
-  lookupRecords: any[];
-} | null> {
-  try {
-    // Get case details
-    const caseData = await getCaseById(caseId);
-    if (!caseData) return null;
+export const linkLookupToCase = async (lookupId: string, caseId: string, userId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('investigation_records')
+    .update({ case_id_v2: caseId })
+    .eq('id', lookupId)
+    .eq('user_id', userId);
 
-    // Get linked lookup records
-    const { data: lookupRecords, error } = await supabase
-      .from('investigation_records')
-      .select('*')
-      .eq('case_id_v2', caseId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching lookup records for case:', error);
-      throw error;
-    }
-
-    return {
-      case: caseData,
-      lookupRecords: lookupRecords || []
-    };
-  } catch (error) {
-    console.error('Failed to fetch case with lookup records:', error);
-    return null;
+  if (error) {
+    console.error('Error linking lookup to case:', error);
+    throw error;
   }
-}
 
-export const newCaseManagementService = {
-  getAllCases,
-  getCaseById,
-  createCase,
-  updateCase,
-  logCaseActivity,
-  getCaseActivityLog,
-  linkLookupRecordToCase,
-  getCaseWithLookupRecords
+  // Log the linking activity
+  await logCaseActivity({
+    case_id: caseId,
+    user_id: userId,
+    activity_type: 'lookup_linked',
+    activity_description: `Lookup record linked to case`,
+    metadata: { lookup_id: lookupId }
+  });
+};
+
+export const getCaseLinkedLookups = async (caseId: string, userId: string): Promise<any[]> => {
+  const { data, error } = await supabase
+    .from('investigation_records')
+    .select('*')
+    .eq('case_id_v2', caseId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching case linked lookups:', error);
+    throw error;
+  }
+
+  return data || [];
 };
