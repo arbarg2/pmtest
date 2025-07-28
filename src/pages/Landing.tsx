@@ -43,15 +43,15 @@ const Landing = () => {
             </Badge>
             <h1 className="text-4xl md:text-6xl font-bold text-slate-900 dark:text-slate-100 mb-6 animate-fade-in">
               <span className="text-accent font-extrabold animate-shimmer">Lightning-Fast</span>{' '}
-              Crypto Wallet & Transaction 
-              <span className="text-accent block animate-shimmer">Risk Intelligence</span>
+              Crypto Wallet Risk Insights & 
+              <span className="text-accent block animate-shimmer">Automated Compliance Reports</span>
             </h1>
             <div className="space-y-4 mb-8 max-w-4xl mx-auto animate-slide-up">
               <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 font-medium">
-                Built for institutional compliance and investigation teams.
+                Built for institutional compliance and AML investigation teams.
               </p>
               <p className="text-lg md:text-xl text-slate-500 dark:text-slate-400">
-                Gain advanced blockchain forensics, comprehensive risk assessment, and behavioral analysis for unparalleled security intelligence.
+                Gain clear, AI-driven risk assessments and regulatory-ready reports, empowering your team to manage crypto compliance with confidence.
               </p>
             </div>
             <div className="flex justify-center animate-scale-in">
@@ -73,22 +73,22 @@ const Landing = () => {
                   <div className="w-16 h-16 bg-gradient-to-br from-accent/10 to-accent/20 rounded-2xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-200">
                     <Zap className="w-8 h-8 text-accent" />
                   </div>
-                  <h3 className="font-semibold text-lg mb-2 text-slate-900 dark:text-slate-100">Real-Time Analysis</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Lightning-fast blockchain forensics with comprehensive transaction mapping</p>
+                  <h3 className="font-semibold text-lg mb-2 text-slate-900 dark:text-slate-100">Rapid Analysis</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Lightning-fast crypto analysis delivering immediate risk summaries.</p>
                 </div>
                 <div className="text-center group">
                   <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-primary/20 rounded-2xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-200">
                     <Shield className="w-8 h-8 text-primary" />
                   </div>
-                  <h3 className="font-semibold text-lg mb-2 text-slate-900 dark:text-slate-100">Advanced Risk Intelligence</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Multi-layer risk assessment with entity attribution and behavioral analysis</p>
+                  <h3 className="font-semibold text-lg mb-2 text-slate-900 dark:text-slate-100">AI-Driven Risk Assessment</h3>
+                  <p className="text-slate-600 dark:text-slate-400">AI-driven risk assessment with relevant entity insights and actionable flags.</p>
                 </div>
                 <div className="text-center group">
                   <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/20 dark:to-purple-800/20 rounded-2xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-200">
                     <Eye className="w-8 h-8 text-purple-600 dark:text-purple-400" />
                   </div>
-                  <h3 className="font-semibold text-lg mb-2 text-slate-900 dark:text-slate-100">Forensic Reporting</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Detailed investigation reports with audit trails and compliance documentation</p>
+                  <h3 className="font-semibold text-lg mb-2 text-slate-900 dark:text-slate-100">Automated Compliance Reports</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Generate clear, auditable reports and justify decisions with ease.</p>
                 </div>
               </div>
             </div>
@@ -101,7 +101,7 @@ const Landing = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12 animate-fade-in">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-              See the Unseen, Streamline Compliance, Built for Trust
+              Uncover Clear Risks, Streamline Compliance, Built for Trust
             </h2>
             <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
               Empower your compliance and investigation teams with institutional-grade blockchain intelligence
@@ -114,12 +114,11 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-gradient-to-br from-accent/10 to-accent/20 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200">
                   <Globe className="w-6 h-6 text-accent" />
                 </div>
-                <CardTitle className="text-slate-900 dark:text-slate-100">See the Unseen</CardTitle>
+                <CardTitle className="text-slate-900 dark:text-slate-100">Uncover Clear Risks</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-slate-600 dark:text-slate-400">
-                  Uncover hidden connections, trace complex transaction flows, and identify risk patterns 
-                  invisible to traditional analysis methods.
+                  Rapidly identify critical risk indicators, clearly understand transaction flows, and transform complex blockchain data into actionable insights.
                 </p>
               </CardContent>
             </Card>
@@ -133,8 +132,7 @@ const Landing = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-slate-600 dark:text-slate-400">
-                  Automate AML screening, sanctions checking, and regulatory reporting with 
-                  comprehensive audit trails and investigation documentation.
+                  Automate wallet risk assessments, streamline sanctions checking, and generate regulatory-ready reports with comprehensive audit trails.
                 </p>
               </CardContent>
             </Card>
