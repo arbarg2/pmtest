@@ -20,9 +20,10 @@ const Landing = () => {
       <header className="border-b border-slate-200/50 bg-white/90 backdrop-blur-xl sticky top-0 z-50 dark:bg-slate-900/90 dark:border-slate-700/50">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 animate-fade-in">
-              <Shield className="w-8 h-8 text-primary animate-pulse-slow" />
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Rìan</h1>
+            <div className="flex items-center space-x-4 animate-fade-in">
+              {/* Enhanced logo structure ready for future custom logo */}
+              <Shield className="w-10 h-10 text-primary animate-pulse-slow" />
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Rìan</h1>
             </div>
             <Button 
               onClick={() => navigate('/auth')}
@@ -46,6 +47,7 @@ const Landing = () => {
               Crypto Wallet Risk Insights & 
               <span className="text-accent block animate-shimmer">Automated Compliance Reports</span>
             </h1>
+            <p className="text-sm text-slate-400 dark:text-slate-500 mt-2 mb-6 animate-fade-in">The Rìan Difference.</p>
             <div className="space-y-4 mb-8 max-w-4xl mx-auto animate-slide-up">
               <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 font-medium">
                 Built for institutional compliance and AML investigation teams.
