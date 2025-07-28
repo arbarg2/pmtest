@@ -1,30 +1,23 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Search, 
+  Filter, 
   Eye, 
-  Filter,
   Calendar,
-  Hash,
   AlertTriangle,
-  CheckCircle,
-  Shield
+  Shield,
+  User,
+  UserCheck
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 
 interface InvestigationRecord {
@@ -32,237 +25,324 @@ interface InvestigationRecord {
   record_id: string;
   wallet_address: string;
   network: string;
-  risk_score: number;
   risk_level: string;
-  analysis_data: any;
+  risk_score: number;
+  investigation_status: string;
+  analyst_notes: string;
   created_at: string;
   updated_at: string;
+  is_case: boolean;
+  case_id?: string;
+  case_status?: string;
 }
 
-export function InvestigationRecordsTable() {
-  const [records, setRecords] = useState<InvestigationRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [riskLevelFilter, setRiskLevelFilter] = useState<string>('all');
+export const InvestigationRecordsTable = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const [records, setRecords] = useState<InvestigationRecord[]>([]);
+  const [filteredRecords, setFilteredRecords] = useState<InvestigationRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [riskFilter, setRiskFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [analystFilter, setAnalystFilter] = useState('all');
+  const [uniqueAnalysts, setUniqueAnalysts] = useState<string[]>([]);
 
   useEffect(() => {
     if (user) {
-      fetchRecords();
+      loadRecords();
     }
-  }, [user, searchTerm, riskLevelFilter]);
+  }, [user]);
 
-  const fetchRecords = async () => {
+  useEffect(() => {
+    filterRecords();
+  }, [records, searchTerm, riskFilter, statusFilter, analystFilter]);
+
+  const loadRecords = async () => {
+    if (!user) return;
+    
+    setLoading(true);
     try {
-      setLoading(true);
-      const result = await supabaseLookupRecords.getLookupRecords(user?.id || '');
+      const result = await supabaseLookupRecords.getLookupRecords(user.id);
       
       if (result.success && result.records) {
-        let filteredRecords = result.records;
+        setRecords(result.records);
         
-        // Apply search filter
-        if (searchTerm) {
-          filteredRecords = filteredRecords.filter(record => 
-            record.wallet_address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            record.record_id.toLowerCase().includes(searchTerm.toLowerCase())
-          );
-        }
-        
-        // Apply risk level filter
-        if (riskLevelFilter !== 'all') {
-          filteredRecords = filteredRecords.filter(record => 
-            record.risk_level === riskLevelFilter
-          );
-        }
-        
-        setRecords(filteredRecords);
-      } else {
-        console.error('Error fetching records:', result.error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch investigation records",
-          variant: "destructive",
+        // Extract unique analysts from records
+        const analysts = new Set<string>();
+        result.records.forEach(record => {
+          const notes = record.analyst_notes || '';
+          const assignedMatch = notes.match(/Assigned to: (.+)/);
+          if (assignedMatch) {
+            analysts.add(assignedMatch[1]);
+          }
         });
+        setUniqueAnalysts(Array.from(analysts));
       }
     } catch (error) {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch investigation records",
-        variant: "destructive",
-      });
+      console.error('Error loading records:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const getRiskConfig = (riskLevel: string) => {
-    switch (riskLevel) {
-      case 'Low':
-        return {
-          color: 'text-green-700 bg-green-50 border-green-200 dark:text-green-300 dark:bg-green-950 dark:border-green-800',
-          icon: <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-        };
-      case 'Medium':
-        return {
-          color: 'text-yellow-700 bg-yellow-50 border-yellow-200 dark:text-yellow-300 dark:bg-yellow-950 dark:border-yellow-800',
-          icon: <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-        };
-      case 'High':
-      case 'Critical':
-        return {
-          color: 'text-red-700 bg-red-50 border-red-200 dark:text-red-300 dark:bg-red-950 dark:border-red-800',
-          icon: <Shield className="w-4 h-4 text-red-600 dark:text-red-400" />
-        };
-      default:
-        return {
-          color: 'text-gray-700 bg-gray-50 border-gray-200 dark:text-gray-300 dark:bg-gray-950 dark:border-gray-800',
-          icon: <Shield className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-        };
+  const filterRecords = () => {
+    let filtered = [...records];
+
+    // Search filter (wallet address, record ID, or analyst name)
+    if (searchTerm) {
+      filtered = filtered.filter(record => {
+        const searchLower = searchTerm.toLowerCase();
+        const assignedAnalyst = extractAnalystFromNotes(record.analyst_notes);
+        
+        return (
+          record.wallet_address.toLowerCase().includes(searchLower) ||
+          record.record_id.toLowerCase().includes(searchLower) ||
+          (assignedAnalyst && assignedAnalyst.toLowerCase().includes(searchLower))
+        );
+      });
+    }
+
+    // Risk level filter
+    if (riskFilter !== 'all') {
+      filtered = filtered.filter(record => record.risk_level === riskFilter);
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(record => record.investigation_status === statusFilter);
+    }
+
+    // Analyst filter
+    if (analystFilter !== 'all') {
+      filtered = filtered.filter(record => {
+        const assignedAnalyst = extractAnalystFromNotes(record.analyst_notes);
+        return assignedAnalyst === analystFilter;
+      });
+    }
+
+    setFilteredRecords(filtered);
+  };
+
+  const extractAnalystFromNotes = (notes: string): string | null => {
+    if (!notes) return null;
+    const assignedMatch = notes.match(/Assigned to: (.+)/);
+    return assignedMatch ? assignedMatch[1] : null;
+  };
+
+  const getRiskColor = (risk: string) => {
+    switch (risk) {
+      case 'High': return 'bg-red-100 text-red-800 border-red-200';
+      case 'Medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'Low': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'assigned': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'cleared': return 'bg-green-100 text-green-800 border-green-200';
+      case 'escalated': return 'bg-red-100 text-red-800 border-red-200';
+      case 'blocked': return 'bg-gray-100 text-gray-800 border-gray-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
   };
 
-  const handleViewDetails = (record: InvestigationRecord) => {
-    console.log('Viewing record:', record);
-    // Fixed navigation to use the correct route pattern
-    navigate(`/record/${record.record_id}`);
+  const handleViewRecord = (record: InvestigationRecord) => {
+    navigate(`/record/${record.id}`);
   };
 
-  if (!user) {
+  if (loading) {
     return (
-      <Card className="bg-white/90 backdrop-blur shadow-xl border-0 dark:bg-slate-900/90">
-        <CardContent className="p-8 text-center">
-          <p className="text-slate-600 dark:text-slate-300">
-            Please sign in to view your investigation records.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   return (
-    <Card className="bg-white/90 backdrop-blur shadow-xl border-0 dark:bg-slate-900/90">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Hash className="w-6 h-6 mr-3 text-blue-600 dark:text-blue-400" />
-            Investigation Records
+    <div className="space-y-6">
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            Filters & Search
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search by address, ID, or analyst..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            {/* Risk Filter */}
+            <Select value={riskFilter} onValueChange={setRiskFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by risk" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Risk Levels</SelectItem>
+                <SelectItem value="High">High Risk</SelectItem>
+                <SelectItem value="Medium">Medium Risk</SelectItem>
+                <SelectItem value="Low">Low Risk</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="assigned">Assigned</SelectItem>
+                <SelectItem value="cleared">Cleared</SelectItem>
+                <SelectItem value="escalated">Escalated</SelectItem>
+                <SelectItem value="blocked">Blocked</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Analyst Filter */}
+            <Select value={analystFilter} onValueChange={setAnalystFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by analyst" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Analysts</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {uniqueAnalysts.map(analyst => (
+                  <SelectItem key={analyst} value={analyst}>{analyst}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Clear Filters */}
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSearchTerm('');
+                setRiskFilter('all');
+                setStatusFilter('all');
+                setAnalystFilter('all');
+              }}
+            >
+              Clear Filters
+            </Button>
           </div>
-          <Badge variant="outline" className="text-blue-600 dark:text-blue-400">
-            {records.length} Records
-          </Badge>
-        </CardTitle>
-        
-        {/* Search and Filter Controls */}
-        <div className="flex flex-col sm:flex-row gap-4 mt-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <Input
-              placeholder="Search by address or Record ID..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 dark:bg-slate-800 dark:border-slate-600"
-            />
-          </div>
-          
-          <Select value={riskLevelFilter} onValueChange={setRiskLevelFilter}>
-            <SelectTrigger className="w-48 dark:bg-slate-800 dark:border-slate-600">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Filter by risk level" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Risk Levels</SelectItem>
-              <SelectItem value="Low">Low</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="High">High</SelectItem>
-              <SelectItem value="Critical">Critical</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-2 text-slate-600 dark:text-slate-300">Loading records...</p>
-          </div>
-        ) : records.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-slate-600 dark:text-slate-300">
-              No investigation records found. Start by analyzing a wallet address.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
+        </CardContent>
+      </Card>
+
+      {/* Records Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Investigation Records ({filteredRecords.length})</span>
+            <Button variant="outline" onClick={loadRecords}>
+              Refresh
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filteredRecords.length === 0 ? (
+            <div className="text-center py-8">
+              <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-600 mb-2">
+                {records.length === 0 ? 'No Records Found' : 'No Matching Records'}
+              </h3>
+              <p className="text-gray-500">
+                {records.length === 0 
+                  ? 'Start by performing wallet analysis to create investigation records.'
+                  : 'Try adjusting your search filters to find the records you\'re looking for.'
+                }
+              </p>
+            </div>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Record ID</TableHead>
-                  <TableHead>Address</TableHead>
+                  <TableHead>Wallet Address</TableHead>
                   <TableHead>Network</TableHead>
-                  <TableHead>Risk Score</TableHead>
                   <TableHead>Risk Level</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Assigned To</TableHead>
+                  <TableHead>Created</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {records.map((record) => {
-                  const riskConfig = getRiskConfig(record.risk_level);
+                {filteredRecords.map((record) => {
+                  const assignedAnalyst = extractAnalystFromNotes(record.analyst_notes);
+                  
                   return (
-                    <TableRow key={record.id}>
-                      <TableCell>
-                        <code className="text-sm font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-blue-600 dark:text-blue-400">
+                    <TableRow key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {record.is_case && (
+                            <Badge variant="secondary" className="text-xs">CASE</Badge>
+                          )}
                           {record.record_id}
-                        </code>
-                      </TableCell>
-                      <TableCell>
-                        <code className="text-sm font-mono break-all">
-                          {record.wallet_address.slice(0, 12)}...{record.wallet_address.slice(-8)}
-                        </code>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{record.network}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-bold text-lg">
-                          {record.risk_score.toFixed(1)}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={`${riskConfig.color} text-xs px-2 py-1 font-medium`}>
-                          {riskConfig.icon}
-                          <span className="ml-1">{record.risk_level}</span>
+                        <code className="bg-slate-100 px-2 py-1 rounded text-xs">
+                          {record.wallet_address.slice(0, 8)}...{record.wallet_address.slice(-6)}
+                        </code>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="uppercase text-xs">
+                          {record.network}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300">
+                        <Badge className={getRiskColor(record.risk_level)}>
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          {record.risk_level}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(record.investigation_status)}>
+                          {record.investigation_status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {assignedAnalyst ? (
+                          <div className="flex items-center gap-2">
+                            <UserCheck className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-600">{assignedAnalyst}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-gray-500">
+                            <User className="w-4 h-4" />
+                            <span className="text-sm">Unassigned</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
                           <Calendar className="w-4 h-4" />
-                          <span>{formatDate(record.created_at)}</span>
+                          {new Date(record.created_at).toLocaleDateString()}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
+                        <Button 
+                          variant="outline" 
                           size="sm"
-                          onClick={() => handleViewDetails(record)}
-                          className="flex items-center"
+                          onClick={() => handleViewRecord(record)}
                         >
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -270,9 +350,9 @@ export function InvestigationRecordsTable() {
                 })}
               </TableBody>
             </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
-}
+};

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface LookupRecord {
@@ -18,6 +19,7 @@ export interface LookupRecord {
   created_at: string;
   updated_at: string;
   user_id: string;
+  assigned_analyst?: string;
 }
 
 export interface CreateLookupRecordData {

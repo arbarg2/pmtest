@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import RegulatorJustification from './RegulatorJustification';
 import { regulatorReportExportService } from '@/services/regulatorReportExport';
 import EmailReportDialog from './EmailReportDialog';
+import { AnalystAssignment } from './AnalystAssignment';
 
 // Import all dashboard components
 import WalletOverview from '@/components/dashboard/WalletOverview';
@@ -52,6 +54,7 @@ const EnhancedWalletResults = ({
   const [notesKey, setNotesKey] = useState(0);
   const [isEmailingReport, setIsEmailingReport] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [assignedAnalyst, setAssignedAnalyst] = useState<string | undefined>();
   const analystNotesRef = useRef<AnalystNotesThreadRef>(null);
 
   // Initialize case data from wallet/record data
@@ -62,6 +65,13 @@ const EnhancedWalletResults = ({
       setCaseId(wallet.case_id);
       setCaseStatus(wallet.case_status || 'open');
       setCaseCreatedAt(wallet.case_created_at);
+      
+      // Extract assigned analyst from analyst_notes or a dedicated field
+      const notes = wallet.analyst_notes || '';
+      const assignedMatch = notes.match(/Assigned to: (.+)/);
+      if (assignedMatch) {
+        setAssignedAnalyst(assignedMatch[1]);
+      }
     }
   }, [wallet]);
 
@@ -94,10 +104,11 @@ const EnhancedWalletResults = ({
         caseId,
         caseStatus,
         caseCreatedAt,
+        assignedAnalyst,
         timestamp: new Date().toISOString(),
         reportType: 'wallet_intelligence',
         source: 'rian_platform',
-        emailAddresses: emailAddresses // Add email addresses to the payload
+        emailAddresses: emailAddresses
       };
 
       console.log('📧 Sending report via Edge Function with email addresses:', emailAddresses);
@@ -154,6 +165,10 @@ const EnhancedWalletResults = ({
     }, 500);
   };
 
+  const handleAssignmentChange = (assignee: string) => {
+    setAssignedAnalyst(assignee);
+  };
+
   // Add new handler for regulator report download
   const handleDownloadRegulatorReport = async () => {
     try {
@@ -163,7 +178,7 @@ const EnhancedWalletResults = ({
         caseId: caseId,
         aiSummary: wallet.ai_summary || undefined,
         analystJustification: analystNotes,
-        analystName: 'Current Analyst', // In production, get from auth context
+        analystName: assignedAnalyst || 'Current Analyst',
         timestamp: new Date().toISOString(),
         riskFactors,
         sanctionsMatches
@@ -209,6 +224,14 @@ const EnhancedWalletResults = ({
                   </span>
                   <span>•</span>
                   <span>Comprehensive blockchain forensics analysis</span>
+                  {assignedAnalyst && (
+                    <>
+                      <span>•</span>
+                      <span className="text-blue-600 dark:text-blue-400 font-medium">
+                        Assigned to: {assignedAnalyst}
+                      </span>
+                    </>
+                  )}
                   {wallet.isTemporary && (
                     <>
                       <span>•</span>
@@ -220,15 +243,22 @@ const EnhancedWalletResults = ({
                 </div>
               </div>
             </div>
-            <Button 
-              onClick={() => setIsEmailDialogOpen(true)}
-              disabled={isEmailingReport}
-              size="sm"
-              className="bg-accent hover:bg-accent/90 text-white"
-            >
-              <Mail className="w-4 h-4 mr-2" />
-              {isEmailingReport ? 'Sending...' : 'Email Report'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <AnalystAssignment 
+                recordId={recordId || 'unknown'}
+                currentAssignee={assignedAnalyst}
+                onAssignmentChange={handleAssignmentChange}
+              />
+              <Button 
+                onClick={() => setIsEmailDialogOpen(true)}
+                disabled={isEmailingReport}
+                size="sm"
+                className="bg-accent hover:bg-accent/90 text-white"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                {isEmailingReport ? 'Sending...' : 'Email Report'}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -273,7 +303,7 @@ const EnhancedWalletResults = ({
           <CounterpartyIntelligence wallet={wallet} />
         </div>
 
-        {/* Regulator Justification Section - NEW */}
+        {/* Regulator Justification Section */}
         <div className="mb-8">
           <RegulatorJustification
             wallet={wallet}
