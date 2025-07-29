@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface LookupRecord {
@@ -320,13 +319,14 @@ class SupabaseLookupRecordsService {
     }
   }
 
-  async updateLookupRecord(recordId: string, userId: string, updates: Partial<CreateLookupRecordData>) {
+  async updateLookupRecord(recordId: string, userId: string, updates: any) {
     try {
       console.log('Updating record:', recordId, 'for user:', userId);
       
       const updateData = {
         ...(updates.analyst_notes !== undefined && { analyst_notes: updates.analyst_notes }),
         ...(updates.investigation_status !== undefined && { investigation_status: updates.investigation_status }),
+        ...(updates.assigned_to !== undefined && { assigned_to: updates.assigned_to }),
         ...(updates.analyst_fields?.case_notes !== undefined && { analyst_notes: updates.analyst_fields.case_notes }),
         ...(updates.analyst_fields?.analyst_decision !== undefined && { investigation_status: updates.analyst_fields.analyst_decision }),
         ...(updates.analyst_fields?.tags !== undefined && { tags: updates.analyst_fields.tags }),

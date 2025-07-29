@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UserPlus, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface AnalystAssignmentProps {
@@ -32,21 +33,45 @@ export const AnalystAssignment: React.FC<AnalystAssignmentProps> = ({
 
     setIsAssigning(true);
     try {
+      let assigneeUserId = '';
       let assigneeEmail = '';
       
       if (assignmentType === 'me') {
+        assigneeUserId = user.id;
         assigneeEmail = user.email || '';
       } else {
         if (!analystEmail.trim()) {
           toast.error('Please enter an analyst email address');
+          setIsAssigning(false);
           return;
         }
+        
+        // Look up the user by email to get their user ID
+        const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+        
+        if (userError) {
+          console.error('Error fetching users:', userError);
+          toast.error('Failed to lookup analyst. Please try again.');
+          setIsAssigning(false);
+          return;
+        }
+        
+        const targetUser = userData?.users?.find(u => u.email === analystEmail.trim());
+        
+        if (!targetUser) {
+          toast.error('Analyst with this email address not found');
+          setIsAssigning(false);
+          return;
+        }
+        
+        assigneeUserId = targetUser.id;
         assigneeEmail = analystEmail.trim();
       }
 
-      console.log('🔄 Assigning report to analyst:', assigneeEmail);
+      console.log('🔄 Assigning report to analyst:', assigneeEmail, 'User ID:', assigneeUserId);
       
       const result = await supabaseLookupRecords.updateLookupRecord(recordId, user.id, {
+        assigned_to: assigneeUserId,
         analyst_notes: `Assigned to: ${assigneeEmail}`,
         investigation_status: 'assigned'
       });
