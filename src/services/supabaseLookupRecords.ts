@@ -323,6 +323,45 @@ class SupabaseLookupRecordsService {
     try {
       console.log('🔄 updateLookupRecord called with:', { recordId, userId, updates });
       
+      // First, let's verify the record exists before trying to update
+      console.log('🔍 First, checking if record exists...');
+      
+      const existsCheck = await supabase
+        .from('investigation_records')
+        .select('id, record_id, user_id')
+        .eq('id', recordId)
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      console.log('🔍 Exists check result:', {
+        data: existsCheck.data,
+        error: existsCheck.error
+      });
+      
+      if (!existsCheck.data) {
+        // Try by record_id if internal id didn't work
+        const existsCheckByRecordId = await supabase
+          .from('investigation_records')
+          .select('id, record_id, user_id')
+          .eq('record_id', recordId)
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        console.log('🔍 Exists check by record_id result:', {
+          data: existsCheckByRecordId.data,
+          error: existsCheckByRecordId.error
+        });
+        
+        if (!existsCheckByRecordId.data) {
+          console.error('❌ Record does not exist for this user');
+          return { success: false, error: 'Record not found for this user' };
+        }
+        
+        // Use the internal id for the update
+        recordId = existsCheckByRecordId.data.id;
+        console.log('🔄 Using internal ID for update:', recordId);
+      }
+      
       const updateData = {
         ...(updates.analyst_notes !== undefined && { analyst_notes: updates.analyst_notes }),
         ...(updates.investigation_status !== undefined && { investigation_status: updates.investigation_status }),
@@ -335,50 +374,24 @@ class SupabaseLookupRecordsService {
 
       console.log('📤 Update data prepared:', updateData);
 
-      // Try both approaches to find the record
-      let record = null;
-      let error = null;
-
-      // First try by internal UUID
-      console.log('🔍 Attempting update by internal ID (UUID)');
-      const uuidResult = await supabase
+      // Now perform the update using the verified internal ID
+      console.log('🔄 Performing update with internal ID:', recordId);
+      const { data: record, error } = await supabase
         .from('investigation_records')
         .update(updateData)
         .eq('id', recordId)
         .eq('user_id', userId)
         .select()
-        .maybeSingle();
-      
-      if (uuidResult.error) {
-        console.log('⚠️ UUID update failed:', uuidResult.error);
-      } else if (uuidResult.data) {
-        console.log('✅ Successfully updated by UUID');
-        record = uuidResult.data;
-      }
+        .single();
 
-      // If UUID approach didn't work, try by record_id
-      if (!record) {
-        console.log('🔍 Attempting update by record_id format');
-        const recordIdResult = await supabase
-          .from('investigation_records')
-          .update(updateData)
-          .eq('record_id', recordId)
-          .eq('user_id', userId)
-          .select()
-          .maybeSingle();
-        
-        if (recordIdResult.error) {
-          console.log('⚠️ record_id update failed:', recordIdResult.error);
-          error = recordIdResult.error;
-        } else if (recordIdResult.data) {
-          console.log('✅ Successfully updated by record_id');
-          record = recordIdResult.data;
-        }
+      if (error) {
+        console.error('❌ Update failed:', error);
+        return { success: false, error: error.message };
       }
 
       if (!record) {
-        console.error('❌ No record found to update with either ID approach');
-        return { success: false, error: error?.message || 'Record not found' };
+        console.error('❌ No record returned from update');
+        return { success: false, error: 'No record returned from update' };
       }
 
       console.log('✅ Record updated successfully:', {
