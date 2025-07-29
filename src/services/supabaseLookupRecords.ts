@@ -342,18 +342,18 @@ class SupabaseLookupRecordsService {
         .eq('record_id', recordId)
         .eq('user_id', userId)
         .select()
-        .maybeSingle();
+        .single();
 
       // If not found by record_id, try by internal id
-      if (error && error.code === 'PGRST116') {
-        console.log('Not found by record_id, trying by internal id');
+      if (error || !record) {
+        console.log('Trying to update by internal id');
         const result = await supabase
           .from('investigation_records')
           .update(updateData)
           .eq('id', recordId)
           .eq('user_id', userId)
           .select()
-          .maybeSingle();
+          .single();
         
         record = result.data;
         error = result.error;
