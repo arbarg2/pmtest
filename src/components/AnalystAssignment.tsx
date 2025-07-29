@@ -47,12 +47,6 @@ export const AnalystAssignment: React.FC<AnalystAssignmentProps> = ({
       console.log('🔄 Assigning report to analyst:', assigneeEmail);
       
       const result = await supabaseLookupRecords.updateLookupRecord(recordId, user.id, {
-        analyst_fields: {
-          analyst_decision: 'pending',
-          case_notes: '',
-          tags: [],
-          attachments: []
-        },
         analyst_notes: `Assigned to: ${assigneeEmail}`,
         investigation_status: 'assigned'
       });
