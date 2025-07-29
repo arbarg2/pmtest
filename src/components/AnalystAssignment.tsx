@@ -56,7 +56,13 @@ export const AnalystAssignment: React.FC<AnalystAssignmentProps> = ({
           return;
         }
         
-        const targetUser = userData?.users?.find(u => u.email === analystEmail.trim());
+        if (!userData || !userData.users) {
+          toast.error('Unable to retrieve user list');
+          setIsAssigning(false);
+          return;
+        }
+        
+        const targetUser = userData.users.find(u => u.email === analystEmail.trim());
         
         if (!targetUser) {
           toast.error('Analyst with this email address not found');
