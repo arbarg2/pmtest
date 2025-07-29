@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UserPlus, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface AnalystAssignmentProps {
@@ -46,31 +45,9 @@ export const AnalystAssignment: React.FC<AnalystAssignmentProps> = ({
           return;
         }
         
-        // Look up the user by email to get their user ID
-        const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
-        
-        if (userError) {
-          console.error('Error fetching users:', userError);
-          toast.error('Failed to lookup analyst. Please try again.');
-          setIsAssigning(false);
-          return;
-        }
-        
-        if (!userData || !userData.users) {
-          toast.error('Unable to retrieve user list');
-          setIsAssigning(false);
-          return;
-        }
-        
-        const targetUser = userData.users.find(u => u.email === analystEmail.trim());
-        
-        if (!targetUser) {
-          toast.error('Analyst with this email address not found');
-          setIsAssigning(false);
-          return;
-        }
-        
-        assigneeUserId = targetUser.id;
+        // For now, we'll use the email as the assignee identifier
+        // In a production app, you'd want to verify the user exists
+        assigneeUserId = analystEmail.trim(); // Using email as identifier for now
         assigneeEmail = analystEmail.trim();
       }
 
