@@ -321,7 +321,7 @@ class SupabaseLookupRecordsService {
 
   async updateLookupRecord(recordId: string, userId: string, updates: any) {
     try {
-      console.log('Updating record:', recordId, 'for user:', userId, 'with updates:', updates);
+      console.log('🔄 updateLookupRecord called with:', { recordId, userId, updates });
       
       const updateData = {
         ...(updates.analyst_notes !== undefined && { analyst_notes: updates.analyst_notes }),
@@ -333,55 +333,64 @@ class SupabaseLookupRecordsService {
         updated_at: new Date().toISOString()
       };
 
-      console.log('Update data:', updateData);
+      console.log('📤 Update data prepared:', updateData);
 
-      // First, determine if recordId is a UUID (internal id) or record_id format
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
+      // Try both approaches to find the record
+      let record = null;
+      let error = null;
+
+      // First try by internal UUID
+      console.log('🔍 Attempting update by internal ID (UUID)');
+      const uuidResult = await supabase
+        .from('investigation_records')
+        .update(updateData)
+        .eq('id', recordId)
+        .eq('user_id', userId)
+        .select()
+        .maybeSingle();
       
-      let record, error;
-      
-      if (isUUID) {
-        // If it's a UUID, it's the internal id
-        console.log('Updating by internal id (UUID)');
-        const result = await supabase
-          .from('investigation_records')
-          .update(updateData)
-          .eq('id', recordId)
-          .eq('user_id', userId)
-          .select()
-          .single();
-        
-        record = result.data;
-        error = result.error;
-      } else {
-        // If it's not a UUID, it's likely the record_id format (LR_YYMMDD_XXX)
-        console.log('Updating by record_id format');
-        const result = await supabase
+      if (uuidResult.error) {
+        console.log('⚠️ UUID update failed:', uuidResult.error);
+      } else if (uuidResult.data) {
+        console.log('✅ Successfully updated by UUID');
+        record = uuidResult.data;
+      }
+
+      // If UUID approach didn't work, try by record_id
+      if (!record) {
+        console.log('🔍 Attempting update by record_id format');
+        const recordIdResult = await supabase
           .from('investigation_records')
           .update(updateData)
           .eq('record_id', recordId)
           .eq('user_id', userId)
           .select()
-          .single();
+          .maybeSingle();
         
-        record = result.data;
-        error = result.error;
-      }
-
-      if (error) {
-        console.error('Error updating lookup record:', error);
-        return { success: false, error: error.message };
+        if (recordIdResult.error) {
+          console.log('⚠️ record_id update failed:', recordIdResult.error);
+          error = recordIdResult.error;
+        } else if (recordIdResult.data) {
+          console.log('✅ Successfully updated by record_id');
+          record = recordIdResult.data;
+        }
       }
 
       if (!record) {
-        console.error('No record found to update');
-        return { success: false, error: 'Record not found' };
+        console.error('❌ No record found to update with either ID approach');
+        return { success: false, error: error?.message || 'Record not found' };
       }
 
-      console.log('Successfully updated record:', record);
+      console.log('✅ Record updated successfully:', {
+        id: record.id,
+        record_id: record.record_id,
+        assigned_to: record.assigned_to,
+        analyst_notes: record.analyst_notes
+      });
+      
       return { success: true, record };
     } catch (error) {
-      console.error('Error in updateLookupRecord:', error);
+      console.error('❌ Exception in updateLookupRecord:', error);
       return { success: false, error: 'Failed to update lookup record' };
     }
   }
