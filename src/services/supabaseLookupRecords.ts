@@ -321,7 +321,7 @@ class SupabaseLookupRecordsService {
 
   async updateLookupRecord(recordId: string, userId: string, updates: any) {
     try {
-      console.log('Updating record:', recordId, 'for user:', userId);
+      console.log('Updating record:', recordId, 'for user:', userId, 'with updates:', updates);
       
       const updateData = {
         ...(updates.analyst_notes !== undefined && { analyst_notes: updates.analyst_notes }),
@@ -335,22 +335,31 @@ class SupabaseLookupRecordsService {
 
       console.log('Update data:', updateData);
 
-      // Try to update by record_id first
-      let { data: record, error } = await supabase
-        .from('investigation_records')
-        .update(updateData)
-        .eq('record_id', recordId)
-        .eq('user_id', userId)
-        .select()
-        .single();
-
-      // If not found by record_id, try by internal id
-      if (error || !record) {
-        console.log('Trying to update by internal id');
+      // First, determine if recordId is a UUID (internal id) or record_id format
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
+      
+      let record, error;
+      
+      if (isUUID) {
+        // If it's a UUID, it's the internal id
+        console.log('Updating by internal id (UUID)');
         const result = await supabase
           .from('investigation_records')
           .update(updateData)
           .eq('id', recordId)
+          .eq('user_id', userId)
+          .select()
+          .single();
+        
+        record = result.data;
+        error = result.error;
+      } else {
+        // If it's not a UUID, it's likely the record_id format (LR_YYMMDD_XXX)
+        console.log('Updating by record_id format');
+        const result = await supabase
+          .from('investigation_records')
+          .update(updateData)
+          .eq('record_id', recordId)
           .eq('user_id', userId)
           .select()
           .single();

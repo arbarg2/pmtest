@@ -51,8 +51,9 @@ export const AnalystAssignment: React.FC<AnalystAssignmentProps> = ({
         assigneeEmail = analystEmail.trim();
       }
 
-      console.log('🔄 Assigning report to analyst:', assigneeEmail, 'User ID:', assigneeUserId);
+      console.log('🔄 Assigning report to analyst:', assigneeEmail, 'User ID:', assigneeUserId, 'Record ID:', recordId);
       
+      // Use the recordId directly - it could be either the record_id or internal id
       const result = await supabaseLookupRecords.updateLookupRecord(recordId, user.id, {
         assigned_to: assigneeUserId,
         analyst_notes: `Assigned to: ${assigneeEmail}`,
@@ -67,6 +68,7 @@ export const AnalystAssignment: React.FC<AnalystAssignmentProps> = ({
           onAssignmentChange(assigneeEmail);
         }
       } else {
+        console.error('Assignment failed:', result.error);
         toast.error('Failed to assign report');
       }
     } catch (error) {
