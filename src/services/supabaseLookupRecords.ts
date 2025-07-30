@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface LookupRecord {
@@ -323,45 +324,45 @@ class SupabaseLookupRecordsService {
     try {
       console.log('🔄 updateLookupRecord called with:', { recordId, userId, updates });
       
-      // First, let's verify the record exists before trying to update
-      console.log('🔍 First, checking if record exists...');
+      let targetRecordId = recordId;
+      let recordFound = false;
       
-      const existsCheck = await supabase
+      // First, try to find the record by internal UUID
+      console.log('🔍 Trying to find record by internal UUID:', recordId);
+      let { data: existsCheck, error: existsError } = await supabase
         .from('investigation_records')
         .select('id, record_id, user_id')
         .eq('id', recordId)
         .eq('user_id', userId)
         .maybeSingle();
       
-      console.log('🔍 Exists check result:', {
-        data: existsCheck.data,
-        error: existsCheck.error
-      });
-      
-      if (!existsCheck.data) {
-        // Try by record_id if internal id didn't work
-        const existsCheckByRecordId = await supabase
+      if (existsCheck) {
+        console.log('✅ Found record by internal UUID:', existsCheck);
+        targetRecordId = existsCheck.id;
+        recordFound = true;
+      } else {
+        // If not found by UUID, try by record_id (display ID like LR_250716_001)
+        console.log('🔍 Not found by UUID, trying by record_id:', recordId);
+        let { data: existsCheckByRecordId, error: existsErrorByRecordId } = await supabase
           .from('investigation_records')
           .select('id, record_id, user_id')
           .eq('record_id', recordId)
           .eq('user_id', userId)
           .maybeSingle();
         
-        console.log('🔍 Exists check by record_id result:', {
-          data: existsCheckByRecordId.data,
-          error: existsCheckByRecordId.error
-        });
-        
-        if (!existsCheckByRecordId.data) {
-          console.error('❌ Record does not exist for this user');
-          return { success: false, error: 'Record not found for this user' };
+        if (existsCheckByRecordId) {
+          console.log('✅ Found record by record_id:', existsCheckByRecordId);
+          targetRecordId = existsCheckByRecordId.id; // Use the internal UUID for the update
+          recordFound = true;
         }
-        
-        // Use the internal id for the update
-        recordId = existsCheckByRecordId.data.id;
-        console.log('🔄 Using internal ID for update:', recordId);
       }
       
+      if (!recordFound) {
+        console.error('❌ Record not found with either ID type');
+        return { success: false, error: 'Record not found for this user' };
+      }
+      
+      // Prepare the update data
       const updateData = {
         ...(updates.analyst_notes !== undefined && { analyst_notes: updates.analyst_notes }),
         ...(updates.investigation_status !== undefined && { investigation_status: updates.investigation_status }),
@@ -372,14 +373,14 @@ class SupabaseLookupRecordsService {
         updated_at: new Date().toISOString()
       };
 
-      console.log('📤 Update data prepared:', updateData);
+      console.log('📤 Performing update with internal UUID:', targetRecordId);
+      console.log('📤 Update data:', updateData);
 
-      // Now perform the update using the verified internal ID
-      console.log('🔄 Performing update with internal ID:', recordId);
+      // Perform the update using the internal UUID
       const { data: record, error } = await supabase
         .from('investigation_records')
         .update(updateData)
-        .eq('id', recordId)
+        .eq('id', targetRecordId)
         .eq('user_id', userId)
         .select()
         .single();
@@ -398,7 +399,7 @@ class SupabaseLookupRecordsService {
         id: record.id,
         record_id: record.record_id,
         assigned_to: record.assigned_to,
-        analyst_notes: record.analyst_notes
+        analyst_notes: record.analyst_notes ? 'Present' : 'Empty'
       });
       
       return { success: true, record };
