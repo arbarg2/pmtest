@@ -56,7 +56,7 @@ export const AnalystAssignment: React.FC<AnalystAssignmentProps> = ({
       // Prepare the update data - only include assigned_to if we have a valid UUID
       const updateData: any = {
         analyst_notes: `Assigned to: ${assigneeEmail}`,
-        investigation_status: 'assigned'
+        investigation_status: 'pending'
       };
 
       // Only set assigned_to if we have a valid UUID (when assigning to self)
