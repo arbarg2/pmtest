@@ -45,20 +45,26 @@ export const AnalystAssignment: React.FC<AnalystAssignmentProps> = ({
           return;
         }
         
-        // For now, we'll use the email as the assignee identifier
-        // In a production app, you'd want to verify the user exists
-        assigneeUserId = analystEmail.trim(); // Using email as identifier for now
+        // For the assigned_to field, we'll use null since we don't have the actual user UUID
+        // We'll store the email in the analyst_notes instead
+        assigneeUserId = ''; // Leave empty since we don't have the UUID
         assigneeEmail = analystEmail.trim();
       }
 
       console.log('🔄 Assigning report to analyst:', assigneeEmail, 'User ID:', assigneeUserId, 'Record ID:', recordId);
       
-      // Use the recordId directly - it could be either the record_id or internal id
-      const result = await supabaseLookupRecords.updateLookupRecord(recordId, user.id, {
-        assigned_to: assigneeUserId,
+      // Prepare the update data - only include assigned_to if we have a valid UUID
+      const updateData: any = {
         analyst_notes: `Assigned to: ${assigneeEmail}`,
         investigation_status: 'assigned'
-      });
+      };
+
+      // Only set assigned_to if we have a valid UUID (when assigning to self)
+      if (assignmentType === 'me' && assigneeUserId) {
+        updateData.assigned_to = assigneeUserId;
+      }
+
+      const result = await supabaseLookupRecords.updateLookupRecord(recordId, user.id, updateData);
 
       if (result.success) {
         toast.success(`Report assigned to ${assigneeEmail}`);
