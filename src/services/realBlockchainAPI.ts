@@ -381,7 +381,148 @@ class RealBlockchainAPI {
     return address.match(/^0x[a-fA-F0-9]{40}$/) !== null;
   }
 
-  calculateRealRiskScore(networkData: any, network: 'bitcoin' | 'ethereum'): {
+  private isValidSolanaAddress(address: string): boolean {
+    return address.match(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/) !== null;
+  }
+
+  // Solana API integration using public RPC
+  async getSolanaAddressData(address: string): Promise<{
+    balance: number;
+    transactionCount: number;
+    transactions: any[];
+    tokenAccounts: any[];
+  }> {
+    await this.enforceRateLimit();
+    
+    try {
+      console.log(`🔍 [SOLANA LIVE] Fetching real-time data for: ${address}`);
+      
+      // Validate Solana address format
+      if (!this.isValidSolanaAddress(address)) {
+        throw new Error(`Invalid Solana address format: ${address}`);
+      }
+      
+      const rpcUrl = 'https://api.mainnet-beta.solana.com';
+      const timeout = 20000; // 20 seconds timeout
+      
+      // Get SOL balance
+      const balanceController = new AbortController();
+      const balanceTimeout = setTimeout(() => {
+        console.log('⚠️ Solana balance request timeout, aborting...');
+        balanceController.abort();
+      }, timeout);
+      
+      const balanceResponse = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getBalance',
+          params: [address]
+        }),
+        signal: balanceController.signal
+      });
+      
+      clearTimeout(balanceTimeout);
+      
+      if (!balanceResponse.ok) {
+        throw new Error(`Solana RPC error: ${balanceResponse.status}`);
+      }
+      
+      const balanceData = await balanceResponse.json();
+      console.log('📊 Solana balance response:', balanceData);
+      
+      if (balanceData.error) {
+        throw new Error(`Solana RPC error: ${balanceData.error.message}`);
+      }
+      
+      // Get transaction signatures (limited to 25 for performance)
+      await this.enforceRateLimit();
+      
+      const signaturesController = new AbortController();
+      const signaturesTimeout = setTimeout(() => {
+        console.log('⚠️ Solana signatures request timeout, aborting...');
+        signaturesController.abort();
+      }, timeout);
+      
+      const signaturesResponse = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 2,
+          method: 'getSignaturesForAddress',
+          params: [address, { limit: 25 }]
+        }),
+        signal: signaturesController.signal
+      });
+      
+      clearTimeout(signaturesTimeout);
+      
+      const signaturesData = signaturesResponse.ok ? await signaturesResponse.json() : { result: [] };
+      console.log(`📊 Solana signatures response: ${signaturesData.result?.length || 0} signatures`);
+      
+      // Get token accounts
+      await this.enforceRateLimit();
+      
+      const tokenController = new AbortController();
+      const tokenTimeout = setTimeout(() => {
+        console.log('⚠️ Solana token accounts request timeout, aborting...');
+        tokenController.abort();
+      }, timeout);
+      
+      const tokenResponse = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 3,
+          method: 'getTokenAccountsByOwner',
+          params: [
+            address,
+            { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' },
+            { encoding: 'jsonParsed' }
+          ]
+        }),
+        signal: tokenController.signal
+      });
+      
+      clearTimeout(tokenTimeout);
+      
+      const tokenData = tokenResponse.ok ? await tokenResponse.json() : { result: { value: [] } };
+      console.log(`📊 Solana token accounts: ${tokenData.result?.value?.length || 0} accounts`);
+      
+      const result = {
+        balance: (balanceData.result || 0) / 1e9, // Convert lamports to SOL
+        transactionCount: signaturesData.result?.length || 0,
+        transactions: signaturesData.result || [],
+        tokenAccounts: tokenData.result?.value || []
+      };
+      
+      console.log(`✅ [SOLANA LIVE] Real-time data retrieved:`, {
+        balance: result.balance,
+        txCount: result.transactionCount,
+        tokenAccounts: result.tokenAccounts.length
+      });
+      
+      return result;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Solana API request timed out. Please try again.');
+      }
+      console.error('❌ [SOLANA] Live API failed:', error);
+      throw error;
+    }
+  }
+
+  calculateRealRiskScore(networkData: any, network: 'bitcoin' | 'ethereum' | 'solana'): {
     riskScore: number;
     riskLevel: 'Low' | 'Medium' | 'High';
     riskFactors: Record<string, boolean>;
@@ -414,9 +555,13 @@ class RealBlockchainAPI {
       riskScore += 3;
     } else if (network === 'ethereum' && balance > 1000) { // > 1000 ETH
       riskScore += 3;
+    } else if (network === 'solana' && balance > 10000) { // > 10000 SOL
+      riskScore += 3;
     } else if (network === 'bitcoin' && balance > 10) { // > 10 BTC
       riskScore += 1;
     } else if (network === 'ethereum' && balance > 100) { // > 100 ETH
+      riskScore += 1;
+    } else if (network === 'solana' && balance > 1000) { // > 1000 SOL
       riskScore += 1;
     }
 
@@ -446,6 +591,15 @@ class RealBlockchainAPI {
           riskFactors.mixer_usage = true;
         }
       }
+      
+      // For Solana: Look for high frequency small transactions
+      if (network === 'solana') {
+        // Solana signatures don't contain value data, so we use frequency as indicator
+        if (txCount > 100 && networkData.tokenAccounts?.length > 10) {
+          riskScore += 2;
+          riskFactors.mixer_usage = true;
+        }
+      }
     }
 
     // Very high frequency trading pattern
@@ -471,7 +625,7 @@ class RealBlockchainAPI {
   }
 
   // Entity attribution based on real data patterns
-  deriveEntityAttribution(networkData: any, network: 'bitcoin' | 'ethereum'): {
+  deriveEntityAttribution(networkData: any, network: 'bitcoin' | 'ethereum' | 'solana'): {
     name: string;
     type: string;
     risk_level: string;
@@ -495,14 +649,14 @@ class RealBlockchainAPI {
         risk_level: 'Medium',
         confidence: 0.75
       };
-    } else if (txCount > 1000 && balance > (network === 'bitcoin' ? 10 : 100)) {
+    } else if (txCount > 1000 && balance > (network === 'bitcoin' ? 10 : network === 'ethereum' ? 100 : 1000)) {
       return {
         name: 'Institutional Wallet',
         type: 'custodial',
         risk_level: 'Low',
         confidence: 0.65
       };
-    } else if (balance > (network === 'bitcoin' ? 100 : 1000)) {
+    } else if (balance > (network === 'bitcoin' ? 100 : network === 'ethereum' ? 1000 : 10000)) {
       return {
         name: 'High-Value Wallet',
         type: 'private',
@@ -526,7 +680,7 @@ class RealBlockchainAPI {
     }
   }
 
-  calculateVolumeMetrics(networkData: any, network: 'bitcoin' | 'ethereum') {
+  calculateVolumeMetrics(networkData: any, network: 'bitcoin' | 'ethereum' | 'solana') {
     const balance = networkData.balance || 0;
     const txCount = networkData.transactionCount || networkData.transactions?.length || 0;
     const totalReceived = networkData.totalReceived || 0;
@@ -537,7 +691,7 @@ class RealBlockchainAPI {
     const outboundVolume = totalSent || (balance * (txCount > 0 ? Math.log(txCount + 1) * 0.5 : 0.8));
     
     // Current market prices (rough estimates - in production, fetch from price API)
-    const usdPrice = network === 'bitcoin' ? 45000 : 2500;
+    const usdPrice = network === 'bitcoin' ? 45000 : network === 'ethereum' ? 2500 : 150;
     
     return {
       lifetime_value: {

@@ -164,7 +164,7 @@ class BlockchainDataService {
   }
 
   // Detect network type from address format
-  detectNetwork(address: string): 'BTC' | 'ETH' {
+  detectNetwork(address: string): 'BTC' | 'ETH' | 'SOL' {
     // Bitcoin addresses start with 1, 3, or bc1
     if (address.match(/^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/) || address.startsWith('bc1')) {
       return 'BTC';
@@ -172,6 +172,10 @@ class BlockchainDataService {
     // Ethereum addresses are 42 characters starting with 0x
     if (address.match(/^0x[a-fA-F0-9]{40}$/)) {
       return 'ETH';
+    }
+    // Solana addresses are 32-44 characters, Base58 encoded
+    if (address.match(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/)) {
+      return 'SOL';
     }
     // Default to Bitcoin for unknown formats
     return 'BTC';

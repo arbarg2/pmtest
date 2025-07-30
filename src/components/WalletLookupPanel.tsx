@@ -44,7 +44,7 @@ export const WalletLookupPanel = ({
           <div className="flex space-x-3">
             <Input
               type="text"
-              placeholder="Enter wallet address (Bitcoin, Ethereum, etc.)"
+              placeholder="Enter wallet address (Bitcoin, Ethereum, Solana)"
               value={walletAddress}
               onChange={(e) => setWalletAddress(e.target.value)}
               className="flex-1 text-sm font-mono"

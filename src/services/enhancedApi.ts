@@ -31,6 +31,14 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
         txCount: realData.transactionCount,
         tokenTransfers: realData.tokenTransfers?.length || 0
       });
+    } else if (network === 'solana') {
+      console.log('🚀 Fetching Solana real-time data from Solana RPC API...');
+      realData = await realBlockchainAPI.getSolanaAddressData(address);
+      console.log('✅ SUCCESS: Solana real-time data retrieved:', {
+        balance: realData.balance,
+        txCount: realData.transactionCount,
+        tokenAccounts: realData.tokenAccounts?.length || 0
+      });
     } else {
       throw new Error(`Unsupported network: ${network}`);
     }
@@ -107,13 +115,17 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
             ? Math.max(...realData.transactions.map((tx: any) => 
                 tx.vout ? Math.max(...tx.vout.map((out: any) => out.value / 100000000)) : 0
               ))
-            : Math.max(...realData.transactions.map((tx: any) => 
+            : network === 'ethereum'
+            ? Math.max(...realData.transactions.map((tx: any) => 
                 parseInt(tx.value || '0') / 1e18
-              )),
+              ))
+            : 0.001, // For Solana, signatures don't contain value data
           direction: 'outbound',
           timestamp: network === 'bitcoin'
             ? new Date((realData.transactions[0]?.status?.block_time || Date.now() / 1000) * 1000).toISOString()
-            : new Date(parseInt(realData.transactions[0]?.timeStamp || '0') * 1000).toISOString()
+            : network === 'ethereum'
+            ? new Date(parseInt(realData.transactions[0]?.timeStamp || '0') * 1000).toISOString()
+            : new Date(realData.transactions[0]?.blockTime ? realData.transactions[0].blockTime * 1000 : Date.now()).toISOString()
         } : undefined
       },
       geographic_risk: {
@@ -128,12 +140,16 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
         first_seen: realData.transactions && realData.transactions.length > 0
           ? network === 'bitcoin'
             ? new Date((realData.transactions[realData.transactions.length - 1]?.status?.block_time || Date.now() / 1000) * 1000).toISOString()
-            : new Date(parseInt(realData.transactions[realData.transactions.length - 1]?.timeStamp || '0') * 1000).toISOString()
+            : network === 'ethereum'
+            ? new Date(parseInt(realData.transactions[realData.transactions.length - 1]?.timeStamp || '0') * 1000).toISOString()
+            : new Date(realData.transactions[realData.transactions.length - 1]?.blockTime ? realData.transactions[realData.transactions.length - 1].blockTime * 1000 : Date.now()).toISOString()
           : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
         last_active: realData.transactions && realData.transactions.length > 0
           ? network === 'bitcoin'
             ? new Date((realData.transactions[0]?.status?.block_time || Date.now() / 1000) * 1000).toISOString()
-            : new Date(parseInt(realData.transactions[0]?.timeStamp || '0') * 1000).toISOString()
+            : network === 'ethereum'
+            ? new Date(parseInt(realData.transactions[0]?.timeStamp || '0') * 1000).toISOString()
+            : new Date(realData.transactions[0]?.blockTime ? realData.transactions[0].blockTime * 1000 : Date.now()).toISOString()
           : new Date().toISOString()
       },
       behavioral_classification: {
@@ -169,10 +185,12 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       last_activity: realData.transactions && realData.transactions.length > 0
         ? network === 'bitcoin'
           ? new Date((realData.transactions[0]?.status?.block_time || Date.now() / 1000) * 1000).toISOString()
-          : new Date(parseInt(realData.transactions[0]?.timeStamp || '0') * 1000).toISOString()
+          : network === 'ethereum'
+          ? new Date(parseInt(realData.transactions[0]?.timeStamp || '0') * 1000).toISOString()
+          : new Date(realData.transactions[0]?.blockTime ? realData.transactions[0].blockTime * 1000 : Date.now()).toISOString()
         : new Date().toISOString(),
       processing_time_ms: processingTime,
-      explanation: `✅ REAL-TIME ANALYSIS: Live ${network} blockchain data from ${network === 'bitcoin' ? 'Blockstream API' : 'Etherscan API'}. Balance: ${realData.balance?.toFixed(6)} ${network.toUpperCase()}, Transactions: ${realData.transactionCount || realData.transactions?.length || 0}${sanctionsResults.length > 0 ? ` | SANCTIONS: ${sanctionsResults.length} matches found` : ' | SANCTIONS: Clean'}. This analysis uses verified blockchain data and real-time sanctions screening.`,
+      explanation: `✅ REAL-TIME ANALYSIS: Live ${network} blockchain data from ${network === 'bitcoin' ? 'Blockstream API' : network === 'ethereum' ? 'Etherscan API' : 'Solana RPC'}. Balance: ${realData.balance?.toFixed(6)} ${network.toUpperCase()}, Transactions: ${realData.transactionCount || realData.transactions?.length || 0}${sanctionsResults.length > 0 ? ` | SANCTIONS: ${sanctionsResults.length} matches found` : ' | SANCTIONS: Clean'}. This analysis uses verified blockchain data and real-time sanctions screening.`,
       risk_score_breakdown: {
         transaction_volume: { score: Math.min((realData.transactionCount || 0) / 100, 1) },
         balance_analysis: { score: Math.min((realData.balance || 0) / 10, 1) },
@@ -182,7 +200,7 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       asset_breakdown: {
         [network.toUpperCase()]: {
           balance: realData.balance || 0,
-          usd_value: (realData.balance || 0) * (network === 'bitcoin' ? 45000 : 2500)
+          usd_value: (realData.balance || 0) * (network === 'bitcoin' ? 45000 : network === 'ethereum' ? 2500 : 150)
         }
       },
       lookupId: `LR_${Date.now()}`
@@ -216,7 +234,7 @@ export const enhancedWalletAPI = {
   analyzeWallet: analyzeWalletWithRealData
 };
 
-function detectNetworkFromAddress(address: string): 'bitcoin' | 'ethereum' {
+function detectNetworkFromAddress(address: string): 'bitcoin' | 'ethereum' | 'solana' {
   console.log('🔍 Detecting network for address:', address);
   
   // Clean the address
@@ -244,6 +262,12 @@ function detectNetworkFromAddress(address: string): 'bitcoin' | 'ethereum' {
   if (cleanAddress.match(/^bc1[a-z0-9]{39,59}$/)) {
     console.log('✅ Detected as Bitcoin Bech32 address');
     return 'bitcoin';
+  }
+  
+  // Solana addresses are 32-44 characters, Base58 encoded
+  if (cleanAddress.match(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/)) {
+    console.log('✅ Detected as Solana address');
+    return 'solana';
   }
   
   throw new Error(`Unable to detect network from address format: ${address}`);
