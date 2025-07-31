@@ -436,7 +436,13 @@ class RealBlockchainAPI {
       console.log('📊 Solana balance response:', balanceData);
       
       if (balanceData.error) {
+        console.error('❌ Solana RPC balance error:', balanceData.error);
         throw new Error(`Solana RPC error: ${balanceData.error.message}`);
+      }
+      
+      if (!balanceData.result && balanceData.result !== 0) {
+        console.error('❌ Solana balance result is undefined:', balanceData);
+        throw new Error('Solana RPC returned undefined balance result');
       }
       
       // Get transaction signatures (limited to 25 for performance)
