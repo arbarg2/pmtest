@@ -402,123 +402,156 @@ class RealBlockchainAPI {
         throw new Error(`Invalid Solana address format: ${address}`);
       }
       
-      const rpcUrl = 'https://api.mainnet-beta.solana.com';
-      const timeout = 20000; // 20 seconds timeout
+      // Try multiple RPC endpoints for better reliability
+      const rpcEndpoints = [
+        'https://solana-api.projectserum.com',
+        'https://api.mainnet-beta.solana.com',
+        'https://rpc.ankr.com/solana',
+        'https://solana-mainnet.rpc.extrnode.com'
+      ];
+      const timeout = 15000; // 15 seconds timeout
       
-      // Get SOL balance
-      const balanceController = new AbortController();
-      const balanceTimeout = setTimeout(() => {
-        console.log('⚠️ Solana balance request timeout, aborting...');
-        balanceController.abort();
-      }, timeout);
+      let currentRpcUrl = rpcEndpoints[0]; // Start with first endpoint
+      let rpcError = null;
       
-      const balanceResponse = await fetch(rpcUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'getBalance',
-          params: [address]
-        }),
-        signal: balanceController.signal
-      });
-      
-      clearTimeout(balanceTimeout);
-      
-      if (!balanceResponse.ok) {
-        throw new Error(`Solana RPC error: ${balanceResponse.status}`);
+      // Try each RPC endpoint until one works
+      for (let i = 0; i < rpcEndpoints.length; i++) {
+        currentRpcUrl = rpcEndpoints[i];
+        console.log(`🔗 Trying Solana RPC endpoint ${i + 1}/${rpcEndpoints.length}: ${currentRpcUrl}`);
+        
+        try {
+          // Get SOL balance
+          const balanceController = new AbortController();
+          const balanceTimeout = setTimeout(() => {
+            console.log('⚠️ Solana balance request timeout, aborting...');
+            balanceController.abort();
+          }, timeout);
+          
+          const balanceResponse = await fetch(currentRpcUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
+            },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'getBalance',
+              params: [address]
+            }),
+            signal: balanceController.signal
+          });
+          
+          clearTimeout(balanceTimeout);
+          
+          if (!balanceResponse.ok) {
+            throw new Error(`Solana RPC HTTP error: ${balanceResponse.status}`);
+          }
+          
+          const balanceData = await balanceResponse.json();
+          console.log('📊 Solana balance response:', balanceData);
+          
+          if (balanceData.error) {
+            throw new Error(`Solana RPC error: ${balanceData.error.message}`);
+          }
+          
+          if (balanceData.result === undefined) {
+            throw new Error('Solana RPC returned undefined balance result');
+          }
+          
+          // If we get here, the RPC is working, get the rest of the data
+          console.log(`✅ Successfully connected to ${currentRpcUrl}`);
+          
+          // Get transaction signatures (limited to 25 for performance)
+          await this.enforceRateLimit();
+          
+          const signaturesController = new AbortController();
+          const signaturesTimeout = setTimeout(() => {
+            console.log('⚠️ Solana signatures request timeout, aborting...');
+            signaturesController.abort();
+          }, timeout);
+          
+          const signaturesResponse = await fetch(currentRpcUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
+            },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 2,
+              method: 'getSignaturesForAddress',
+              params: [address, { limit: 25 }]
+            }),
+            signal: signaturesController.signal
+          });
+          
+          clearTimeout(signaturesTimeout);
+          
+          const signaturesData = signaturesResponse.ok ? await signaturesResponse.json() : { result: [] };
+          console.log(`📊 Solana signatures response: ${signaturesData.result?.length || 0} signatures`);
+          
+          // Get token accounts
+          await this.enforceRateLimit();
+          
+          const tokenController = new AbortController();
+          const tokenTimeout = setTimeout(() => {
+            console.log('⚠️ Solana token accounts request timeout, aborting...');
+            tokenController.abort();
+          }, timeout);
+          
+          const tokenResponse = await fetch(currentRpcUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
+            },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 3,
+              method: 'getTokenAccountsByOwner',
+              params: [
+                address,
+                { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' },
+                { encoding: 'jsonParsed' }
+              ]
+            }),
+            signal: tokenController.signal
+          });
+          
+          clearTimeout(tokenTimeout);
+          
+          const tokenData = tokenResponse.ok ? await tokenResponse.json() : { result: { value: [] } };
+          console.log(`📊 Solana token accounts: ${tokenData.result?.value?.length || 0} accounts`);
+          
+          const result = {
+            balance: (balanceData.result || 0) / 1e9, // Convert lamports to SOL
+            transactionCount: signaturesData.result?.length || 0,
+            transactions: signaturesData.result || [],
+            tokenAccounts: tokenData.result?.value || []
+          };
+          
+          console.log(`✅ [SOLANA LIVE] Real-time data retrieved from ${currentRpcUrl}:`, {
+            balance: result.balance,
+            txCount: result.transactionCount,
+            tokenAccounts: result.tokenAccounts.length
+          });
+          
+          return result;
+          
+        } catch (endpointError) {
+          rpcError = endpointError;
+          console.warn(`❌ Failed to connect to ${currentRpcUrl}:`, endpointError);
+          if (i < rpcEndpoints.length - 1) {
+            console.log(`🔄 Trying next RPC endpoint...`);
+            continue;
+          }
+          break;
+        }
       }
       
-      const balanceData = await balanceResponse.json();
-      console.log('📊 Solana balance response:', balanceData);
-      
-      if (balanceData.error) {
-        console.error('❌ Solana RPC balance error:', balanceData.error);
-        throw new Error(`Solana RPC error: ${balanceData.error.message}`);
-      }
-      
-      if (!balanceData.result && balanceData.result !== 0) {
-        console.error('❌ Solana balance result is undefined:', balanceData);
-        throw new Error('Solana RPC returned undefined balance result');
-      }
-      
-      // Get transaction signatures (limited to 25 for performance)
-      await this.enforceRateLimit();
-      
-      const signaturesController = new AbortController();
-      const signaturesTimeout = setTimeout(() => {
-        console.log('⚠️ Solana signatures request timeout, aborting...');
-        signaturesController.abort();
-      }, timeout);
-      
-      const signaturesResponse = await fetch(rpcUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 2,
-          method: 'getSignaturesForAddress',
-          params: [address, { limit: 25 }]
-        }),
-        signal: signaturesController.signal
-      });
-      
-      clearTimeout(signaturesTimeout);
-      
-      const signaturesData = signaturesResponse.ok ? await signaturesResponse.json() : { result: [] };
-      console.log(`📊 Solana signatures response: ${signaturesData.result?.length || 0} signatures`);
-      
-      // Get token accounts
-      await this.enforceRateLimit();
-      
-      const tokenController = new AbortController();
-      const tokenTimeout = setTimeout(() => {
-        console.log('⚠️ Solana token accounts request timeout, aborting...');
-        tokenController.abort();
-      }, timeout);
-      
-      const tokenResponse = await fetch(rpcUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 3,
-          method: 'getTokenAccountsByOwner',
-          params: [
-            address,
-            { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' },
-            { encoding: 'jsonParsed' }
-          ]
-        }),
-        signal: tokenController.signal
-      });
-      
-      clearTimeout(tokenTimeout);
-      
-      const tokenData = tokenResponse.ok ? await tokenResponse.json() : { result: { value: [] } };
-      console.log(`📊 Solana token accounts: ${tokenData.result?.value?.length || 0} accounts`);
-      
-      const result = {
-        balance: (balanceData.result || 0) / 1e9, // Convert lamports to SOL
-        transactionCount: signaturesData.result?.length || 0,
-        transactions: signaturesData.result || [],
-        tokenAccounts: tokenData.result?.value || []
-      };
-      
-      console.log(`✅ [SOLANA LIVE] Real-time data retrieved:`, {
-        balance: result.balance,
-        txCount: result.transactionCount,
-        tokenAccounts: result.tokenAccounts.length
-      });
-      
-      return result;
+      // If we get here, all RPC endpoints failed
+      throw new Error(`All Solana RPC endpoints failed. Last error: ${rpcError?.message || 'Unknown error'}`);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Solana API request timed out. Please try again.');
