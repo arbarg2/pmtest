@@ -670,32 +670,59 @@ class RealBlockchainAPI {
       high_frequency_trading: false
     };
 
-    // High transaction volume risk
+    // Network-specific transaction volume risk assessment
     const txCount = networkData.transactionCount || networkData.transactions?.length || 0;
-    if (txCount > 10000) {
-      riskScore += 4;
-      riskFactors.high_frequency_trading = true;
-    } else if (txCount > 1000) {
-      riskScore += 2;
-      riskFactors.high_frequency_trading = true;
-    } else if (txCount > 100) {
-      riskScore += 1;
+    
+    if (network === 'solana') {
+      // Solana-specific thresholds (lower due to different usage patterns)
+      if (txCount > 500) {
+        riskScore += 4;
+        riskFactors.high_frequency_trading = true;
+      } else if (txCount > 100) {
+        riskScore += 2;
+        riskFactors.high_frequency_trading = true;
+      } else if (txCount > 20) {
+        riskScore += 1;
+      }
+    } else {
+      // Bitcoin/Ethereum thresholds (unchanged)
+      if (txCount > 10000) {
+        riskScore += 4;
+        riskFactors.high_frequency_trading = true;
+      } else if (txCount > 1000) {
+        riskScore += 2;
+        riskFactors.high_frequency_trading = true;
+      } else if (txCount > 100) {
+        riskScore += 1;
+      }
     }
 
-    // High value risk
+    // Network-specific balance risk assessment
     const balance = networkData.balance || 0;
-    if (network === 'bitcoin' && balance > 100) { // > 100 BTC
-      riskScore += 3;
-    } else if (network === 'ethereum' && balance > 1000) { // > 1000 ETH
-      riskScore += 3;
-    } else if (network === 'solana' && balance > 10000) { // > 10000 SOL
-      riskScore += 3;
-    } else if (network === 'bitcoin' && balance > 10) { // > 10 BTC
-      riskScore += 1;
-    } else if (network === 'ethereum' && balance > 100) { // > 100 ETH
-      riskScore += 1;
-    } else if (network === 'solana' && balance > 1000) { // > 1000 SOL
-      riskScore += 1;
+    
+    if (network === 'bitcoin') {
+      if (balance > 100) riskScore += 3;
+      else if (balance > 10) riskScore += 1;
+    } else if (network === 'ethereum') {
+      if (balance > 1000) riskScore += 3;
+      else if (balance > 100) riskScore += 1;
+    } else if (network === 'solana') {
+      // Solana-specific balance thresholds (lower due to price difference)
+      if (balance > 50) riskScore += 3;
+      else if (balance > 10) riskScore += 1;
+      
+      // Additional Solana-specific risk factors
+      const tokenCount = networkData.tokenAccounts?.length || 0;
+      if (tokenCount > 20) {
+        riskScore += 2; // Many tokens could indicate trading/mixing activity
+      } else if (tokenCount > 10) {
+        riskScore += 1;
+      }
+      
+      // Recent activity bonus for Solana (more weight given to active addresses)
+      if (txCount > 5 && balance > 1) {
+        riskScore += 1; // Active address with meaningful balance
+      }
     }
 
     // Pattern analysis for potential mixing behavior
