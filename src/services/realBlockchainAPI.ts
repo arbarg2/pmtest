@@ -402,10 +402,12 @@ class RealBlockchainAPI {
         throw new Error(`Invalid Solana address format: ${address}`);
       }
       
-      // Use truly free RPC endpoints that actually work
+      // Use reliable free Solana mainnet RPC endpoints
       const rpcEndpoints = [
-        'https://api.devnet.solana.com', // Devnet is free but we'll use for demo
-        'https://api.testnet.solana.com'  // Testnet is also free
+        'https://api.mainnet-beta.solana.com', // Official Solana Labs RPC (free tier)
+        'https://solana-api.projectserum.com',  // Serum/OpenBook RPC
+        'https://rpc.ankr.com/solana',          // Ankr public RPC
+        'https://solana.publicnode.com'         // PublicNode free RPC
       ];
       const timeout = 10000; // 10 seconds timeout
       
@@ -548,45 +550,15 @@ class RealBlockchainAPI {
         }
       }
       
-      // If all RPC endpoints failed, provide simulated data for demo purposes
-      console.log('⚠️ All Solana RPC endpoints failed, providing simulated data for demo');
-      
-      // Generate realistic simulated data based on address to trigger risk scoring
-      const addressHash = this.hashAddress(address);
-      const simulatedBalance = ((addressHash % 800) + 200) / 100; // 2-10 SOL (meaningful amounts)
-      const simulatedTxCount = (addressHash % 45) + 15; // 15-60 transactions
-      const simulatedTokens = Math.floor((addressHash % 12) + 3); // 3-15 token accounts
-      
-      const result = {
-        balance: simulatedBalance,
-        transactionCount: simulatedTxCount,
-        transactions: this.generateMockSolanaTransactions(simulatedTxCount),
-        tokenAccounts: this.generateMockTokenAccounts(simulatedTokens)
-      };
-      
-      console.log(`🎭 [SOLANA DEMO] Enhanced simulated data:`, {
-        balance: `${result.balance.toFixed(2)} SOL`,
-        txCount: result.transactionCount,
-        tokenAccounts: result.tokenAccounts.length,
-        note: 'Enhanced demo data with meaningful balances for risk analysis'
-      });
-      
-      return result;
+      // If all RPC endpoints failed, throw error instead of using simulated data
+      console.error('❌ All Solana RPC endpoints failed');
+      throw new Error(`Failed to connect to Solana network. All RPC endpoints unavailable. Last error: ${rpcError?.message || 'Unknown error'}`);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Solana API request timed out. Please try again.');
       }
       console.error('❌ [SOLANA] Live API failed:', error);
-      
-      // Even if there's a critical error, return meaningful demo data
-      console.log('🔄 Providing enhanced fallback demo data due to API failure');
-      const addressHash = this.hashAddress(address);
-      return {
-        balance: ((addressHash % 600) + 300) / 100, // 3-9 SOL (meaningful amounts)
-        transactionCount: (addressHash % 40) + 20, // 20-60 transactions  
-        transactions: this.generateMockSolanaTransactions((addressHash % 40) + 20),
-        tokenAccounts: this.generateMockTokenAccounts(Math.floor((addressHash % 8) + 5)) // 5-12 token accounts
-      };
+      throw error; // Don't fall back to mock data, throw the actual error
     }
   }
 
