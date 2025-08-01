@@ -66,7 +66,7 @@ class SupabaseLookupRecordsService {
       }
 
       // Ensure network value matches database constraint
-      const validNetworks = ['ethereum', 'bitcoin', 'ETH', 'BTC', 'eth', 'btc'];
+      const validNetworks = ['ethereum', 'bitcoin', 'solana', 'ETH', 'BTC', 'SOL', 'eth', 'btc', 'sol'];
       if (!validNetworks.includes(data.network)) {
         console.error('❌ Invalid network value:', data.network);
         return { 

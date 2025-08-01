@@ -524,12 +524,12 @@ class RealBlockchainAPI {
           const tokenData = tokenResponse.ok ? await tokenResponse.json() : { result: { value: [] } };
           console.log(`📊 Solana token accounts: ${tokenData.result?.value?.length || 0} accounts`);
           
-          const result = {
-            balance: (balanceData.result || 0) / 1e9, // Convert lamports to SOL
-            transactionCount: signaturesData.result?.length || 0,
-            transactions: signaturesData.result || [],
-            tokenAccounts: tokenData.result?.value || []
-          };
+           const result = {
+             balance: balanceData.result?.value ? (balanceData.result.value / 1e9) : 0, // Convert lamports to SOL safely
+             transactionCount: signaturesData.result?.length || 0,
+             transactions: signaturesData.result || [],
+             tokenAccounts: tokenData.result?.value || []
+           };
           
           console.log(`✅ [SOLANA LIVE] Real-time data retrieved from ${currentRpcUrl}:`, {
             balance: result.balance,
