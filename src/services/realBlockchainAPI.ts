@@ -402,69 +402,84 @@ class RealBlockchainAPI {
         throw new Error(`Invalid Solana address format: ${address}`);
       }
       
-      // Fast single RPC endpoint
-      const rpcUrl = 'https://api.mainnet-beta.solana.com';
-      const timeout = 4000; // 4 second timeout for speed
+      // Multiple reliable Solana RPC endpoints to handle 403 errors
+      const rpcEndpoints = [
+        'https://solana.publicnode.com',
+        'https://rpc.ankr.com/solana',
+        'https://api.mainnet-beta.solana.com',
+        'https://solana-api.projectserum.com'
+      ];
+      const timeout = 4000;
       
-      console.log(`🔗 Using Solana RPC: ${rpcUrl}`);
+      let lastError = null;
       
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
-      
-      // Single parallel request for only essential data
-      const [balanceResponse, signaturesResponse] = await Promise.all([
-        fetch(rpcUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 1,
-            method: 'getBalance',
-            params: [address]
-          })
-        }),
-        fetch(rpcUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 2,
-            method: 'getSignaturesForAddress',
-            params: [address, { limit: 2 }] // Minimal for speed
-          })
-        })
-      ]);
+      for (const rpcUrl of rpcEndpoints) {
+        try {
+          console.log(`🔗 Trying Solana RPC: ${rpcUrl}`);
+          
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), timeout);
+          
+          // Single parallel request for only essential data
+          const [balanceResponse, signaturesResponse] = await Promise.all([
+            fetch(rpcUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              signal: controller.signal,
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 1,
+                method: 'getBalance',
+                params: [address]
+              })
+            }),
+            fetch(rpcUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              signal: controller.signal,
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 2,
+                method: 'getSignaturesForAddress',
+                params: [address, { limit: 2 }]
+              })
+            })
+          ]);
 
-      clearTimeout(timeoutId);
+          clearTimeout(timeoutId);
 
-      if (!balanceResponse.ok) {
-        throw new Error(`Solana RPC failed: ${balanceResponse.status}`);
+          if (!balanceResponse.ok) {
+            throw new Error(`Solana RPC failed: ${balanceResponse.status}`);
+          }
+
+          const balanceData = await balanceResponse.json();
+          const signaturesData = signaturesResponse.ok ? await signaturesResponse.json() : { result: [] };
+          
+          const result = {
+            balance: balanceData.result?.value ? (balanceData.result.value / 1e9) : 0,
+            transactionCount: signaturesData.result?.length || 0,
+            transactions: signaturesData.result || [],
+            tokenAccounts: []
+          };
+          
+          console.log(`✅ [SOLANA LIVE] Success with ${rpcUrl}:`, {
+            balance: result.balance,
+            txCount: result.transactionCount
+          });
+          
+          return result;
+          
+        } catch (error) {
+          lastError = error;
+          console.warn(`❌ ${rpcUrl} failed:`, error);
+          continue;
+        }
       }
-
-      const balanceData = await balanceResponse.json();
-      const signaturesData = signaturesResponse.ok ? await signaturesResponse.json() : { result: [] };
       
-      const result = {
-        balance: balanceData.result?.value ? (balanceData.result.value / 1e9) : 0,
-        transactionCount: signaturesData.result?.length || 0,
-        transactions: signaturesData.result || [],
-        tokenAccounts: [] // Skip for speed
-      };
-      
-      console.log(`✅ [SOLANA LIVE] Fast data retrieved:`, {
-        balance: result.balance,
-        txCount: result.transactionCount
-      });
-      
-      return result;
+      throw new Error(`All Solana RPCs failed. Last error: ${lastError?.message}`);
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Solana API request timed out. Please try again.');
-      }
-      console.error('❌ [SOLANA] Live API failed:', error);
-      throw error; // Don't fall back, throw the error
+      console.error('❌ [SOLANA] All endpoints failed:', error);
+      throw error;
     }
   }
 
