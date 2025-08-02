@@ -41,6 +41,44 @@ export type Database = {
         }
         Relationships: []
       }
+      case_activity_log: {
+        Row: {
+          activity_description: string
+          activity_type: string
+          case_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          activity_description: string
+          activity_type: string
+          case_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          activity_description?: string
+          activity_type?: string
+          case_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_activity_log_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_audit_log: {
         Row: {
           action: string
@@ -68,6 +106,45 @@ export type Database = {
         }
         Relationships: []
       }
+      cases: {
+        Row: {
+          assigned_to: string | null
+          case_id: string
+          case_name: string
+          created_at: string
+          created_by: string
+          id: string
+          overall_risk_level: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          case_id?: string
+          case_name: string
+          created_at?: string
+          created_by: string
+          id?: string
+          overall_risk_level?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          case_id?: string
+          case_name?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          overall_risk_level?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       investigation_records: {
         Row: {
           ai_summary: string | null
@@ -80,6 +157,7 @@ export type Database = {
           assigned_to: string | null
           case_created_at: string | null
           case_id: string | null
+          case_id_v2: string | null
           case_status: string | null
           created_at: string
           id: string
@@ -106,6 +184,7 @@ export type Database = {
           assigned_to?: string | null
           case_created_at?: string | null
           case_id?: string | null
+          case_id_v2?: string | null
           case_status?: string | null
           created_at?: string
           id?: string
@@ -132,6 +211,7 @@ export type Database = {
           assigned_to?: string | null
           case_created_at?: string | null
           case_id?: string | null
+          case_id_v2?: string | null
           case_status?: string | null
           created_at?: string
           id?: string
@@ -147,7 +227,15 @@ export type Database = {
           user_id?: string
           wallet_address?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "investigation_records_case_id_v2_fkey"
+            columns: ["case_id_v2"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       risk_factors: {
         Row: {
@@ -338,6 +426,10 @@ export type Database = {
         }[]
       }
       generate_case_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_case_id_v2: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
