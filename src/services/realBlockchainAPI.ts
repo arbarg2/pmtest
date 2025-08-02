@@ -462,26 +462,23 @@ class RealBlockchainAPI {
           // If we get here, the RPC is working, get the rest of the data
           console.log(`✅ Successfully connected to ${currentRpcUrl}`);
           
-          // Get transaction signatures (limited to 25 for performance)
-          await this.enforceRateLimit();
-          
+          // Get transaction signatures (limited to 5 for speed)
           const signaturesController = new AbortController();
           const signaturesTimeout = setTimeout(() => {
             console.log('⚠️ Solana signatures request timeout, aborting...');
             signaturesController.abort();
-          }, timeout);
+          }, 3000); // Reduced timeout
           
           const signaturesResponse = await fetch(currentRpcUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
             },
             body: JSON.stringify({
               jsonrpc: '2.0',
               id: 2,
               method: 'getSignaturesForAddress',
-              params: [address, { limit: 25 }]
+              params: [address, { limit: 5 }] // Reduced for speed
             }),
             signal: signaturesController.signal
           });
@@ -491,38 +488,8 @@ class RealBlockchainAPI {
           const signaturesData = signaturesResponse.ok ? await signaturesResponse.json() : { result: [] };
           console.log(`📊 Solana signatures response: ${signaturesData.result?.length || 0} signatures`);
           
-          // Get token accounts
-          await this.enforceRateLimit();
-          
-          const tokenController = new AbortController();
-          const tokenTimeout = setTimeout(() => {
-            console.log('⚠️ Solana token accounts request timeout, aborting...');
-            tokenController.abort();
-          }, timeout);
-          
-          const tokenResponse = await fetch(currentRpcUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
-            },
-            body: JSON.stringify({
-              jsonrpc: '2.0',
-              id: 3,
-              method: 'getTokenAccountsByOwner',
-              params: [
-                address,
-                { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' },
-                { encoding: 'jsonParsed' }
-              ]
-            }),
-            signal: tokenController.signal
-          });
-          
-          clearTimeout(tokenTimeout);
-          
-          const tokenData = tokenResponse.ok ? await tokenResponse.json() : { result: { value: [] } };
-          console.log(`📊 Solana token accounts: ${tokenData.result?.value?.length || 0} accounts`);
+          // Skip token accounts for faster response
+          const tokenData = { result: { value: [] } };
           
            const result = {
              balance: balanceData.result?.value ? (balanceData.result.value / 1e9) : 0, // Convert lamports to SOL safely
