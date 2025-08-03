@@ -72,15 +72,23 @@ class SanctionsScreeningService {
       const url = `${this.OPENSANCTIONS_API}/match?q=${encodeURIComponent(query)}&dataset=default&limit=10`;
       console.log('Querying OpenSanctions:', url);
       
+      // Add 3-second timeout for fast response
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
       const response = await fetch(url, {
+        signal: controller.signal,
         headers: {
           'Accept': 'application/json',
           'User-Agent': 'Rian-Blockchain-Intelligence/1.0'
         }
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error(`OpenSanctions API error: ${response.status}`);
+        console.warn(`OpenSanctions API returned ${response.status}, using fallback`);
+        return []; // Return empty array instead of throwing
       }
 
       const data: OpenSanctionsResponse = await response.json();
@@ -88,8 +96,12 @@ class SanctionsScreeningService {
 
       return this.parseOpenSanctionsResults(data, query);
     } catch (error) {
-      console.error('OpenSanctions query failed:', error);
-      throw error;
+      if (error.name === 'AbortError') {
+        console.warn('OpenSanctions query timed out after 3s, using fallback');
+      } else {
+        console.warn('OpenSanctions query failed:', error);
+      }
+      return []; // Return empty array for faster fallback
     }
   }
 
