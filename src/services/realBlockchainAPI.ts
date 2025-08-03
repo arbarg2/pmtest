@@ -264,84 +264,48 @@ class RealBlockchainAPI {
         throw new Error(`Invalid Ethereum address format: ${address}`);
       }
       
-      const timeout = 20000; // 20 seconds timeout
+      const timeout = 10000; // Reduced to 10 seconds for faster response
       
-      // Get ETH balance with timeout
-      const balanceController = new AbortController();
-      const balanceTimeout = setTimeout(() => {
-        console.log('⚠️ Ethereum balance request timeout, aborting...');
-        balanceController.abort();
-      }, timeout);
+      // Make all API calls in parallel for 3x speed improvement
+      console.log('📡 Making parallel API calls to Etherscan...');
       
       const balanceUrl = `${this.ETHERSCAN_BASE_URL}?chainid=1&module=account&action=balance&address=${address}&tag=latest&apikey=${this.etherscanApiKey}`;
-      console.log('📡 Fetching balance from Etherscan API...');
+      const txUrl = `${this.ETHERSCAN_BASE_URL}?chainid=1&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
+      const tokenUrl = `${this.ETHERSCAN_BASE_URL}?chainid=1&module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
       
-      const balanceResponse = await fetch(balanceUrl, { 
-        signal: balanceController.signal,
+      const fetchOptions = {
+        signal: AbortSignal.timeout(timeout),
         headers: { 
           'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
           'Accept': 'application/json'
         }
-      });
-      clearTimeout(balanceTimeout);
-      
-      if (!balanceResponse.ok) {
-        throw new Error(`Etherscan balance API HTTP error: ${balanceResponse.status}`);
-      }
-      
-      const balanceData: EtherscanResponse = await balanceResponse.json();
-      console.log('📊 Balance response:', balanceData);
+      };
+
+      // Execute all requests in parallel
+      const [balanceResponse, txResponse, tokenResponse] = await Promise.allSettled([
+        fetch(balanceUrl, fetchOptions),
+        fetch(txUrl, fetchOptions),
+        fetch(tokenUrl, fetchOptions)
+      ]);
+
+      // Process balance
+      const balanceData = balanceResponse.status === 'fulfilled' && balanceResponse.value.ok 
+        ? await balanceResponse.value.json() as EtherscanResponse 
+        : { status: '0', message: 'Balance request failed', result: '0' };
       
       if (balanceData.status !== '1') {
-        throw new Error(`Etherscan balance API error: ${balanceData.message}`);
+        console.warn('⚠️ Balance API warning:', balanceData.message);
       }
 
-      // Get transaction history with timeout and limit to 25 for performance
-      await this.enforceRateLimit();
+      // Process transactions
+      const txData = txResponse.status === 'fulfilled' && txResponse.value.ok 
+        ? await txResponse.value.json() as EtherscanResponse 
+        : { status: '0', message: 'Transactions request failed', result: [] };
       
-      const txController = new AbortController();
-      const txTimeout = setTimeout(() => {
-        console.log('⚠️ Ethereum transactions request timeout, aborting...');
-        txController.abort();
-      }, timeout);
-      
-      const txUrl = `${this.ETHERSCAN_BASE_URL}?chainid=1&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
-      console.log('📡 Fetching transactions from Etherscan API...');
-      
-      const txResponse = await fetch(txUrl, { 
-        signal: txController.signal,
-        headers: { 
-          'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
-          'Accept': 'application/json'
-        }
-      });
-      clearTimeout(txTimeout);
-      
-      const txData: EtherscanResponse = txResponse.ok ? await txResponse.json() : { status: '0', message: 'Request failed', result: [] };
-      console.log('📊 Transactions response status:', txData.status, 'count:', txData.result?.length || 0);
-      
-      // Get token transfers with timeout and limit to 25 for performance
-      await this.enforceRateLimit();
-      
-      const tokenController = new AbortController();
-      const tokenTimeout = setTimeout(() => {
-        console.log('⚠️ Ethereum token transfers request timeout, aborting...');
-        tokenController.abort();
-      }, timeout);
-      
-      const tokenUrl = `${this.ETHERSCAN_BASE_URL}?chainid=1&module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
-      console.log('📡 Fetching token transfers from Etherscan API...');
-      
-      const tokenResponse = await fetch(tokenUrl, { 
-        signal: tokenController.signal,
-        headers: { 
-          'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
-          'Accept': 'application/json'
-        }
-      });
-      clearTimeout(tokenTimeout);
-      
-      const tokenData: EtherscanResponse = tokenResponse.ok ? await tokenResponse.json() : { status: '0', message: 'Request failed', result: [] };
+      // Process token transfers
+      const tokenData = tokenResponse.status === 'fulfilled' && tokenResponse.value.ok 
+        ? await tokenResponse.value.json() as EtherscanResponse 
+        : { status: '0', message: 'Token transfers request failed', result: [] };
       console.log('📊 Token transfers response status:', tokenData.status, 'count:', tokenData.result?.length || 0);
 
       const result = {
