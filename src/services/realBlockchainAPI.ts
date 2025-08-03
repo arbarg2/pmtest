@@ -81,7 +81,7 @@ interface EthereumTransaction {
 }
 
 class RealBlockchainAPI {
-  private readonly ETHERSCAN_BASE_URL = 'https://api.etherscan.io/api';
+  private readonly ETHERSCAN_BASE_URL = 'https://api.etherscan.io/v2/api';
   private readonly BLOCKSTREAM_BASE_URL = 'https://blockstream.info/api';
   private etherscanApiKey: string | null = null;
   private apiKeyInitialized = false;
@@ -273,7 +273,7 @@ class RealBlockchainAPI {
         balanceController.abort();
       }, timeout);
       
-      const balanceUrl = `${this.ETHERSCAN_BASE_URL}?module=account&action=balance&address=${address}&tag=latest&apikey=${this.etherscanApiKey}`;
+      const balanceUrl = `${this.ETHERSCAN_BASE_URL}?chainid=1&module=account&action=balance&address=${address}&tag=latest&apikey=${this.etherscanApiKey}`;
       console.log('📡 Fetching balance from Etherscan API...');
       
       const balanceResponse = await fetch(balanceUrl, { 
@@ -305,7 +305,7 @@ class RealBlockchainAPI {
         txController.abort();
       }, timeout);
       
-      const txUrl = `${this.ETHERSCAN_BASE_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
+      const txUrl = `${this.ETHERSCAN_BASE_URL}?chainid=1&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
       console.log('📡 Fetching transactions from Etherscan API...');
       
       const txResponse = await fetch(txUrl, { 
@@ -329,7 +329,7 @@ class RealBlockchainAPI {
         tokenController.abort();
       }, timeout);
       
-      const tokenUrl = `${this.ETHERSCAN_BASE_URL}?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
+      const tokenUrl = `${this.ETHERSCAN_BASE_URL}?chainid=1&module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
       console.log('📡 Fetching token transfers from Etherscan API...');
       
       const tokenResponse = await fetch(tokenUrl, { 

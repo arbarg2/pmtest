@@ -24,8 +24,8 @@ interface Transaction {
 
 class BlockchainDataService {
   private readonly BITCOIN_API_BASE = 'https://blockstream.info/api';
-  private readonly ETHEREUM_API_BASE = 'https://api.etherscan.io/api';
-  private readonly ETHERSCAN_API_KEY = 'YourApiKey'; // Free tier available
+  private readonly ETHEREUM_API_BASE = 'https://api.etherscan.io/v2/api';
+  // Note: This service uses hardcoded placeholder. For production, configure ETHERSCAN_API_KEY in Supabase secrets.
 
   // Bitcoin data using Blockstream API (completely free)
   async getBitcoinAddressInfo(address: string): Promise<BitcoinAddressInfo> {
@@ -70,10 +70,10 @@ class BlockchainDataService {
   async getEthereumAddressInfo(address: string): Promise<EthereumAddressInfo> {
     try {
       const balanceResponse = await fetch(
-        `${this.ETHEREUM_API_BASE}?module=account&action=balance&address=${address}&tag=latest&apikey=${this.ETHERSCAN_API_KEY}`
+        `${this.ETHEREUM_API_BASE}?chainid=1&module=account&action=balance&address=${address}&tag=latest&apikey=YourApiKey`
       );
       const txCountResponse = await fetch(
-        `${this.ETHEREUM_API_BASE}?module=proxy&action=eth_getTransactionCount&address=${address}&tag=latest&apikey=${this.ETHERSCAN_API_KEY}`
+        `${this.ETHEREUM_API_BASE}?chainid=1&module=proxy&action=eth_getTransactionCount&address=${address}&tag=latest&apikey=YourApiKey`
       );
 
       const balanceData = await balanceResponse.json();
@@ -93,7 +93,7 @@ class BlockchainDataService {
   async getEthereumTransactions(address: string, limit: number = 10): Promise<Transaction[]> {
     try {
       const response = await fetch(
-        `${this.ETHEREUM_API_BASE}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${this.ETHERSCAN_API_KEY}`
+        `${this.ETHEREUM_API_BASE}?chainid=1&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=YourApiKey`
       );
       
       const data = await response.json();
