@@ -5,96 +5,148 @@
 @tailwind utilities;
 
 :root {
-  /* Light Mode - Modern Blue & Teal Palette */
-  --primary: 217 91% 60%;          /* Bright blue */
+  /* Light Mode - Premium Ocean & Crystal Palette */
+  --primary: 217 91% 58%;          /* Ocean blue */
+  --primary-variant: 220 85% 65%;  /* Lighter ocean */
   --primary-foreground: 0 0% 100%;
-  --secondary: 210 40% 96%;        /* Light gray */
-  --secondary-foreground: 222.2 84% 4.9%;
+  --secondary: 210 40% 98%;        /* Crystal white */
+  --secondary-foreground: 220 14% 11%;
   --muted: 210 40% 96%;
   --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 188 94% 42%;           /* Teal accent */
+  --accent: 185 84% 48%;           /* Turquoise accent */
+  --accent-variant: 188 94% 42%;   /* Deep turquoise */
   --accent-foreground: 0 0% 100%;
+  --success: 142 71% 45%;          /* Emerald green */
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 50%;           /* Amber warning */
+  --warning-foreground: 0 0% 100%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 100%;
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
-  --ring: 217 91% 60%;
+  --ring: 217 91% 58%;
   --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
+  --foreground: 220 14% 11%;
   --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
+  --card-foreground: 220 14% 11%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --chart-1: 12 76% 61%;
-  --chart-2: 173 58% 39%;
-  --chart-3: 197 37% 24%;
-  --chart-4: 43 74% 66%;
-  --chart-5: 27 87% 67%;
+  --popover-foreground: 220 14% 11%;
+  --chart-1: 217 91% 58%;
+  --chart-2: 185 84% 48%;
+  --chart-3: 142 71% 45%;
+  --chart-4: 38 92% 50%;
+  --chart-5: 280 100% 70%;
   --radius: 0.75rem;
 
-  /* Semantic Colors */
-  --teal: 188 94% 42%;
+  /* Enhanced Semantic Colors */
+  --ocean: 217 91% 58%;
+  --ocean-light: 220 85% 65%;
+  --ocean-foreground: 0 0% 100%;
+  --turquoise: 185 84% 48%;
+  --turquoise-light: 188 94% 52%;
+  --turquoise-foreground: 0 0% 100%;
+  --crystal: 210 40% 98%;
+  --crystal-foreground: 220 14% 11%;
+  --emerald: 142 71% 45%;
+  --emerald-foreground: 0 0% 100%;
+  --amber: 38 92% 50%;
+  --amber-foreground: 0 0% 100%;
+  
+  /* Legacy Semantic Colors (for compatibility) */
+  --teal: 185 84% 48%;
   --teal-foreground: 0 0% 100%;
-  --blue: 217 91% 60%;
+  --blue: 217 91% 58%;
   --blue-foreground: 0 0% 100%;
   --sapphire: 230 100% 70%;
   --sapphire-foreground: 0 0% 100%;
   
+  /* Gradient Definitions */
+  --gradient-ocean: linear-gradient(135deg, hsl(217 91% 58%), hsl(220 85% 65%));
+  --gradient-turquoise: linear-gradient(135deg, hsl(185 84% 48%), hsl(188 94% 52%));
+  --gradient-crystal: linear-gradient(180deg, hsl(210 40% 100%), hsl(210 40% 96%));
+  --gradient-sunset: linear-gradient(135deg, hsl(217 91% 58%), hsl(185 84% 48%));
+  
   /* Sidebar Colors */
   --sidebar-background: 0 0% 100%;
-  --sidebar-foreground: 222.2 84% 4.9%;
-  --sidebar-primary: 217 91% 60%;
+  --sidebar-foreground: 220 14% 11%;
+  --sidebar-primary: 217 91% 58%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 210 40% 96%;
-  --sidebar-accent-foreground: 222.2 84% 4.9%;
+  --sidebar-accent: 210 40% 98%;
+  --sidebar-accent-foreground: 220 14% 11%;
   --sidebar-border: 214.3 31.8% 91.4%;
-  --sidebar-ring: 217 91% 60%;
+  --sidebar-ring: 217 91% 58%;
 }
 
 .dark {
-  /* Dark Mode - Sophisticated Dark Palette */
-  --primary: 217 91% 65%;          /* Bright blue for dark */
+  /* Dark Mode - Midnight Ocean & Neon Palette */
+  --primary: 217 91% 70%;          /* Bright ocean blue */
+  --primary-variant: 220 85% 75%;  /* Lighter ocean */
   --primary-foreground: 220 26% 14%;
-  --secondary: 220 26% 14%;        /* Dark surface */
-  --secondary-foreground: 220 9% 86%;
+  --secondary: 220 26% 14%;        /* Deep slate */
+  --secondary-foreground: 220 9% 90%;
   --muted: 220 26% 14%;
   --muted-foreground: 220 9% 46%;
-  --accent: 188 94% 50%;           /* Brighter teal for dark */
+  --accent: 185 84% 55%;           /* Vibrant turquoise */
+  --accent-variant: 188 94% 48%;   /* Deep turquoise */
   --accent-foreground: 220 26% 14%;
-  --destructive: 0 72% 51%;
+  --success: 142 71% 55%;          /* Bright emerald */
+  --success-foreground: 220 26% 14%;
+  --warning: 38 92% 60%;           /* Bright amber */
+  --warning-foreground: 220 26% 14%;
+  --destructive: 0 72% 58%;
   --destructive-foreground: 0 0% 100%;
   --border: 220 26% 18%;           /* Subtle borders */
   --input: 220 26% 18%;
-  --ring: 217 91% 65%;
-  --background: 224 71% 4%;        /* Rich dark blue */
-  --foreground: 220 9% 95%;        /* Soft white */
-  --card: 220 26% 9%;              /* Elevated dark surface */
+  --ring: 217 91% 70%;
+  --background: 224 71% 4%;        /* Rich midnight blue */
+  --foreground: 220 9% 95%;        /* Crisp white */
+  --card: 220 26% 9%;              /* Elevated slate surface */
   --card-foreground: 220 9% 95%;
   --popover: 220 26% 9%;
   --popover-foreground: 220 9% 95%;
-  --chart-1: 217 91% 65%;
-  --chart-2: 188 94% 50%;
-  --chart-3: 280 100% 70%;
-  --chart-4: 47 96% 53%;
-  --chart-5: 339 82% 52%;
+  --chart-1: 217 91% 70%;
+  --chart-2: 185 84% 55%;
+  --chart-3: 142 71% 55%;
+  --chart-4: 38 92% 60%;
+  --chart-5: 280 100% 75%;
 
-  /* Semantic Colors for Dark Mode */
-  --teal: 188 94% 50%;
+  /* Enhanced Semantic Colors for Dark Mode */
+  --ocean: 217 91% 70%;
+  --ocean-light: 220 85% 75%;
+  --ocean-foreground: 220 26% 14%;
+  --turquoise: 185 84% 55%;
+  --turquoise-light: 188 94% 58%;
+  --turquoise-foreground: 220 26% 14%;
+  --crystal: 220 26% 14%;
+  --crystal-foreground: 220 9% 90%;
+  --emerald: 142 71% 55%;
+  --emerald-foreground: 220 26% 14%;
+  --amber: 38 92% 60%;
+  --amber-foreground: 220 26% 14%;
+  
+  /* Legacy Semantic Colors (for compatibility) */
+  --teal: 185 84% 55%;
   --teal-foreground: 220 26% 14%;
-  --blue: 217 91% 65%;
+  --blue: 217 91% 70%;
   --blue-foreground: 220 26% 14%;
-  --sapphire: 230 100% 75%;
+  --sapphire: 230 100% 80%;
   --sapphire-foreground: 220 26% 14%;
+  
+  /* Gradient Definitions for Dark Mode */
+  --gradient-ocean: linear-gradient(135deg, hsl(217 91% 70%), hsl(220 85% 75%));
+  --gradient-turquoise: linear-gradient(135deg, hsl(185 84% 55%), hsl(188 94% 58%));
+  --gradient-crystal: linear-gradient(180deg, hsl(220 26% 16%), hsl(220 26% 12%));
+  --gradient-sunset: linear-gradient(135deg, hsl(217 91% 70%), hsl(185 84% 55%));
   
   /* Sidebar Colors for Dark Mode */
   --sidebar-background: 220 26% 9%;    /* Slightly elevated dark */
   --sidebar-foreground: 220 9% 95%;
-  --sidebar-primary: 217 91% 65%;
+  --sidebar-primary: 217 91% 70%;
   --sidebar-primary-foreground: 220 26% 14%;
   --sidebar-accent: 220 26% 14%;
-  --sidebar-accent-foreground: 220 9% 86%;
+  --sidebar-accent-foreground: 220 9% 90%;
   --sidebar-border: 220 26% 18%;
-  --sidebar-ring: 217 91% 65%;
+  --sidebar-ring: 217 91% 70%;
 }
 
 @layer base {
