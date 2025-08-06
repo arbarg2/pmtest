@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { UserDropdown } from '@/components/UserDropdown';
 import { WalletLookupPanel } from '@/components/WalletLookupPanel';
 import { AnalystDashboard } from '@/components/AnalystDashboard';
+import { ProgressiveAnalysisDisplay } from '@/components/ProgressiveAnalysisDisplay';
+import { PerformanceMetrics } from '@/components/PerformanceMetrics';
 import EnhancedWalletResults from '@/components/EnhancedWalletResults';
 import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
@@ -17,7 +19,15 @@ const Index = () => {
   const navigate = useNavigate();
   const { recordId } = useParams();
   const [walletAddress, setWalletAddress] = useState('');
-  const { isAnalyzing, analyzeWallet, generateReport, analysisData } = useWalletAnalysis();
+  const { 
+    isAnalyzing, 
+    analyzeWallet, 
+    generateReport, 
+    analysisData,
+    analysisProgress,
+    getCacheStats,
+    getQueueStats 
+  } = useWalletAnalysis();
   const [isLoadingWalletData, setIsLoadingWalletData] = useState(false);
   const [recordNotFound, setRecordNotFound] = useState(false);
   const [walletData, setWalletData] = useState<any>(null);
@@ -238,6 +248,24 @@ const Index = () => {
               />
             </CardContent>
           </Card>
+        </div>
+
+        {/* Progressive Analysis Display */}
+        {isAnalyzing && analysisProgress && (
+          <div className="mb-8">
+            <ProgressiveAnalysisDisplay 
+              state={analysisProgress}
+              isVisible={true}
+            />
+          </div>
+        )}
+
+        {/* Performance Metrics */}
+        <div className="mb-8">
+          <PerformanceMetrics 
+            cacheStats={getCacheStats()}
+            queueStats={getQueueStats()}
+          />
         </div>
 
         {/* Main Dashboard Content */}
