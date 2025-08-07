@@ -260,13 +260,15 @@ const Index = () => {
           </div>
         )}
 
-        {/* Performance Metrics */}
+        {/* Performance Metrics - Temporarily disabled for debugging */}
+        {/* 
         <div className="mb-8">
           <PerformanceMetrics 
             cacheStats={getCacheStats()}
             queueStats={getQueueStats()}
           />
         </div>
+        */}
 
         {/* Main Dashboard Content */}
         <AnalystDashboard />
