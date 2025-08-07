@@ -1,22 +1,16 @@
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { enhancedWalletAPI } from '@/services/enhancedApi';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { riskFactorsService } from '@/services/riskFactors';
-import { progressiveAnalysisService } from '@/services/progressiveAnalysis';
-import { cacheService } from '@/services/cacheService';
-import { backgroundProcessor } from '@/services/backgroundProcessor';
 import { WalletRiskResponse } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const useWalletAnalysis = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisData, setAnalysisData] = useState<WalletRiskResponse | null>(null);
-  const [analysisProgress, setAnalysisProgress] = useState<any>(null);
 
   const analyzeWallet = async (walletAddress: string, network: string = 'bitcoin') => {
     if (!user) {
@@ -25,87 +19,95 @@ export const useWalletAnalysis = () => {
     }
     
     setIsAnalyzing(true);
-    setAnalysisProgress(null);
     
     try {
-      console.log('🚀 Starting progressive wallet analysis for:', walletAddress);
+      console.log('🚀 Starting wallet analysis for:', walletAddress);
       
-      // Use progressive analysis for better UX
-      const result = await progressiveAnalysisService.analyzeWithProgressiveLoading(
-        walletAddress,
-        (progressState) => {
-          setAnalysisProgress(progressState);
-          
-          // Update analysis data with partial results
-          if (progressState.partialResult) {
-            setAnalysisData(progressState.partialResult);
-          } else if (progressState.finalResult) {
-            setAnalysisData(progressState.finalResult);
-          }
-        }
-      );
+      // Perform the wallet analysis
+      const result = await enhancedWalletAPI.analyzeWallet(walletAddress);
       
       if (!result) {
         throw new Error('No analysis result received');
       }
 
-      console.log('✅ Progressive analysis completed:', result);
+      console.log('✅ Analysis completed:', result);
 
-      // Queue background processing jobs
-      console.log('📋 Queuing background processing jobs...');
+      // Save the analysis to database
+      console.log('💾 Saving analysis to database...');
+      const saveResult = await supabaseLookupRecords.createLookupRecord({
+        wallet_address: result.address,
+        network: result.network,
+        risk_score: result.risk_score,
+        risk_level: result.risk_level,
+        processing_time_ms: result.processing_time_ms,
+        risk_assessment: result,
+        analyst_fields: {
+          case_notes: '',
+          analyst_decision: 'pending' as const,
+          tags: [],
+          attachments: []
+        }
+      }, user.id);
       
-      try {
-        // Save to database in background (high priority)
-        const dbJob = await backgroundProcessor.addJob('database_storage', {
-          address: walletAddress,
-          network,
-          result,
-          userId: user.id
-        }, 3);
+      if (saveResult.success && saveResult.record) {
+        console.log('✅ Analysis saved with record ID:', saveResult.record.id);
         
-        console.log('📝 Database job queued:', dbJob);
+        // Calculate and store risk factors
+        try {
+          console.log('🔍 Calculating and storing risk factors...');
+          const riskFactors = await riskFactorsService.calculateAndStoreRiskFactors(saveResult.record.id, result);
+          console.log('✅ Risk factors stored:', riskFactors.length, 'factors');
+        } catch (error) {
+          console.error('❌ Failed to store risk factors:', error);
+        }
 
-        // Process risk factors in background (medium priority)
-        const recordId = result.lookupId || `temp_${Date.now()}`;
-        await backgroundProcessor.addJob('risk_factors', {
-          recordId,
-          walletData: result
-        }, 2);
+        // Screen and store sanctions data
+        try {
+          console.log('🔍 Screening and storing sanctions data...');
+          const sanctionsResults = await riskFactorsService.screenSanctions(walletAddress, network);
+          if (sanctionsResults.length > 0) {
+            const storedSanctions = await riskFactorsService.storeSanctionsScreening(saveResult.record.id, sanctionsResults);
+            console.log('✅ Sanctions screening stored:', storedSanctions.length, 'matches');
+          } else {
+            console.log('✅ No sanctions matches found');
+          }
+        } catch (error) {
+          console.error('❌ Failed to store sanctions screening:', error);
+        }
 
-        // Screen sanctions in background (medium priority)
-        await backgroundProcessor.addJob('sanctions_screening', {
-          recordId,
-          address: walletAddress,
-          network
-        }, 2);
-
-        console.log('✅ Background jobs queued successfully');
-      } catch (bgError) {
-        console.error('❌ Background job queuing failed:', bgError);
+        // Add the record ID to the result and mark as temporary if save failed
+        const enhancedResult = {
+          ...result,
+          recordId: saveResult.record.id,
+          isTemporary: false
+        };
+        
+        setAnalysisData(enhancedResult);
+        toast.success('Wallet analysis completed successfully');
+        
+        return enhancedResult;
+      } else {
+        console.warn('⚠️ Failed to save to database, proceeding with temporary record');
+        
+        // Create temporary record ID for session
+        const tempRecordId = `temp_${Date.now()}`;
+        const tempResult = {
+          ...result,
+          recordId: tempRecordId,
+          isTemporary: true
+        };
+        
+        setAnalysisData(tempResult);
+        toast.warning('Analysis completed but not saved to database');
+        
+        return tempResult;
       }
-
-      // Create enhanced result with record ID
-      const enhancedResult = {
-        ...result,
-        recordId: result.lookupId,
-        isTemporary: true
-      };
-      
-      setAnalysisData(enhancedResult);
-      toast.success('Wallet analysis completed successfully');
-      
-      // Record performance metrics
-      cacheService.recordApiCall(result.processing_time_ms);
-      
-      return enhancedResult;
-      
     } catch (error) {
-      console.error('❌ Progressive wallet analysis failed:', error);
+      console.error('❌ Wallet analysis failed:', error);
       toast.error(error instanceof Error ? error.message : 'Analysis failed');
       throw error;
     } finally {
       setIsAnalyzing(false);
-      setAnalysisProgress(null);
     }
   };
 
@@ -113,16 +115,10 @@ export const useWalletAnalysis = () => {
     toast.info('Report generation initiated for ' + walletAddress);
   };
 
-  const getCacheStats = () => cacheService.getCacheStats();
-  const getQueueStats = () => backgroundProcessor.getQueueStats();
-
   return {
     isAnalyzing,
     analyzeWallet,
     generateReport,
-    analysisData,
-    analysisProgress,
-    getCacheStats,
-    getQueueStats,
+    analysisData
   };
 };

@@ -42,13 +42,9 @@ export const storeAnalysisResult = async (
       }
     }, userId);
 
-    if (dbResult.success && dbResult.record) {
-      console.log(`✅ Database storage successful, record ID: ${dbResult.record.id}`);
-      return { 
-        ...dbResult, 
-        recordId: dbResult.record.id,
-        record_id: dbResult.record.record_id 
-      };
+    if (dbResult.success) {
+      console.log(`✅ Database storage successful`);
+      return dbResult;
     } else {
       console.error(`❌ Database storage failed:`, dbResult.error);
       return dbResult;
