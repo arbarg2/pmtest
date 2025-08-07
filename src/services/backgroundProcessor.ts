@@ -140,12 +140,26 @@ class BackgroundProcessor {
     result: WalletRiskResponse;
     userId: string;
   }): Promise<void> {
-    await storeAnalysisResult(
+    console.log('💾 Processing database storage job:', data);
+    const storeResult = await storeAnalysisResult(
       data.address,
       data.network,
       data.result,
       data.userId
     );
+    
+    if (storeResult.success && storeResult.record) {
+      console.log('✅ Database storage completed, real record ID:', storeResult.record.id);
+      
+      // Store the mapping for later retrieval
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(`recordId_${data.result.lookupId}`, storeResult.record.id);
+      }
+    }
+    
+    if (!storeResult.success) {
+      throw new Error(storeResult.error || 'Database storage failed');
+    }
   }
 
   getQueueStats(): {

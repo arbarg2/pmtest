@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { enhancedWalletAPI } from '@/services/enhancedApi';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
@@ -12,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export const useWalletAnalysis = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisData, setAnalysisData] = useState<WalletRiskResponse | null>(null);
   const [analysisProgress, setAnalysisProgress] = useState<any>(null);
@@ -54,12 +56,14 @@ export const useWalletAnalysis = () => {
       
       try {
         // Save to database in background (high priority)
-        await backgroundProcessor.addJob('database_storage', {
+        const dbJob = await backgroundProcessor.addJob('database_storage', {
           address: walletAddress,
           network,
           result,
           userId: user.id
         }, 3);
+        
+        console.log('📝 Database job queued:', dbJob);
 
         // Process risk factors in background (medium priority)
         const recordId = result.lookupId || `temp_${Date.now()}`;
@@ -83,8 +87,8 @@ export const useWalletAnalysis = () => {
       // Create enhanced result with record ID
       const enhancedResult = {
         ...result,
-        recordId: result.lookupId || `temp_${Date.now()}`,
-        isTemporary: false
+        recordId: result.lookupId,
+        isTemporary: true
       };
       
       setAnalysisData(enhancedResult);

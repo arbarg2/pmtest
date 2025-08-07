@@ -279,7 +279,7 @@ class ProgressiveAnalysisService {
       transaction_count: blockchainData.transactionCount,
       last_activity: blockchainData.lastActivity,
       processing_time_ms: Date.now(),
-      lookupId: `LR_${Date.now()}`
+      lookupId: crypto.randomUUID()
     };
   }
 
