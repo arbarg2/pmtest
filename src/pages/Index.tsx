@@ -53,6 +53,11 @@ const Index = () => {
             console.log('✅ Found record in database:', result.record);
 
             const loadedWalletData = {
+              ...(result.record.analysis_data &&
+                typeof result.record.analysis_data === 'object' &&
+                result.record.analysis_data !== null
+                ? result.record.analysis_data
+                : {}),
               recordId: result.record.record_id || result.record.id,
               address: result.record.wallet_address,
               network: result.record.network,
@@ -62,13 +67,7 @@ const Index = () => {
               case_id: result.record.case_id,
               case_status: result.record.case_status,
               case_created_at: result.record.case_created_at,
-              ...(result.record.analysis_data &&
-                typeof result.record.analysis_data === 'object' &&
-                result.record.analysis_data !== null
-                ? result.record.analysis_data
-                : {})
             };
-
             setWalletData(loadedWalletData);
             setRecordNotFound(false);
 

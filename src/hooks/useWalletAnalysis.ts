@@ -64,7 +64,7 @@ export const useWalletAnalysis = () => {
         // Screen and store sanctions data
         try {
           console.log('🔍 Screening and storing sanctions data...');
-          const sanctionsResults = await riskFactorsService.screenSanctions(walletAddress, network);
+          const sanctionsResults = await riskFactorsService.screenSanctions(walletAddress, result.network);
           if (sanctionsResults.length > 0) {
             const storedSanctions = await riskFactorsService.storeSanctionsScreening(saveResult.record.id, sanctionsResults);
             console.log('✅ Sanctions screening stored:', storedSanctions.length, 'matches');
