@@ -1,9 +1,14 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+function isUUID(v: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
 }
 
 serve(async (req) => {
@@ -13,60 +18,81 @@ serve(async (req) => {
   }
 
   try {
-    console.log('📧 Sending report to webhook...');
-    
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
     // Get the report data from the request body
     const reportData = await req.json();
-    
-    console.log('📋 Report data received:', {
-      recordId: reportData.recordId,
-      reportType: reportData.reportType,
-      timestamp: reportData.timestamp
-    });
 
-    // Send the data to the Tines webhook
-    const webhookUrl = 'https://pat.tines.com/webhook/aml-buddy-bot-2/010e55b671e752ae9888806bfb8d0e2d';
-    
+    // If a recordId is provided, verify the user owns this record via RLS
+    const recordId = reportData?.recordId as string | undefined;
+    if (recordId) {
+      const query = supabase.from('investigation_records').select('id').limit(1);
+      const { data, error } = isUUID(recordId)
+        ? await query.eq('id', recordId)
+        : await query.eq('record_id', recordId);
+
+      if (error || !data || data.length === 0) {
+        console.warn('Record ownership verification failed.', { error, recordId });
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    const webhookUrl = Deno.env.get('TINES_REPORT_WEBHOOK_URL');
+    if (!webhookUrl) {
+      console.error('TINES_REPORT_WEBHOOK_URL is not configured');
+      return new Response(JSON.stringify({ error: 'Server not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const response = await fetch(webhookUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(reportData),
     });
 
     if (response.ok) {
-      console.log('✅ Report sent successfully to webhook');
       return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'Report sent successfully to webhook'
-        }),
-        {
-          headers: { 
-            'Content-Type': 'application/json',
-            ...corsHeaders
-          },
-          status: 200,
-        },
+        JSON.stringify({ success: true, message: 'Report sent successfully to webhook' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else {
-      console.error('❌ Webhook request failed:', response.status, response.statusText);
-      throw new Error(`Webhook request failed: ${response.status} ${response.statusText}`);
+      const text = await response.text();
+      console.error('Webhook request failed:', response.status, text);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Webhook request failed' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
   } catch (error) {
     console.error('❌ Error sending report:', error);
     return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: 'Failed to send report',
-        details: error.message
-      }),
+      JSON.stringify({ success: false, error: 'Failed to send report' }),
       {
-        headers: { 
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
         status: 500,
       },
     );
