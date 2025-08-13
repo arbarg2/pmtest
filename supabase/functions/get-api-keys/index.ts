@@ -13,26 +13,39 @@ serve(async (req) => {
   }
 
   try {
-    // This endpoint has been deprecated for security reasons.
-    // API keys must never be exposed to the client.
+    console.log('🔑 Getting API keys from environment...');
+    
+    // Get the API keys from Deno environment (Supabase secrets)
+    const etherscanApiKey = Deno.env.get('ETHERSCAN_API_KEY')
+    
+    console.log('Available environment variables:', Object.keys(Deno.env.toObject()));
+    
+    if (!etherscanApiKey) {
+      console.warn('⚠️ ETHERSCAN_API_KEY not found in environment');
+    } else {
+      console.log('✅ ETHERSCAN_API_KEY found');
+    }
+
     return new Response(
       JSON.stringify({
-        status: 'error',
-        error: 'Deprecated endpoint. Use the etherscan-proxy function instead.'
+        etherscanApiKey: etherscanApiKey || null,
+        status: 'success'
       }),
       {
         headers: { 
           'Content-Type': 'application/json',
           ...corsHeaders
         },
-        status: 403,
+        status: 200,
       },
     )
   } catch (error) {
+    console.error('❌ Error getting API keys:', error)
     return new Response(
       JSON.stringify({ 
-        error: 'Unexpected error',
-        details: error instanceof Error ? error.message : 'Unknown'
+        error: 'Failed to get API keys',
+        details: error.message,
+        status: 'error'
       }),
       {
         headers: { 

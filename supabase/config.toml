@@ -57,9 +57,3 @@ verify_jwt = true
 
 [functions.wallet-monitor]
 verify_jwt = false
-
-[functions.send-report-webhook]
-verify_jwt = true
-
-[functions.etherscan-proxy]
-verify_jwt = true
