@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, Eye, CheckCircle, ArrowRight, Twitter, Linkedin, Lock, Zap, Globe, Users } from 'lucide-react';
-import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
+import { useDemoWalletAnalysis } from '@/hooks/useDemoWalletAnalysis';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,20 +15,21 @@ import { useNavigate } from 'react-router-dom';
 const Landing = () => {
   const [showEarlyAccess, setShowEarlyAccess] = useState(false);
   const navigate = useNavigate();
-  const { analyzeWallet } = useWalletAnalysis();
+  const { analyzeDemoWallet } = useDemoWalletAnalysis();
 
   const handleTryDemo = async (address: string) => {
     try {
-      // Perform analysis without authentication requirement
-      const result = await analyzeWallet(address);
+      console.log('🎯 Demo button clicked for address:', address);
+      // Perform demo analysis without authentication requirement
+      const result = await analyzeDemoWallet(address);
       if (result && result.recordId) {
-        // Navigate directly to results
-        navigate(`/record/${result.recordId}`);
+        console.log('🚀 Navigating to demo results with recordId:', result.recordId);
+        // Navigate directly to results with demo flag
+        navigate(`/record/${result.recordId}?demo=true`);
       }
     } catch (error) {
       console.error('Demo analysis failed:', error);
-      // Fallback: navigate to auth with demo address
-      navigate('/auth', { state: { demoAddress: address } });
+      // Don't redirect to auth for demo failures
     }
   };
 

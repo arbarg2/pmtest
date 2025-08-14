@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,13 +11,17 @@ import EnhancedWalletResults from '@/components/EnhancedWalletResults';
 import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { riskFactorsService } from '@/services/riskFactors';
+import { useDemoContext } from '@/contexts/DemoContext';
 
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { recordId } = useParams();
   const [walletAddress, setWalletAddress] = useState('');
+  const isDemo = searchParams.get('demo') === 'true';
+  const { demoData } = useDemoContext();
   const { isAnalyzing, analyzeWallet, generateReport, analysisData } = useWalletAnalysis();
   const [isLoadingWalletData, setIsLoadingWalletData] = useState(false);
   const [recordNotFound, setRecordNotFound] = useState(false);
@@ -26,11 +30,11 @@ const Index = () => {
   const [sanctionsMatches, setSanctionsMatches] = useState([]);
 
   useEffect(() => {
-    // Only redirect to auth if not viewing a specific record (allow demo access to results)
-    if (!loading && !user && !recordId) {
+    // Only redirect to auth if not viewing a specific record and not in demo mode
+    if (!loading && !user && !recordId && !isDemo) {
       navigate('/auth');
     }
-  }, [user, loading, navigate, recordId]);
+  }, [user, loading, navigate, recordId, isDemo]);
 
   // Handle demo address from landing page
   useEffect(() => {
@@ -42,18 +46,35 @@ const Index = () => {
   }, [location.state, navigate, location.pathname]);
 
   useEffect(() => {
-    if (recordId && user) {
-      console.log('🔄 Loading data for record:', recordId);
+    if (recordId && (user || isDemo)) {
+      console.log('🔄 Loading data for record:', recordId, 'Demo mode:', isDemo);
 
       setIsLoadingWalletData(true);
       setRecordNotFound(false);
 
-      const loadWalletData = async () => {
+          const loadWalletData = async () => {
         try {
+          // For demo records, check if it's in demoData first
+          if (isDemo && demoData && demoData.recordId === recordId) {
+            console.log('✅ Using demo analysis data from demo context');
+            setWalletData(demoData);
+            setRecordNotFound(false);
+            setIsLoadingWalletData(false);
+            return;
+          }
+
           if (analysisData && analysisData.recordId === recordId && analysisData.isTemporary === true) {
             console.log('✅ Using temporary analysis data from current session');
             setWalletData(analysisData);
             setRecordNotFound(false);
+            setIsLoadingWalletData(false);
+            return;
+          }
+
+          // Skip database lookup for demo records
+          if (isDemo) {
+            console.log('❌ Demo record not found in session data');
+            setRecordNotFound(true);
             setIsLoadingWalletData(false);
             return;
           }
@@ -117,7 +138,7 @@ const Index = () => {
 
       loadWalletData();
     }
-  }, [recordId, user, analysisData]);
+  }, [recordId, user, analysisData, isDemo, demoData]);
 
   const handleAnalyze = async () => {
     if (!walletAddress.trim()) return;
@@ -154,7 +175,7 @@ const Index = () => {
     );
   }
 
-  if (!user) {
+  if (!user && !isDemo) {
     return null;
   }
 
@@ -175,14 +196,17 @@ const Index = () => {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
-              Record Not Found
+              {isDemo ? 'Demo Record Not Found' : 'Record Not Found'}
             </h2>
             <p className="text-slate-500 dark:text-slate-400 mb-4">
-              Could not load wallet data for record ID: {recordId}
+              {isDemo 
+                ? 'The demo session has expired. Please try the demo again from the landing page.'
+                : `Could not load wallet data for record ID: ${recordId}`
+              }
             </p>
-            <Button onClick={handleBack}>
+            <Button onClick={isDemo ? () => navigate('/') : handleBack}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
+              {isDemo ? 'Back to Landing' : 'Back to Dashboard'}
             </Button>
           </div>
         </div>
