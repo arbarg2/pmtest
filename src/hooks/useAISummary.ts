@@ -98,19 +98,24 @@ export const useAISummary = (recordId?: string) => {
       // Update status to pending immediately for better UX
       setSummaryData(prev => prev ? { ...prev, ai_summary_status: 'pending' } : null);
       
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
+      // Skip database updates for demo records
+      const isDemoRecord = recordId.startsWith('demo_');
       
-      let updateQuery = supabase
-        .from('investigation_records')
-        .update({ ai_summary_status: 'pending' });
-      
-      if (isUUID) {
-        updateQuery = updateQuery.eq('id', recordId);
-      } else {
-        updateQuery = updateQuery.eq('record_id', recordId);
-      }
+      if (!isDemoRecord) {
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
+        
+        let updateQuery = supabase
+          .from('investigation_records')
+          .update({ ai_summary_status: 'pending' });
+        
+        if (isUUID) {
+          updateQuery = updateQuery.eq('id', recordId);
+        } else {
+          updateQuery = updateQuery.eq('record_id', recordId);
+        }
 
-      await updateQuery;
+        await updateQuery;
+      }
 
       // Call the Edge Function to generate summary
       const { data, error } = await supabase.functions.invoke('ai-summary', {
@@ -122,6 +127,20 @@ export const useAISummary = (recordId?: string) => {
       }
 
       console.log('✅ AI summary generated successfully');
+      
+      // Check if this is a demo record with immediate response
+      if (data?.demo && data?.ai_summary) {
+        console.log('🎭 Demo AI summary received immediately');
+        setSummaryData({
+          id: recordId,
+          record_id: recordId,
+          ai_summary: data.ai_summary,
+          ai_summary_status: 'completed',
+          ai_summary_generated_at: new Date().toISOString(),
+          ai_summary_previous: null
+        });
+        return;
+      }
       
       // Add a small delay to ensure the database has been updated
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -160,20 +179,24 @@ export const useAISummary = (recordId?: string) => {
     } catch (error) {
       console.error('❌ AI summary generation failed:', error);
       
-      // Update status to failed
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
+      // Update status to failed (skip for demo records)
+      const isDemoRecord = recordId.startsWith('demo_');
       
-      let failedQuery = supabase
-        .from('investigation_records')
-        .update({ ai_summary_status: 'failed' });
-      
-      if (isUUID) {
-        failedQuery = failedQuery.eq('id', recordId);
-      } else {
-        failedQuery = failedQuery.eq('record_id', recordId);
-      }
+      if (!isDemoRecord) {
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
+        
+        let failedQuery = supabase
+          .from('investigation_records')
+          .update({ ai_summary_status: 'failed' });
+        
+        if (isUUID) {
+          failedQuery = failedQuery.eq('id', recordId);
+        } else {
+          failedQuery = failedQuery.eq('record_id', recordId);
+        }
 
-      await failedQuery;
+        await failedQuery;
+      }
       
       // Update local state immediately
       setSummaryData(prev => prev ? { ...prev, ai_summary_status: 'failed' } : null);

@@ -38,6 +38,71 @@ serve(async (req) => {
         
         const { recordId, walletData } = body
 
+        // Check if this is a demo record
+        const isDemoRecord = recordId.startsWith('demo_');
+        
+        if (isDemoRecord) {
+          console.log('🎭 Processing demo record - generating mock AI summary')
+          
+          // Generate a mock AI summary for demo records
+          const mockAISummary = `# AI Analysis Summary for Demo Wallet
+
+## Executive Summary
+This wallet demonstrates **high-volume trading activity** with a substantial Bitcoin balance. The address appears to be associated with a commercial exchange operation based on transaction patterns and volume metrics.
+
+## Risk Assessment
+- **Overall Risk Score**: ${walletData.risk_score}/10 (${walletData.risk_level})
+- **Confidence Level**: 85%
+- **Primary Risk Factors**: High transaction frequency, large balance holdings
+
+## Key Findings
+
+### 🎯 Entity Classification
+- **Type**: ${walletData.entity_attribution?.name || 'Commercial Exchange'}
+- **Category**: ${walletData.entity_attribution?.type || 'exchange'}
+- **Confidence**: ${(walletData.entity_attribution?.confidence || 0.75) * 100}%
+
+### 💰 Financial Profile
+- **Current Balance**: ${walletData.asset_breakdown?.BITCOIN?.balance || 0} BTC
+- **USD Equivalent**: $${(walletData.asset_breakdown?.BITCOIN?.usd_value || 0).toLocaleString()}
+- **Transaction Count**: ${walletData.transaction_count?.toLocaleString() || 'N/A'}
+- **Average Transaction Size**: ${walletData.volume_metrics?.average_transaction_size || 0} BTC
+
+### 🛡️ Sanctions & Compliance
+- **Sanctions Status**: ✅ Clean
+- **Fraud Reports**: None identified
+- **Regulatory Flags**: None detected
+
+### 📊 Behavioral Analysis
+The wallet exhibits characteristics typical of a **${walletData.behavioral_classification?.category || 'commercial exchange'}** operation:
+- High-frequency transaction patterns
+- Consistent inbound/outbound flow ratios
+- Professional-grade operational security
+
+### 🚨 Alerts & Recommendations
+- **No immediate red flags detected**
+- Consider enhanced monitoring due to high transaction volume
+- Verify entity compliance with local regulations
+- Monitor for unusual pattern changes
+
+---
+*Analysis completed using real-time blockchain data and advanced risk modeling algorithms.*`;
+
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'Demo AI summary generated',
+              ai_summary: mockAISummary,
+              record_id: recordId,
+              demo: true
+            }),
+            { 
+              status: 200, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
+        }
+
         // Check if recordId is a UUID or record_id string
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
         
