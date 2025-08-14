@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { riskFactorsService } from '@/services/riskFactors';
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { recordId } = useParams();
   const [walletAddress, setWalletAddress] = useState('');
   const { isAnalyzing, analyzeWallet, generateReport, analysisData } = useWalletAnalysis();
@@ -29,6 +30,15 @@ const Index = () => {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  // Handle demo address from landing page
+  useEffect(() => {
+    if (location.state?.demoAddress) {
+      setWalletAddress(location.state.demoAddress);
+      // Clear the state to prevent re-triggering
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.state, navigate, location.pathname]);
 
   useEffect(() => {
     if (recordId && user) {

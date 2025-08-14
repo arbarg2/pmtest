@@ -8,11 +8,17 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import EarlyAccessModal from '@/components/auth/EarlyAccessModal';
+import { QuickStartDemo } from '@/components/QuickStartDemo';
 import { useNavigate } from 'react-router-dom';
 
 const Landing = () => {
   const [showEarlyAccess, setShowEarlyAccess] = useState(false);
   const navigate = useNavigate();
+
+  const handleTryDemo = (address: string) => {
+    // Navigate to dashboard with the demo address pre-filled
+    navigate('/dashboard', { state: { demoAddress: address } });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
@@ -95,6 +101,13 @@ const Landing = () => {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Quick Start Demo Section */}
+      <section className="px-4 py-16">
+        <div className="max-w-4xl mx-auto">
+          <QuickStartDemo onTryDemo={handleTryDemo} />
         </div>
       </section>
 
