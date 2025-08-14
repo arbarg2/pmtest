@@ -26,27 +26,27 @@ const App = () => (
       <AuthProvider>
         <DemoProvider>
           <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/dashboard" element={<Index />} />
-              <Route path="/record/:recordId" element={<Index />} />
-              <Route path="/wallets/:recordId/flow" element={<WalletTransactionFlow />} />
-              <Route path="/cases" element={<CaseManagementPage />} />
-              <Route path="/all-records" element={<AllRecords />} />
-              <Route path="/bulk-analysis" element={<BulkAnalysis />} />
-              <Route path="/audit-logs" element={<AuditLogs />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/api-docs" element={<ApiDocs />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </DemoProvider>
-    </AuthProvider>
-  </ThemeProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/dashboard" element={<Index />} />
+                <Route path="/record/:recordId" element={<Index />} />
+                <Route path="/wallets/:recordId/flow" element={<WalletTransactionFlow />} />
+                <Route path="/cases" element={<CaseManagementPage />} />
+                <Route path="/all-records" element={<AllRecords />} />
+                <Route path="/bulk-analysis" element={<BulkAnalysis />} />
+                <Route path="/audit-logs" element={<AuditLogs />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/api-docs" element={<ApiDocs />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </DemoProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
