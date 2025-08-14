@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, Eye, CheckCircle, ArrowRight, Twitter, Linkedin, Lock, Zap, Globe, Users } from 'lucide-react';
+import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,10 +15,21 @@ import { useNavigate } from 'react-router-dom';
 const Landing = () => {
   const [showEarlyAccess, setShowEarlyAccess] = useState(false);
   const navigate = useNavigate();
+  const { analyzeWallet } = useWalletAnalysis();
 
-  const handleTryDemo = (address: string) => {
-    // Navigate to dashboard with the demo address pre-filled
-    navigate('/dashboard', { state: { demoAddress: address } });
+  const handleTryDemo = async (address: string) => {
+    try {
+      // Perform analysis without authentication requirement
+      const result = await analyzeWallet(address);
+      if (result && result.recordId) {
+        // Navigate directly to results
+        navigate(`/record/${result.recordId}`);
+      }
+    } catch (error) {
+      console.error('Demo analysis failed:', error);
+      // Fallback: navigate to auth with demo address
+      navigate('/auth', { state: { demoAddress: address } });
+    }
   };
 
   return (

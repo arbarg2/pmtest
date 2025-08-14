@@ -26,10 +26,11 @@ const Index = () => {
   const [sanctionsMatches, setSanctionsMatches] = useState([]);
 
   useEffect(() => {
-    if (!loading && !user) {
+    // Only redirect to auth if not viewing a specific record (allow demo access to results)
+    if (!loading && !user && !recordId) {
       navigate('/auth');
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, recordId]);
 
   // Handle demo address from landing page
   useEffect(() => {
