@@ -132,47 +132,94 @@ The wallet exhibits characteristics typical of a **${walletData.behavioral_class
         }
 
         console.log('✅ Record verified:', existingRecord)
-        console.log('🌐 Calling Tines webhook for AI summary generation...')
-        
-        // Call the Tines webhook
-        const tinesWebhookUrl = 'https://pat.tines.com/webhook/aml-buddy-bot/d944814a4370670941138b195459ae7e'
-        
-        const webhookPayload = {
-          record_id: existingRecord.id, // Use the UUID for callback
-          wallet_data: walletData,
-          callback_url: `${supabaseUrl}/functions/v1/ai-summary`
+        console.log('🤖 Generating AI summary via Lovable AI Gateway...')
+
+        const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
+        if (!lovableApiKey) {
+          throw new Error('LOVABLE_API_KEY not configured')
         }
 
-        console.log('📤 Sending webhook payload to Tines:', JSON.stringify(webhookPayload, null, 2))
+        const prompt = `You are a senior blockchain compliance analyst. Produce a concise, professional AML/KYC risk summary in Markdown for the wallet below.
 
-        const webhookResponse = await fetch(tinesWebhookUrl, {
+Wallet data (JSON):
+${JSON.stringify(walletData, null, 2)}
+
+Format the response with these sections:
+## Executive Summary
+## Risk Assessment (include risk score & level)
+## Key Findings
+### Entity Classification
+### Financial Profile
+### Sanctions & Compliance
+### Behavioral Analysis
+## Recommendations
+
+Keep it under 600 words. Use bullet points where helpful. Do not invent numbers — only use what is in the data.`
+
+        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(webhookPayload)
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: 'You are a senior blockchain AML compliance analyst.' },
+              { role: 'user', content: prompt }
+            ],
+          }),
         })
 
-        if (!webhookResponse.ok) {
-          const errorText = await webhookResponse.text()
-          console.error('❌ Tines webhook failed:', webhookResponse.status, errorText)
-          throw new Error(`Tines webhook failed: ${webhookResponse.status} - ${errorText}`)
+        if (!aiResponse.ok) {
+          const errorText = await aiResponse.text()
+          console.error('❌ AI Gateway failed:', aiResponse.status, errorText)
+          throw new Error(`AI Gateway failed: ${aiResponse.status} - ${errorText}`)
         }
 
-        const webhookResult = await webhookResponse.json()
-        console.log('✅ Tines webhook response:', webhookResult)
+        const aiData = await aiResponse.json()
+        const aiSummary = aiData.choices?.[0]?.message?.content
+
+        if (!aiSummary) {
+          throw new Error('No summary returned from AI Gateway')
+        }
+
+        console.log('✅ AI summary generated, saving to database...')
+
+        // Get current summary to preserve as previous
+        const { data: current } = await supabase
+          .from('investigation_records')
+          .select('ai_summary')
+          .eq('id', existingRecord.id)
+          .maybeSingle()
+
+        const updatePayload: any = {
+          ai_summary: aiSummary,
+          ai_summary_generated_at: new Date().toISOString(),
+          ai_summary_status: 'completed',
+        }
+        if (current?.ai_summary) {
+          updatePayload.ai_summary_previous = current.ai_summary
+        }
+
+        const { error: saveError } = await supabase
+          .from('investigation_records')
+          .update(updatePayload)
+          .eq('id', existingRecord.id)
+
+        if (saveError) {
+          console.error('❌ Failed to save AI summary:', saveError)
+          throw new Error(`Failed to save: ${saveError.message}`)
+        }
 
         return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: 'AI summary generation initiated',
+          JSON.stringify({
+            success: true,
+            message: 'AI summary generated',
             record_id: existingRecord.record_id,
-            webhook_response: webhookResult
+            ai_summary: aiSummary,
           }),
-          { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       } else if (body.record_id && body.ai_summary) {
         // This is a callback from Tines with AI summary result
