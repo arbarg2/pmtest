@@ -81,20 +81,25 @@ interface EthereumTransaction {
 }
 
 class RealBlockchainAPI {
-  private readonly ETHERSCAN_BASE_URL = 'https://api.etherscan.io/v2/api';
   private readonly BLOCKSTREAM_BASE_URL = 'https://blockstream.info/api';
-  private etherscanApiKey: string | null = null;
-  private apiKeyInitialized = false;
-  
+
   // Rate limiting
   private lastRequestTime = 0;
   private readonly MIN_REQUEST_INTERVAL = 1000; // 1 second between requests
 
   constructor() {
-    // Initialize API key (non-blocking; missing key is non-fatal — Bitcoin works without it)
-    this.initializeApiKey().catch(() => {
-      // Silently ignore — warnings are logged inside initializeApiKey
+    // Etherscan key is no longer fetched to the client; calls are proxied server-side.
+  }
+
+  // Server-side Etherscan proxy. Never exposes the API key to the browser.
+  private async etherscanProxy(params: Record<string, string | number>): Promise<EtherscanResponse> {
+    const { data, error } = await supabase.functions.invoke('etherscan-proxy', {
+      body: params,
     });
+    if (error) {
+      throw new Error(`Etherscan proxy error: ${error.message}`);
+    }
+    return data as EtherscanResponse;
   }
 
   // Rate limiting helper
@@ -111,32 +116,7 @@ class RealBlockchainAPI {
     this.lastRequestTime = Date.now();
   }
 
-  private async initializeApiKey(): Promise<void> {
-    if (this.apiKeyInitialized) return;
-
-    try {
-      const { data, error } = await supabase.functions.invoke('get-api-keys');
-
-      if (error) {
-        console.warn('⚠️ Could not fetch API keys (Ethereum lookups will be limited):', error.message);
-        this.apiKeyInitialized = true;
-        return;
-      }
-
-      if (!data || !data.etherscanApiKey) {
-        console.warn('⚠️ No Etherscan API key configured. Bitcoin analysis still works; Ethereum lookups will be limited.');
-        this.apiKeyInitialized = true;
-        return;
-      }
-
-      this.etherscanApiKey = data.etherscanApiKey;
-      console.log('✅ Etherscan API key loaded');
-      this.apiKeyInitialized = true;
-    } catch (error) {
-      console.warn('⚠️ API key initialization skipped:', error instanceof Error ? error.message : error);
-      this.apiKeyInitialized = true;
-    }
-  }
+  // (API key initialization removed — handled server-side by etherscan-proxy)
 
   // Bitcoin API integration using Blockstream (free, no API key needed)
   async getBitcoinAddressData(address: string): Promise<{
@@ -245,87 +225,67 @@ class RealBlockchainAPI {
     transactions: EthereumTransaction[];
     tokenTransfers: any[];
   }> {
-    // Ensure API key is initialized
-    await this.initializeApiKey();
     await this.enforceRateLimit();
-
-    if (!this.etherscanApiKey) {
-      throw new Error('Etherscan API key not configured. Please check Supabase secrets configuration.');
-    }
 
     try {
       console.log(`🔍 [ETHEREUM LIVE] Fetching real-time data for: ${address}`);
-      console.log(`🔑 Using API key: ${this.etherscanApiKey.substring(0, 8)}...`);
-      
-      // Validate Ethereum address format
+
       if (!this.isValidEthereumAddress(address)) {
         throw new Error(`Invalid Ethereum address format: ${address}`);
       }
-      
-      const timeout = 10000; // Reduced to 10 seconds for faster response
-      
-      // Make all API calls in parallel for 3x speed improvement
-      console.log('📡 Making parallel API calls to Etherscan...');
-      
-      const balanceUrl = `${this.ETHERSCAN_BASE_URL}?chainid=1&module=account&action=balance&address=${address}&tag=latest&apikey=${this.etherscanApiKey}`;
-      const txUrl = `${this.ETHERSCAN_BASE_URL}?chainid=1&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
-      const tokenUrl = `${this.ETHERSCAN_BASE_URL}?chainid=1&module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${this.etherscanApiKey}`;
-      
-      const fetchOptions = {
-        signal: AbortSignal.timeout(timeout),
-        headers: { 
-          'User-Agent': 'Rian-Blockchain-Intelligence/1.0',
-          'Accept': 'application/json'
-        }
-      };
 
-      // Execute all requests in parallel
-      const [balanceResponse, txResponse, tokenResponse] = await Promise.allSettled([
-        fetch(balanceUrl, fetchOptions),
-        fetch(txUrl, fetchOptions),
-        fetch(tokenUrl, fetchOptions)
+      console.log('📡 Making parallel proxied calls to Etherscan V2...');
+
+      const [balanceResult, txResult, tokenResult] = await Promise.allSettled([
+        this.etherscanProxy({ module: 'account', action: 'balance', address, chainid: 1 }),
+        this.etherscanProxy({
+          module: 'account', action: 'txlist', address, chainid: 1,
+          page: 1, offset: 25, sort: 'desc',
+        }),
+        this.etherscanProxy({
+          module: 'account', action: 'tokentx', address, chainid: 1,
+          page: 1, offset: 25, sort: 'desc',
+        }),
       ]);
 
-      // Process balance
-      const balanceData = balanceResponse.status === 'fulfilled' && balanceResponse.value.ok 
-        ? await balanceResponse.value.json() as EtherscanResponse 
-        : { status: '0', message: 'Balance request failed', result: '0' };
-      
+      const balanceData = balanceResult.status === 'fulfilled'
+        ? balanceResult.value
+        : { status: '0', message: 'Balance request failed', result: '0' } as EtherscanResponse;
+
       if (balanceData.status !== '1') {
         console.warn('⚠️ Balance API warning:', balanceData.message);
       }
 
-      // Process transactions
-      const txData = txResponse.status === 'fulfilled' && txResponse.value.ok 
-        ? await txResponse.value.json() as EtherscanResponse 
-        : { status: '0', message: 'Transactions request failed', result: [] };
-      
-      // Process token transfers
-      const tokenData = tokenResponse.status === 'fulfilled' && tokenResponse.value.ok 
-        ? await tokenResponse.value.json() as EtherscanResponse 
-        : { status: '0', message: 'Token transfers request failed', result: [] };
-      console.log('📊 Token transfers response status:', tokenData.status, 'count:', tokenData.result?.length || 0);
+      const txData = txResult.status === 'fulfilled'
+        ? txResult.value
+        : { status: '0', message: 'Transactions request failed', result: [] } as EtherscanResponse;
+
+      const tokenData = tokenResult.status === 'fulfilled'
+        ? tokenResult.value
+        : { status: '0', message: 'Token transfers request failed', result: [] } as EtherscanResponse;
+
+      console.log('📊 Token transfers status:', tokenData.status, 'count:', tokenData.result?.length || 0);
 
       const result = {
-        balance: parseInt(balanceData.result) / 1e18, // Convert wei to ETH
+        balance: parseInt(balanceData.result || '0') / 1e18,
         transactionCount: txData.status === '1' ? txData.result.length : 0,
         transactions: txData.status === '1' ? txData.result.slice(0, 25) : [],
-        tokenTransfers: tokenData.status === '1' ? tokenData.result.slice(0, 25) : []
+        tokenTransfers: tokenData.status === '1' ? tokenData.result.slice(0, 25) : [],
       };
 
       console.log(`✅ [ETHEREUM LIVE] Real-time data retrieved:`, {
         balance: result.balance,
         txCount: result.transactionCount,
-        tokenTransfers: result.tokenTransfers.length
+        tokenTransfers: result.tokenTransfers.length,
       });
-      
+
       return result;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Ethereum API request timed out. Please try again.');
       }
       console.error('❌ [ETHEREUM] Live API failed:', error);
-      throw error; // Don't fall back, throw the error
+      throw error;
     }
   }
 
