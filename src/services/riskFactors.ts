@@ -207,72 +207,45 @@ class RiskFactorsService {
 
   async screenSanctions(walletAddress: string, network: string): Promise<SanctionsResult[]> {
     try {
-      console.log('Enhanced sanctions screening for:', walletAddress, network);
-      
-      // Use the enhanced sanctions screening service
-      const results = await sanctionsScreeningService.screenEntity('Unknown Entity', walletAddress);
-      
-      console.log('Enhanced sanctions screening results:', results);
-      return results;
+      console.log('🛡️ Real OFAC sanctions screening for:', walletAddress, network);
+
+      const results: SanctionsResult[] = [];
+
+      // 1. Direct match against OFAC SDN address list (case-insensitive)
+      const { data: directMatches, error } = await supabase
+        .from('sanctions_addresses')
+        .select('address, source_list, entity_name, program, network')
+        .eq('network', network.toLowerCase())
+        .ilike('address', walletAddress);
+
+      if (error) {
+        console.error('Sanctions DB query failed:', error);
+      } else if (directMatches && directMatches.length > 0) {
+        for (const m of directMatches) {
+          results.push({
+            entity_name: m.entity_name || 'OFAC-Listed Address',
+            entity_type: 'Sanctioned Address',
+            match_type: 'direct',
+            confidence_score: 1.0,
+            source_list: m.source_list,
+            matched_entity: m.address,
+            sanction_match: true,
+          });
+        }
+        console.log(`🚨 Direct OFAC match for ${walletAddress}`);
+        return results;
+      }
+
+      // 2. Fall through to entity-name screening for additional context
+      const entityResults = await sanctionsScreeningService
+        .screenEntity('Unknown Entity', walletAddress)
+        .catch(() => [] as SanctionsResult[]);
+
+      return [...results, ...entityResults];
     } catch (error) {
-      console.error('Error in enhanced sanctions screening:', error);
-      // Fallback to basic screening logic
-      return this.basicSanctionsScreening(walletAddress, network);
+      console.error('Error in sanctions screening:', error);
+      return [];
     }
-  }
-
-  private basicSanctionsScreening(walletAddress: string, network: string): SanctionsResult[] {
-    console.log('Using basic sanctions screening fallback');
-    
-    // Generate dynamic sanctions screening based on address
-    const addressHash = walletAddress.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    const riskSeed = Math.abs(addressHash) / 1000000 % 1;
-    const screeningResults: SanctionsResult[] = [];
-
-    // Check for direct sanctions match (very rare)
-    if (riskSeed > 0.98) {
-      screeningResults.push({
-        entity_name: 'Sanctioned Entity',
-        entity_type: 'Individual',
-        match_type: 'direct',
-        confidence_score: 0.95,
-        source_list: 'OFAC SDN List (Fallback)',
-        matched_entity: 'High-risk entity detected',
-        sanction_match: true
-      });
-    }
-
-    // Check for 1-hop exposure (more common for high-risk addresses)
-    if (riskSeed > 0.85) {
-      screeningResults.push({
-        entity_name: 'High-Risk Exchange',
-        entity_type: 'Exchange',
-        match_type: '1-hop',
-        confidence_score: 0.75,
-        source_list: 'Compliance Database (Fallback)',
-        matched_entity: 'Associated high-risk service',
-        sanction_match: true
-      });
-    }
-
-    // Known problematic addresses for demo
-    if (walletAddress.includes('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')) {
-      screeningResults.push({
-        entity_name: 'Genesis Block Address',
-        entity_type: 'Historical',
-        match_type: 'direct',
-        confidence_score: 0.95,
-        source_list: 'Demo List',
-        matched_entity: 'Bitcoin Genesis Block',
-        sanction_match: true
-      });
-    }
-
-    return screeningResults;
   }
 
   async storeSanctionsScreening(lookupRecordId: string, matches: SanctionsResult[]): Promise<SanctionsMatch[]> {
