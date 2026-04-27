@@ -330,6 +330,7 @@ class RealBlockchainAPI {
         tokenTransfers: result.tokenTransfers.length,
       });
 
+      void this.setCached('ethereum', address, result);
       return result;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
