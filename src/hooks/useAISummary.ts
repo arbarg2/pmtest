@@ -128,17 +128,18 @@ export const useAISummary = (recordId?: string) => {
 
       console.log('✅ AI summary generated successfully');
       
-      // Check if this is a demo record with immediate response
-      if (data?.demo && data?.ai_summary) {
-        console.log('🎭 Demo AI summary received immediately');
-        setSummaryData({
-          id: recordId,
-          record_id: recordId,
+      // Edge function returns ai_summary immediately for both demo and real records
+      if (data?.ai_summary) {
+        console.log('🤖 AI summary received');
+        setSummaryData(prev => ({
+          id: prev?.id || recordId,
+          record_id: prev?.record_id || recordId,
           ai_summary: data.ai_summary,
           ai_summary_status: 'completed',
           ai_summary_generated_at: new Date().toISOString(),
-          ai_summary_previous: null
-        });
+          ai_summary_previous: prev?.ai_summary || null,
+        }));
+        toast.success('AI analysis completed successfully');
         return;
       }
       
