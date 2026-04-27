@@ -7,10 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -41,128 +41,23 @@ export type Database = {
         }
         Relationships: []
       }
-      case_activity_log: {
-        Row: {
-          activity_description: string
-          activity_type: string
-          case_id: string
-          created_at: string
-          id: string
-          metadata: Json | null
-          user_id: string
-        }
-        Insert: {
-          activity_description: string
-          activity_type: string
-          case_id: string
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          user_id: string
-        }
-        Update: {
-          activity_description?: string
-          activity_type?: string
-          case_id?: string
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "case_activity_log_case_id_fkey"
-            columns: ["case_id"]
-            isOneToOne: false
-            referencedRelation: "cases"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      case_audit_log: {
-        Row: {
-          action: string
-          case_id: string
-          created_at: string | null
-          details: Json | null
-          id: string
-          user_id: string
-        }
-        Insert: {
-          action: string
-          case_id: string
-          created_at?: string | null
-          details?: Json | null
-          id?: string
-          user_id: string
-        }
-        Update: {
-          action?: string
-          case_id?: string
-          created_at?: string | null
-          details?: Json | null
-          id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      cases: {
-        Row: {
-          assigned_to: string | null
-          case_id: string
-          case_name: string
-          created_at: string
-          created_by: string
-          id: string
-          overall_risk_level: string | null
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          assigned_to?: string | null
-          case_id?: string
-          case_name: string
-          created_at?: string
-          created_by: string
-          id?: string
-          overall_risk_level?: string | null
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          assigned_to?: string | null
-          case_id?: string
-          case_name?: string
-          created_at?: string
-          created_by?: string
-          id?: string
-          overall_risk_level?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       investigation_records: {
         Row: {
           ai_summary: string | null
           ai_summary_generated_at: string | null
           ai_summary_previous: string | null
           ai_summary_status: string | null
-          analysis_data: Json
+          analysis_data: Json | null
           analyst_id: string | null
           analyst_notes: string | null
           assigned_to: string | null
           case_created_at: string | null
           case_id: string | null
-          case_id_v2: string | null
           case_status: string | null
           created_at: string
           id: string
           investigation_status: string | null
-          is_case: boolean | null
+          is_case: boolean
           network: string
           record_id: string
           reviewed_at: string | null
@@ -178,23 +73,22 @@ export type Database = {
           ai_summary_generated_at?: string | null
           ai_summary_previous?: string | null
           ai_summary_status?: string | null
-          analysis_data: Json
+          analysis_data?: Json | null
           analyst_id?: string | null
           analyst_notes?: string | null
           assigned_to?: string | null
           case_created_at?: string | null
           case_id?: string | null
-          case_id_v2?: string | null
           case_status?: string | null
           created_at?: string
           id?: string
           investigation_status?: string | null
-          is_case?: boolean | null
+          is_case?: boolean
           network: string
           record_id: string
           reviewed_at?: string | null
-          risk_level: string
-          risk_score: number
+          risk_level?: string
+          risk_score?: number
           tags?: string[] | null
           updated_at?: string
           user_id: string
@@ -205,18 +99,17 @@ export type Database = {
           ai_summary_generated_at?: string | null
           ai_summary_previous?: string | null
           ai_summary_status?: string | null
-          analysis_data?: Json
+          analysis_data?: Json | null
           analyst_id?: string | null
           analyst_notes?: string | null
           assigned_to?: string | null
           case_created_at?: string | null
           case_id?: string | null
-          case_id_v2?: string | null
           case_status?: string | null
           created_at?: string
           id?: string
           investigation_status?: string | null
-          is_case?: boolean | null
+          is_case?: boolean
           network?: string
           record_id?: string
           reviewed_at?: string | null
@@ -227,44 +120,60 @@ export type Database = {
           user_id?: string
           wallet_address?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "investigation_records_case_id_v2_fkey"
-            columns: ["case_id_v2"]
-            isOneToOne: false
-            referencedRelation: "cases"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       risk_factors: {
         Row: {
-          created_at: string | null
+          created_at: string
           description: string | null
-          detected_at: string | null
+          detected_at: string
           factor_type: string
           id: string
-          lookup_record_id: string | null
+          lookup_record_id: string
           score: number
           severity: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           description?: string | null
-          detected_at?: string | null
+          detected_at?: string
           factor_type: string
           id?: string
-          lookup_record_id?: string | null
-          score: number
-          severity: string
+          lookup_record_id: string
+          score?: number
+          severity?: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           description?: string | null
-          detected_at?: string | null
+          detected_at?: string
           factor_type?: string
           id?: string
-          lookup_record_id?: string | null
+          lookup_record_id?: string
           score?: number
           severity?: string
         }
@@ -280,36 +189,36 @@ export type Database = {
       }
       sanctions_screening: {
         Row: {
-          confidence_score: number | null
-          created_at: string | null
-          entity_name: string | null
+          confidence_score: number
+          created_at: string
+          entity_name: string
           entity_type: string | null
           id: string
-          lookup_record_id: string | null
-          match_type: string | null
-          screening_date: string | null
+          lookup_record_id: string
+          match_type: string
+          screening_date: string
           source_list: string | null
         }
         Insert: {
-          confidence_score?: number | null
-          created_at?: string | null
-          entity_name?: string | null
+          confidence_score?: number
+          created_at?: string
+          entity_name: string
           entity_type?: string | null
           id?: string
-          lookup_record_id?: string | null
-          match_type?: string | null
-          screening_date?: string | null
+          lookup_record_id: string
+          match_type?: string
+          screening_date?: string
           source_list?: string | null
         }
         Update: {
-          confidence_score?: number | null
-          created_at?: string | null
-          entity_name?: string | null
+          confidence_score?: number
+          created_at?: string
+          entity_name?: string
           entity_type?: string | null
           id?: string
-          lookup_record_id?: string | null
-          match_type?: string | null
-          screening_date?: string | null
+          lookup_record_id?: string
+          match_type?: string
+          screening_date?: string
           source_list?: string | null
         }
         Relationships: [
@@ -322,39 +231,60 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       watch_alerts: {
         Row: {
           alert_message: string | null
           alert_type: string
-          created_at: string | null
+          created_at: string
           id: string
-          is_read: boolean | null
+          is_read: boolean
           new_value: string | null
           old_value: string | null
           risk_change: number | null
-          watched_wallet_id: string | null
+          watched_wallet_id: string
         }
         Insert: {
           alert_message?: string | null
           alert_type: string
-          created_at?: string | null
+          created_at?: string
           id?: string
-          is_read?: boolean | null
+          is_read?: boolean
           new_value?: string | null
           old_value?: string | null
           risk_change?: number | null
-          watched_wallet_id?: string | null
+          watched_wallet_id: string
         }
         Update: {
           alert_message?: string | null
           alert_type?: string
-          created_at?: string | null
+          created_at?: string
           id?: string
-          is_read?: boolean | null
+          is_read?: boolean
           new_value?: string | null
           old_value?: string | null
           risk_change?: number | null
-          watched_wallet_id?: string | null
+          watched_wallet_id?: string
         }
         Relationships: [
           {
@@ -368,43 +298,43 @@ export type Database = {
       }
       watched_wallets: {
         Row: {
-          alert_threshold: number | null
-          created_at: string | null
+          alert_threshold: number
+          created_at: string
           current_risk_score: number | null
           id: string
           initial_risk_score: number | null
-          last_checked: string | null
+          last_checked: string
           network: string
-          status: string | null
-          updated_at: string | null
+          status: string
+          updated_at: string
           user_id: string
           wallet_address: string
           watch_reason: string | null
         }
         Insert: {
-          alert_threshold?: number | null
-          created_at?: string | null
+          alert_threshold?: number
+          created_at?: string
           current_risk_score?: number | null
           id?: string
           initial_risk_score?: number | null
-          last_checked?: string | null
+          last_checked?: string
           network: string
-          status?: string | null
-          updated_at?: string | null
+          status?: string
+          updated_at?: string
           user_id: string
           wallet_address: string
           watch_reason?: string | null
         }
         Update: {
-          alert_threshold?: number | null
-          created_at?: string | null
+          alert_threshold?: number
+          created_at?: string
           current_risk_score?: number | null
           id?: string
           initial_risk_score?: number | null
-          last_checked?: string | null
+          last_checked?: string
           network?: string
-          status?: string | null
-          updated_at?: string | null
+          status?: string
+          updated_at?: string
           user_id?: string
           wallet_address?: string
           watch_reason?: string | null
@@ -416,40 +346,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      calculate_risk_factors: {
-        Args: { wallet_data: Json }
-        Returns: {
-          factor_type: string
-          severity: string
-          score: number
-          description: string
-        }[]
-      }
-      generate_case_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_case_id_v2: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_record_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      screen_sanctions: {
-        Args: { wallet_address: string; network?: string }
-        Returns: {
-          entity_name: string
-          entity_type: string
-          match_type: string
-          confidence_score: number
-          source_list: string
-        }[]
+      generate_case_id: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "analyst" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -576,6 +483,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "analyst", "user"],
+    },
   },
 } as const
