@@ -251,7 +251,8 @@ class RealBlockchainAPI {
         txCount: result.transactionCount,
         totalReceived: result.totalReceived
       });
-      
+
+      void this.setCached('bitcoin', address, result);
       return result;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
@@ -269,14 +270,20 @@ class RealBlockchainAPI {
     transactions: EthereumTransaction[];
     tokenTransfers: any[];
   }> {
+    if (!this.isValidEthereumAddress(address)) {
+      throw new Error(`Invalid Ethereum address format: ${address}`);
+    }
+
+    const cached = await this.getCached<{
+      balance: number; transactionCount: number;
+      transactions: EthereumTransaction[]; tokenTransfers: any[];
+    }>('ethereum', address);
+    if (cached) return cached;
+
     await this.enforceRateLimit();
 
     try {
       console.log(`🔍 [ETHEREUM LIVE] Fetching real-time data for: ${address}`);
-
-      if (!this.isValidEthereumAddress(address)) {
-        throw new Error(`Invalid Ethereum address format: ${address}`);
-      }
 
       console.log('📡 Making parallel proxied calls to Etherscan V2...');
 
