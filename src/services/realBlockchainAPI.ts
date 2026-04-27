@@ -91,9 +91,9 @@ class RealBlockchainAPI {
   private readonly MIN_REQUEST_INTERVAL = 1000; // 1 second between requests
 
   constructor() {
-    // Initialize API key immediately
-    this.initializeApiKey().catch(error => {
-      console.error('Failed to initialize API key:', error);
+    // Initialize API key (non-blocking; missing key is non-fatal — Bitcoin works without it)
+    this.initializeApiKey().catch(() => {
+      // Silently ignore — warnings are logged inside initializeApiKey
     });
   }
 
@@ -113,30 +113,28 @@ class RealBlockchainAPI {
 
   private async initializeApiKey(): Promise<void> {
     if (this.apiKeyInitialized) return;
-    
+
     try {
-      console.log('🔑 Fetching real Etherscan API key from Supabase secrets...');
-      
-      // Get the API key from Supabase secrets using the get-api-keys function
       const { data, error } = await supabase.functions.invoke('get-api-keys');
-      
+
       if (error) {
-        console.error('❌ Failed to fetch API keys from Supabase:', error);
-        throw new Error(`Failed to fetch API keys: ${error.message}`);
+        console.warn('⚠️ Could not fetch API keys (Ethereum lookups will be limited):', error.message);
+        this.apiKeyInitialized = true;
+        return;
       }
-      
+
       if (!data || !data.etherscanApiKey) {
-        console.error('❌ No Etherscan API key found in response:', data);
-        throw new Error('Etherscan API key not found in Supabase secrets');
+        console.warn('⚠️ No Etherscan API key configured. Bitcoin analysis still works; Ethereum lookups will be limited.');
+        this.apiKeyInitialized = true;
+        return;
       }
-      
+
       this.etherscanApiKey = data.etherscanApiKey;
-      console.log('✅ Etherscan API key loaded successfully:', this.etherscanApiKey.substring(0, 8) + '...');
+      console.log('✅ Etherscan API key loaded');
       this.apiKeyInitialized = true;
-      
     } catch (error) {
-      console.error('❌ API key initialization failed:', error);
-      throw error; // Don't fall back to demo key, throw the error
+      console.warn('⚠️ API key initialization skipped:', error instanceof Error ? error.message : error);
+      this.apiKeyInitialized = true;
     }
   }
 
