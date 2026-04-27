@@ -102,6 +102,43 @@ class RealBlockchainAPI {
     return data as EtherscanResponse;
   }
 
+  // ---------- Wallet cache (TTL'd chain data) ----------
+  // 5 min TTL keeps lookups fresh enough for compliance while massively cutting API calls.
+  private readonly CACHE_TTL_MS = 5 * 60 * 1000;
+
+  private async getCached<T>(network: string, address: string): Promise<T | null> {
+    try {
+      const { data } = await supabase
+        .from('wallet_cache')
+        .select('data, expires_at')
+        .eq('network', network)
+        .ilike('address', address)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+      if (data?.data) {
+        console.log(`⚡ [CACHE HIT] ${network}:${address}`);
+        return data.data as T;
+      }
+    } catch (e) {
+      console.warn('Cache read failed (non-fatal):', e);
+    }
+    return null;
+  }
+
+  private async setCached(network: string, address: string, data: unknown): Promise<void> {
+    try {
+      const expires_at = new Date(Date.now() + this.CACHE_TTL_MS).toISOString();
+      await supabase
+        .from('wallet_cache')
+        .upsert(
+          { network, address, data: data as any, expires_at },
+          { onConflict: 'network,address' },
+        );
+    } catch (e) {
+      console.warn('Cache write failed (non-fatal):', e);
+    }
+  }
+
   // Rate limiting helper
   private async enforceRateLimit(): Promise<void> {
     const now = Date.now();
