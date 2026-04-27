@@ -163,6 +163,13 @@ class RealBlockchainAPI {
     transactionCount: number;
     transactions: any[];
   }> {
+    // Check cache first
+    const cached = await this.getCached<{
+      balance: number; totalReceived: number; totalSent: number;
+      transactionCount: number; transactions: any[];
+    }>('bitcoin', address);
+    if (cached) return cached;
+
     await this.enforceRateLimit();
     
     try {
