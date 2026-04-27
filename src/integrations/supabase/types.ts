@@ -187,6 +187,45 @@ export type Database = {
           },
         ]
       }
+      sanctions_addresses: {
+        Row: {
+          address: string
+          created_at: string
+          date_listed: string | null
+          entity_name: string | null
+          id: string
+          metadata: Json | null
+          network: string
+          program: string | null
+          source_list: string
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          date_listed?: string | null
+          entity_name?: string | null
+          id?: string
+          metadata?: Json | null
+          network: string
+          program?: string | null
+          source_list?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          date_listed?: string | null
+          entity_name?: string | null
+          id?: string
+          metadata?: Json | null
+          network?: string
+          program?: string | null
+          source_list?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sanctions_screening: {
         Row: {
           confidence_score: number
@@ -249,6 +288,33 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      wallet_cache: {
+        Row: {
+          address: string
+          created_at: string
+          data: Json
+          expires_at: string
+          id: string
+          network: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          data: Json
+          expires_at: string
+          id?: string
+          network: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          data?: Json
+          expires_at?: string
+          id?: string
+          network?: string
         }
         Relationships: []
       }
