@@ -70,6 +70,16 @@ export default {
 				sapphire: {
 					DEFAULT: 'hsl(var(--sapphire))',
 					foreground: 'hsl(var(--sapphire-foreground))'
+				},
+				risk: {
+					low: 'hsl(var(--risk-low))',
+					'low-foreground': 'hsl(var(--risk-low-foreground))',
+					medium: 'hsl(var(--risk-medium))',
+					'medium-foreground': 'hsl(var(--risk-medium-foreground))',
+					high: 'hsl(var(--risk-high))',
+					'high-foreground': 'hsl(var(--risk-high-foreground))',
+					critical: 'hsl(var(--risk-critical))',
+					'critical-foreground': 'hsl(var(--risk-critical-foreground))'
 				}
 			},
 			borderRadius: {
