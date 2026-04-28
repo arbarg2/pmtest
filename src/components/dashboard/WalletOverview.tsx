@@ -2,22 +2,21 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Globe, Building2, Activity } from 'lucide-react';
+import { Calendar, Building2, Activity } from 'lucide-react';
 import { WalletRiskResponse } from '@/services/api';
+import { Mono } from '@/components/ui/mono';
+import { riskTier, riskClasses, riskTierFromLevel } from '@/lib/risk';
 
 interface WalletOverviewProps {
   wallet: WalletRiskResponse;
 }
 
 const WalletOverview = ({ wallet }: WalletOverviewProps) => {
-  const getRiskColor = (riskLevel: string) => {
-    switch (riskLevel) {
-      case 'High': return 'bg-red-100 text-red-800 border-red-200';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  const tier = wallet.risk_level
+    ? riskTierFromLevel(wallet.risk_level)
+    : riskTier(wallet.risk_score ?? 0);
+  const classes = riskClasses(tier);
+  const getRiskBadgeClasses = () => `${classes.bgSoft} ${classes.text} ${classes.border}`;
 
   return (
     <Card className="shadow-lg border-0 bg-white/90 backdrop-blur">
