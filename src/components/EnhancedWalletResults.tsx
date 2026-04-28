@@ -21,6 +21,7 @@ import TransactionFlowPreview from '@/components/dashboard/TransactionFlowPrevie
 import ExportActions from '@/components/dashboard/ExportActions';
 import RiskFactorsBreakdown from '@/components/RiskFactorsBreakdown';
 import SanctionsScreening from '@/components/SanctionsScreening';
+import SanctionsHits from '@/components/SanctionsHits';
 import AnalystNotesThread, { AnalystNotesThreadRef } from '@/components/AnalystNotesThread';
 import CaseManagement from '@/components/CaseManagement';
 import { HollyAIAnalysis } from '@/components/HollyAIAnalysis';
@@ -289,6 +290,11 @@ const EnhancedWalletResults = ({
         {/* Third Row - Volume Intelligence */}
         <div className="mb-8">
           <VolumeIntelligence wallet={wallet} />
+        </div>
+
+        {/* Sanctions Hits - real OFAC address match */}
+        <div className="mb-8">
+          <SanctionsHits walletAddress={wallet.address} network={wallet.network} />
         </div>
 
         {/* Fourth Row - Risk Factors and Sanctions */}
