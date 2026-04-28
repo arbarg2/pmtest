@@ -20,8 +20,8 @@ import CounterpartyIntelligence from '@/components/dashboard/CounterpartyIntelli
 import TransactionFlowPreview from '@/components/dashboard/TransactionFlowPreview';
 import ExportActions from '@/components/dashboard/ExportActions';
 import RiskFactorsBreakdown from '@/components/RiskFactorsBreakdown';
-import SanctionsScreening from '@/components/SanctionsScreening';
-import SanctionsHits from '@/components/SanctionsHits';
+import SanctionsPanel from '@/components/wallet/SanctionsPanel';
+import VerdictBanner from '@/components/wallet/VerdictBanner';
 import AnalystNotesThread, { AnalystNotesThreadRef } from '@/components/AnalystNotesThread';
 import CaseManagement from '@/components/CaseManagement';
 import { HollyAIAnalysis } from '@/components/HollyAIAnalysis';
@@ -266,7 +266,12 @@ const EnhancedWalletResults = ({
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        
+
+        {/* Verdict Banner — hero risk summary */}
+        <div className="mb-8">
+          <VerdictBanner wallet={wallet} />
+        </div>
+
         {/* Top Row - Wallet Overview */}
         <div className="mb-8">
           <WalletOverview wallet={wallet} />
@@ -292,15 +297,14 @@ const EnhancedWalletResults = ({
           <VolumeIntelligence wallet={wallet} />
         </div>
 
-        {/* Sanctions Hits - real OFAC address match */}
-        <div className="mb-8">
-          <SanctionsHits walletAddress={wallet.address} network={wallet.network} />
-        </div>
-
-        {/* Fourth Row - Risk Factors and Sanctions */}
+        {/* Fourth Row - Risk Factors and Merged Sanctions Panel */}
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
           <RiskFactorsBreakdown factors={riskFactors} />
-          <SanctionsScreening matches={sanctionsMatches} />
+          <SanctionsPanel
+            walletAddress={wallet.address}
+            network={wallet.network}
+            matches={sanctionsMatches}
+          />
         </div>
 
         {/* Fifth Row - Transaction Flow and Counterparties */}
