@@ -25,6 +25,8 @@ import VerdictBanner from '@/components/wallet/VerdictBanner';
 import AnalystNotesThread, { AnalystNotesThreadRef } from '@/components/AnalystNotesThread';
 import CaseManagement from '@/components/CaseManagement';
 import { HollyAIAnalysis } from '@/components/HollyAIAnalysis';
+import AlertsBell from '@/components/alerts/AlertsBell';
+import AskHollyChat from '@/components/holly/AskHollyChat';
 
 interface EnhancedWalletResultsProps {
   wallet: WalletRiskResponse;
@@ -259,6 +261,7 @@ const EnhancedWalletResults = ({
                 <Mail className="w-4 h-4 mr-2" />
                 {isEmailingReport ? 'Sending...' : 'Email Report'}
               </Button>
+              <AlertsBell />
             </div>
           </div>
         </div>
@@ -367,6 +370,19 @@ const EnhancedWalletResults = ({
         onClose={() => setIsEmailDialogOpen(false)}
         onSendReport={handleEmailReport}
         isLoading={isEmailingReport}
+      />
+
+      {/* Ask Holly — floating conversational investigator */}
+      <AskHollyChat
+        context={{
+          address: wallet.address,
+          network: wallet.network,
+          risk_score: wallet.risk_score,
+          risk_level: wallet.risk_level,
+          risk_factors: riskFactors,
+          sanctions: sanctionsMatches,
+          counterparties: wallet.top_counterparties,
+        }}
       />
     </div>
   );
