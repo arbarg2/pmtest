@@ -8,6 +8,8 @@ import { UserDropdown } from '@/components/UserDropdown';
 import { WalletLookupPanel } from '@/components/WalletLookupPanel';
 import { AnalystDashboard } from '@/components/AnalystDashboard';
 import EnhancedWalletResults from '@/components/EnhancedWalletResults';
+import AlertsBell from '@/components/alerts/AlertsBell';
+import OrgPulse from '@/components/dashboard/OrgPulse';
 import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { riskFactorsService } from '@/services/riskFactors';
@@ -242,12 +244,20 @@ const Index = () => {
                 </p>
               </div>
             </div>
-            <UserDropdown />
+            <div className="flex items-center gap-1">
+              <AlertsBell />
+              <UserDropdown />
+            </div>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Org Pulse */}
+        <div className="mb-8">
+          <OrgPulse />
+        </div>
+
         {/* Top Row - Wallet Analysis Panel */}
         <div className="mb-10">
           <div className="mb-4 text-sm text-slate-600 dark:text-slate-400 uppercase tracking-wide font-medium">
