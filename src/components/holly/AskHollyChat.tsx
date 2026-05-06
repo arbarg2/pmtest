@@ -24,10 +24,13 @@ interface AskHollyChatProps {
   suggestedPrompts?: string[];
 }
 
+const SAR_PROMPT =
+  "Generate a compliance-ready SAR narrative for this wallet using all available risk signals, sanctions exposure, and counterparty data. Follow the standard SAR section structure.";
+
 const DEFAULT_PROMPTS = [
   "Summarize the top 3 risks for this wallet",
   "Has this wallet touched any mixers?",
-  "Draft a brief SAR narrative for this case",
+  "Draft a SAR narrative for this case",
   "What are the most suspicious counterparties?",
 ];
 
