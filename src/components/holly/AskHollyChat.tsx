@@ -41,10 +41,26 @@ const AskHollyChat: React.FC<AskHollyChatProps> = ({ context, suggestedPrompts }
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [streaming, setStreaming] = useState(false);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const prompts = suggestedPrompts ?? DEFAULT_PROMPTS;
+
+  const copyMessage = async (text: string, idx: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIdx(idx);
+      toast.success("SAR narrative copied to clipboard");
+      setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 2000);
+    } catch {
+      toast.error("Could not copy to clipboard");
+    }
+  };
+
+  const isSarMessage = (content: string) =>
+    /SUSPICIOUS ACTIVITY REPORT/i.test(content) || /SAR — NARRATIVE/i.test(content);
+
 
   useEffect(() => {
     if (scrollRef.current) {
