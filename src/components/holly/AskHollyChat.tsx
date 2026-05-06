@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Sparkles, X, Send, Loader2 } from "lucide-react";
+import { Sparkles, X, Send, Loader2, FileText, Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
