@@ -10,6 +10,7 @@ import { AnalystDashboard } from '@/components/AnalystDashboard';
 import EnhancedWalletResults from '@/components/EnhancedWalletResults';
 import AlertsBell from '@/components/alerts/AlertsBell';
 import OrgPulse from '@/components/dashboard/OrgPulse';
+import ClusterView from '@/components/dashboard/ClusterView';
 import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { riskFactorsService } from '@/services/riskFactors';
@@ -282,6 +283,11 @@ const Index = () => {
               />
             </CardContent>
           </Card>
+        </div>
+
+        {/* Cross-Wallet Cluster View */}
+        <div className="mb-10">
+          <ClusterView />
         </div>
 
         {/* Main Dashboard Content */}
