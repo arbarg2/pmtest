@@ -203,9 +203,25 @@ const AskHollyChat: React.FC<AskHollyChatProps> = ({ context, suggestedPrompts }
             <div ref={scrollRef} className="p-4 space-y-4">
               {messages.length === 0 && (
                 <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Hi — I can help you interpret this investigation. Try one of these:
-                  </p>
+                  <button
+                    onClick={() => send(SAR_PROMPT)}
+                    className="w-full group relative overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-accent/5 to-primary/10 p-3 text-left hover:border-primary/60 transition-all"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="shrink-0 w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground shadow-md">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground">
+                          Generate SAR Narrative
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                          Compliance-ready draft from this wallet's risk signals, sanctions & counterparties.
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                  <p className="text-xs text-muted-foreground pt-1">Or try:</p>
                   <div className="flex flex-wrap gap-2">
                     {prompts.map((p) => (
                       <button
@@ -233,9 +249,27 @@ const AskHollyChat: React.FC<AskHollyChatProps> = ({ context, suggestedPrompts }
                     }`}
                   >
                     {m.role === "assistant" ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-headings:my-2 prose-strong:text-foreground">
-                        <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
-                      </div>
+                      <>
+                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-headings:my-2 prose-strong:text-foreground">
+                          <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
+                        </div>
+                        {m.content && isSarMessage(m.content) && !streaming && (
+                          <button
+                            onClick={() => copyMessage(m.content, i)}
+                            className="mt-2 inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md border border-primary/30 bg-background/60 hover:bg-primary/10 transition-colors text-foreground"
+                          >
+                            {copiedIdx === i ? (
+                              <>
+                                <Check className="w-3 h-3" /> Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" /> Copy SAR narrative
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </>
                     ) : (
                       <p>{m.content}</p>
                     )}
