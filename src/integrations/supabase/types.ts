@@ -146,6 +146,45 @@ export type Database = {
         }
         Relationships: []
       }
+      public_checks: {
+        Row: {
+          address: string
+          created_at: string
+          data: Json
+          expires_at: string
+          id: string
+          network: string
+          reasons: Json
+          risk_score: number
+          verdict: string
+          view_count: number
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          data?: Json
+          expires_at?: string
+          id?: string
+          network: string
+          reasons?: Json
+          risk_score?: number
+          verdict: string
+          view_count?: number
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          data?: Json
+          expires_at?: string
+          id?: string
+          network?: string
+          reasons?: Json
+          risk_score?: number
+          verdict?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
       risk_factors: {
         Row: {
           created_at: string
