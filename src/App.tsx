@@ -16,6 +16,7 @@ import BulkAnalysis from "./pages/BulkAnalysis";
 import AllRecords from "./pages/AllRecords";
 import AuditLogs from "./pages/AuditLogs";
 import WalletTransactionFlow from "./pages/WalletTransactionFlow";
+import Safe, { SafeCheckPage } from "./pages/Safe";
 import { AuthPage } from "./components/auth/AuthPage";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,8 @@ const App = () => (
                 <Route path="/audit-logs" element={<AuditLogs />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/api-docs" element={<ApiDocs />} />
+                <Route path="/safe" element={<Safe />} />
+                <Route path="/safe/check/:address" element={<SafeCheckPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
