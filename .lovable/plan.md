@@ -1,96 +1,86 @@
-## Phase 1 Visual Polish — Scope
+# Plan: Turn Rìan into a daily-use safety tool for crypto holders
 
-Four focused changes to the wallet results page and design tokens. No new pages, no info-architecture changes, no landing-page work.
+Today Rìan is a heavy compliance/analyst console. To make it something **everyday crypto holders open daily**, we'll add a consumer "Safety" layer on top of the existing engine — same risk + sanctions data, but reframed for "should I send / should I worry" moments.
 
-### 1. Verdict banner with risk gauge (top of results)
+We'll ship in 4 phases. Each phase is independently usable and shippable.
 
-New component `src/components/wallet/VerdictBanner.tsx` rendered at the top of `EnhancedWalletResults.tsx`, replacing nothing — it sits above the existing `WalletOverview`.
+---
 
-Contains:
-- **Animated SVG risk gauge** (semicircular, 0–100) on the left. Stroke color bound to risk tier token (low/medium/high/critical). Score animates from 0 → final value over ~800ms using a small `useCountUp` hook (inline, no separate file needed).
-- **Verdict copy** in the center: large tier label ("HIGH RISK", "CLEAR", etc.), one-sentence rationale built from `wallet.risk_level` + sanctions hit count + transaction count.
-- **Sanctioned stripe**: if any OFAC hit exists for this address+network, a red bar across the top of the banner reading "OFAC SANCTIONED ADDRESS — BLOCK TRANSACTIONS". Queried with the same Supabase query `SanctionsHits` already uses, lifted into the banner so the verdict reflects truth on first paint.
-- **KPI strip** on the right: 4 compact metrics (Risk Score, Transactions, Network, Analysis Time) with count-up on the numeric ones. Replaces the visual weight of the current 4-tile grid inside `WalletOverview` (the tiles stay for now to avoid breaking the tab; we just demote them visually by removing the gradient backgrounds — see step 4).
+## Phase 1 — The Daily Hooks (web app)
 
-Banner uses `bg-card` with a subtle gradient border tinted by risk color, and the existing `primary-glow` / `accent-glow` utilities for the gauge ring.
+A new `/safe` consumer surface, separate from the analyst dashboard, with 4 tools any user understands:
 
-### 2. Merge the two sanctions panels
+### 1.1 Pre-Send Safety Check
+- Big single input: "Paste any address before you send."
+- One-screen verdict: **SAFE / CAUTION / DANGER**, plain-English reasons (e.g. "Linked to known drainer", "Flagged on OFAC", "Brand new wallet, 0 history").
+- Big copy/share button → generates a public share URL `/safe/check/:address` (anyone can view, no login).
+- Reuses existing `enhancedApi` + `screenSanctions` + `riskFactors`.
 
-Today the results page renders both `SanctionsHits` (real OFAC table lookup) and `SanctionsScreening` (heuristic matches from `riskFactors`). Users see two cards saying similar things. Consolidate into one component `src/components/wallet/SanctionsPanel.tsx` that:
+### 1.2 Wallet Health Dashboard ("My Wallet")
+- Connect wallet (read-only — wagmi + viem, no signing) OR paste address.
+- Health score 0–100, exposure breakdown (mixers, sanctions, scam contracts), counterparty reputation, a "What changed this week" timeline.
+- One-tap **Watch this wallet** → fires existing `watch_alerts` realtime + email/push.
 
-- Runs the OFAC `sanctions_addresses` query (from `SanctionsHits`).
-- Accepts the `matches: SanctionsMatch[]` prop (from `SanctionsScreening`).
-- Renders a single card with two clearly-labeled sub-sections:
-  - **Direct OFAC matches** (from the table query) — uses existing `SanctionsHits` row layout.
-  - **Indirect / heuristic exposure** (from `matches`) — uses existing `SanctionsScreening` row layout, only shown when `matches.length > 0`.
-- One header badge counting total findings across both sources, one summary alert prioritizing direct OFAC > indirect.
-- Clean clear state when both are empty.
+### 1.3 Token Approval Scanner & Revoker
+- For an EVM address, list active ERC-20/721 approvals (via Etherscan logs through existing `etherscan-proxy`).
+- Risk-tag each spender (known scam / unknown / verified protocol).
+- "Revoke" button builds an `approve(spender, 0)` tx for the user to sign in their wallet.
 
-In `EnhancedWalletResults.tsx`:
-- Remove the standalone `<SanctionsHits />` block (line 296–298).
-- Replace `<SanctionsScreening matches={sanctionsMatches} />` in the grid with `<SanctionsPanel walletAddress={...} network={...} matches={sanctionsMatches} />`.
-- The grid that paired Sanctions with `RiskFactorsBreakdown` keeps that pairing.
+### 1.4 Whale & Smart-Money Feed ("Pulse")
+- Curated list of tracked wallets (whales, funds, known scammers).
+- Realtime feed of notable moves with one-line Holly explanations ("Whale X moved $4M USDC to Binance — likely sell").
+- Users can follow wallets → personal feed.
 
-Old `SanctionsHits.tsx` and `SanctionsScreening.tsx` files stay on disk (other places may import them — verified during implementation) but are no longer used in the results page.
+All 4 share a new bottom nav on mobile and a left rail on desktop. Analyst dashboard stays at `/dashboard`; landing routes free users to `/safe`.
 
-### 3. Monospace addresses + hashes
+---
 
-Add a small utility component `src/components/ui/mono.tsx` exporting `<Mono>` that renders `<span className="font-mono text-[0.92em] tracking-tight">`. Apply it everywhere a wallet address or tx hash currently renders as plain text:
+## Phase 2 — Holly for Humans
 
-- `WalletOverview.tsx` → the address block (already `font-mono`, switch to `<Mono>` for consistency + tighter tracking).
-- New `VerdictBanner.tsx` → truncated address chip.
-- New `SanctionsPanel.tsx` → matched address rows.
-- `WalletHeader.tsx` (if it shows the address — verified during implementation).
+Repurpose the existing `ask-holly` edge function with a second persona: **"Explain like I hold crypto."**
+- On any verdict screen: "Why is this risky?" → 3 short bullets, no jargon.
+- Quick prompts: "Is this a scam?", "Should I revoke?", "What's a mixer?".
+- Same streaming chat UI, lighter visual treatment.
 
-No global font swap. No new font import. Uses Tailwind's default `font-mono` stack (already loaded).
+---
 
-### 4. Risk color tokens
+## Phase 3 — Browser Extension (MV3)
 
-Add four semantic risk tokens to `src/index.css` (light + dark) and expose them in `tailwind.config.ts`:
+- Popup: paste-address check + current page address detection (auto-pulls addresses from Etherscan, OpenSea, X profiles).
+- Content script injects a small **risk badge** next to addresses on Etherscan, X/Twitter, and Discord web.
+- Pre-send guardrail: detects MetaMask `eth_sendTransaction` and shows an interstitial with the recipient's risk before approval.
+- Packaged as `/public/rian-safe.zip` with one-click download from `/safe` page.
 
-```
---risk-low:      142 71% 45%   /* emerald, reuses --success */
---risk-medium:   38 92% 50%    /* amber, reuses --warning */
---risk-high:     25 95% 53%    /* deep orange */
---risk-critical: 0 84% 60%     /* red, reuses --destructive */
-```
+---
 
-Plus a tiny helper `src/lib/risk.ts`:
-```ts
-export const riskTier = (score: number) =>
-  score >= 75 ? 'critical' : score >= 50 ? 'high' : score >= 25 ? 'medium' : 'low';
-export const riskClasses = (tier) => ({ text, bg, border, ring }) // returns Tailwind class strings
-```
+## Phase 4 — Telegram Bot
 
-Use it in:
-- `VerdictBanner` (gauge stroke + tier label).
-- `WalletOverview` risk-score tile (replace the hard-coded `text-primary` with the risk-tier text class).
-- `SanctionsPanel` summary alert.
+- `/check 0xabc…` → instant verdict in chat.
+- `/watch 0xabc…` → subscribe; bot pings on risk-score change or large outflow (uses existing realtime `watch_alerts`).
+- `/whale` → daily digest of biggest moves.
+- Built via Lovable's Telegram connector + a `telegram-webhook` edge function writing into a new `telegram_subscriptions` table.
 
-Existing components that hard-code red/orange/yellow (`SanctionsScreening`, `WalletOverview` badge) are left untouched in this pass — only the new/edited components adopt the tokens. A follow-up pass can sweep the rest.
+---
 
-### What is explicitly NOT in this phase
+## Technical notes
 
-- No three-act section reorganization.
-- No `ResultsSubnav`, no `SectionHeader` component.
-- No landing-page changes, no `LiveVerdictPreview`, no stats ticker.
-- No new font imports (Geist/Space Grotesk deferred).
-- No changes to `RiskFactorsBreakdown`, `EntityAttribution`, `GeographicRisk`, `VolumeIntelligence`, `CounterpartyIntelligence`, `TransactionFlowPreview`.
+- **Reuse, don't rebuild**: all 4 features run on the existing `enhancedApi`, `riskFactors`, `screenSanctions`, `watched_wallets`, `watch_alerts`, `ask-holly`, and `etherscan-proxy`.
+- **New tables**: `public_checks` (cached shareable verdicts, anonymous-readable), `followed_wallets` (consumer-light version of watched_wallets, no analyst metadata), `telegram_subscriptions` (chat_id ↔ wallet).
+- **New edge functions**: `safe-check` (public, rate-limited, no auth), `approvals-scan`, `whale-feed-cron`, `telegram-webhook`.
+- **Auth**: `/safe/check/:address` is fully public; Watch/Approvals require sign-in (existing email + Google).
+- **Design**: keep the dark Premium Ocean palette but a more consumer-friendly variant — bigger type, traffic-light verdict colors, generous whitespace; analyst console untouched.
+- **Mobile-first** for `/safe` — current app is desktop-leaning.
 
-### Files touched
+---
 
-Created:
-- `src/components/wallet/VerdictBanner.tsx`
-- `src/components/wallet/SanctionsPanel.tsx`
-- `src/components/ui/mono.tsx`
-- `src/lib/risk.ts`
+## Suggested build order
 
-Edited:
-- `src/components/EnhancedWalletResults.tsx` (add banner, swap sanctions blocks)
-- `src/components/dashboard/WalletOverview.tsx` (mono address, risk-tier color on score tile, demote tile gradients)
-- `src/index.css` (risk tokens light + dark)
-- `tailwind.config.ts` (expose risk tokens)
+1. Phase 1.1 (Pre-Send Check) + new `/safe` shell + share URLs — fastest path to a viral, login-less hook.
+2. Phase 1.2 (Wallet Health) + wagmi connect.
+3. Phase 1.3 (Approval Revoker) — high retention.
+4. Phase 2 (Holly for Humans) layered on 1.1–1.3.
+5. Phase 1.4 (Whale Feed) — needs background cron.
+6. Phase 3 (Extension).
+7. Phase 4 (Telegram Bot).
 
-### Risk / rollback
-
-Each change is additive or a one-line swap. If the verdict banner looks off, removing one `<VerdictBanner />` line restores the prior page. The merged `SanctionsPanel` is wire-compatible with the props both old components received.
+Want me to start with Phase 1.1 + the `/safe` shell, or scope differently?
