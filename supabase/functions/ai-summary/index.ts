@@ -30,12 +30,32 @@ serve(async (req) => {
 
     if (req.method === 'POST') {
       const body = await req.json()
-      console.log('📥 Received payload:', body)
-      
+      console.log('📥 Received payload')
+
       // Check if this is a generation request (has recordId and walletData) or a callback (has record_id and ai_summary)
       if (body.recordId && body.walletData) {
-        console.log('🎯 Processing AI summary generation request')
-        
+        // Require authenticated user for generation
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const userClient = createClient(
+          supabaseUrl,
+          Deno.env.get('SUPABASE_ANON_KEY')!,
+          { global: { headers: { Authorization: authHeader } } },
+        );
+        const { data: claims, error: authErr } = await userClient.auth.getClaims(
+          authHeader.replace('Bearer ', ''),
+        );
+        if (authErr || !claims?.claims?.sub) {
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const userId = claims.claims.sub as string;
+
         const { recordId, walletData } = body
 
         // Check if this is a demo record
