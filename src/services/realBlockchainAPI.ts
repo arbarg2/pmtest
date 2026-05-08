@@ -127,13 +127,9 @@ class RealBlockchainAPI {
 
   private async setCached(network: string, address: string, data: unknown): Promise<void> {
     try {
-      const expires_at = new Date(Date.now() + this.CACHE_TTL_MS).toISOString();
-      await supabase
-        .from('wallet_cache')
-        .upsert(
-          { network, address, data: data as any, expires_at },
-          { onConflict: 'network,address' },
-        );
+      await supabase.functions.invoke('wallet-cache-write', {
+        body: { network, address, data },
+      });
     } catch (e) {
       console.warn('Cache write failed (non-fatal):', e);
     }
