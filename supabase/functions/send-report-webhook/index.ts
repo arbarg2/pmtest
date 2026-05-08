@@ -1,5 +1,5 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,22 +7,38 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('📧 Sending report to webhook...');
-    
-    // Get the report data from the request body
-    const reportData = await req.json();
-    
-    console.log('📋 Report data received:', {
-      recordId: reportData.recordId,
-      reportType: reportData.reportType,
-      timestamp: reportData.timestamp
-    });
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: claims, error: authErr } = await userClient.auth.getClaims(
+      authHeader.replace("Bearer ", ""),
+    );
+    if (authErr || !claims?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const rawData = await req.json();
+    const reportData = {
+      recordId: rawData?.recordId ? String(rawData.recordId).slice(0, 200) : null,
+      reportType: rawData?.reportType ? String(rawData.reportType).slice(0, 80) : null,
+      timestamp: rawData?.timestamp ? String(rawData.timestamp).slice(0, 64) : new Date().toISOString(),
+      userId: claims.claims.sub,
+    };
 
     // Send the data to the Tines webhook
     const webhookUrl = 'https://pat.tines.com/webhook/aml-buddy-bot-2/010e55b671e752ae9888806bfb8d0e2d';

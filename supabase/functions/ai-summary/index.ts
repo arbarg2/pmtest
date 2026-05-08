@@ -30,12 +30,32 @@ serve(async (req) => {
 
     if (req.method === 'POST') {
       const body = await req.json()
-      console.log('📥 Received payload:', body)
-      
+      console.log('📥 Received payload')
+
       // Check if this is a generation request (has recordId and walletData) or a callback (has record_id and ai_summary)
       if (body.recordId && body.walletData) {
-        console.log('🎯 Processing AI summary generation request')
-        
+        // Require authenticated user for generation
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const userClient = createClient(
+          supabaseUrl,
+          Deno.env.get('SUPABASE_ANON_KEY')!,
+          { global: { headers: { Authorization: authHeader } } },
+        );
+        const { data: claims, error: authErr } = await userClient.auth.getClaims(
+          authHeader.replace('Bearer ', ''),
+        );
+        if (authErr || !claims?.claims?.sub) {
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const userId = claims.claims.sub as string;
+
         const { recordId, walletData } = body
 
         // Check if this is a demo record
@@ -110,8 +130,8 @@ The wallet exhibits characteristics typical of a **${walletData.behavioral_class
         
         let query = supabase
           .from('investigation_records')
-          .select('id, record_id');
-        
+          .select('id, record_id, user_id');
+
         if (isUUID) {
           query = query.eq('id', recordId);
         } else {
@@ -119,6 +139,13 @@ The wallet exhibits characteristics typical of a **${walletData.behavioral_class
         }
 
         const { data: existingRecord, error: verifyError } = await query.maybeSingle();
+
+        // Verify caller owns the record
+        if (existingRecord && existingRecord.user_id !== userId) {
+          return new Response(JSON.stringify({ error: 'Forbidden' }), {
+            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
 
         if (verifyError || !existingRecord) {
           console.error('❌ Record verification failed:', verifyError || 'Record not found')
@@ -222,9 +249,15 @@ Keep it under 600 words. Use bullet points where helpful. Do not invent numbers 
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       } else if (body.record_id && body.ai_summary) {
-        // This is a callback from Tines with AI summary result
-        console.log('🎯 Processing AI summary callback from Tines')
-        
+        // Tines callback path — require shared secret
+        const expected = Deno.env.get('TINES_WEBHOOK_SECRET');
+        const got = req.headers.get('x-webhook-secret');
+        if (!expected || !got || got !== expected) {
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
         const { record_id, ai_summary } = body
 
         if (!ai_summary) {

@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const TTL_MS = 5 * 60 * 1000;
+const ALLOWED_ACTIONS = /^[a-z0-9_.:-]{1,80}$/i;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -30,36 +30,40 @@ serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const ALLOWED_NETWORKS = ["bitcoin", "ethereum", "solana"];
-    const { network, address, data } = await req.json();
-    if (!network || !address || data === undefined || !ALLOWED_NETWORKS.includes(String(network))) {
-      return new Response(JSON.stringify({ error: "invalid fields" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const userId = claims.claims.sub as string;
+    const body = await req.json();
+    const action = String(body.action ?? "");
+    const recordId = body.record_id ? String(body.record_id).slice(0, 200) : null;
+    const metadata = body.metadata && typeof body.metadata === "object" ? body.metadata : {};
+    if (!ALLOWED_ACTIONS.test(action)) {
+      return new Response(JSON.stringify({ error: "invalid action" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (typeof address !== "string" || address.length > 128 || !/^[a-zA-Z0-9:_-]+$/.test(address)) {
-      return new Response(JSON.stringify({ error: "invalid address" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const metaStr = JSON.stringify(metadata);
+    if (metaStr.length > 8000) {
+      return new Response(JSON.stringify({ error: "metadata too large" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const supabase = createClient(
+    const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
-    const expires_at = new Date(Date.now() + TTL_MS).toISOString();
-    await supabase
-      .from("wallet_cache")
-      .upsert({ network, address, data, expires_at }, { onConflict: "network,address" });
+    const { error } = await admin.from("audit_logs").insert({
+      user_id: userId, action, record_id: recordId, metadata,
+    });
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
