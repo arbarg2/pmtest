@@ -26,19 +26,12 @@ export async function logAuditAction(
       return;
     }
 
-    const { error } = await supabase.from('audit_logs').insert([
-      {
-        user_id: user.id,
-        action,
-        record_id: recordId || null,
-        metadata: metadata || {}
-      },
-    ]);
+    const { error } = await supabase.functions.invoke('write-audit-log', {
+      body: { action, record_id: recordId || null, metadata: metadata || {} },
+    });
 
     if (error) {
       console.error('Failed to log audit action:', error);
-    } else {
-      console.log(`✅ Audit logged: ${action}`, { recordId, metadata });
     }
   } catch (error) {
     console.error('Error logging audit action:', error);
