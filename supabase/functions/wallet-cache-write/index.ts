@@ -11,9 +11,36 @@ const TTL_MS = 5 * 60 * 1000;
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: claims, error: authErr } = await userClient.auth.getClaims(
+      authHeader.replace("Bearer ", ""),
+    );
+    if (authErr || !claims?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const ALLOWED_NETWORKS = ["bitcoin", "ethereum", "solana"];
     const { network, address, data } = await req.json();
-    if (!network || !address || data === undefined) {
-      return new Response(JSON.stringify({ error: "missing fields" }), {
+    if (!network || !address || data === undefined || !ALLOWED_NETWORKS.includes(String(network))) {
+      return new Response(JSON.stringify({ error: "invalid fields" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (typeof address !== "string" || address.length > 128 || !/^[a-zA-Z0-9:_-]+$/.test(address)) {
+      return new Response(JSON.stringify({ error: "invalid address" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
