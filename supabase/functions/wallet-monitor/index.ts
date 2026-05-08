@@ -18,9 +18,17 @@ interface WatchedWallet {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const expected = Deno.env.get('CRON_SECRET');
+  const provided = req.headers.get('x-cron-secret') ||
+    req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+  if (!expected || !provided || provided !== expected) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   try {
