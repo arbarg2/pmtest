@@ -80,6 +80,12 @@ export default {
 					'high-foreground': 'hsl(var(--risk-high-foreground))',
 					critical: 'hsl(var(--risk-critical))',
 					'critical-foreground': 'hsl(var(--risk-critical-foreground))'
+				},
+				neon: {
+					cyan: 'hsl(var(--neon-cyan))',
+					violet: 'hsl(var(--neon-violet))',
+					magenta: 'hsl(var(--neon-magenta))',
+					lime: 'hsl(var(--neon-lime))'
 				}
 			},
 			borderRadius: {
