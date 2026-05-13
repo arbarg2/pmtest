@@ -33,86 +33,130 @@ const Landing = () => {
     }
   };
 
+  const tickerItems = [
+    { addr: '0x742d…f44e', verdict: 'safe', label: 'Verified DEX router' },
+    { addr: 'bc1q…h7sm', verdict: 'caution', label: 'Mixer proximity' },
+    { addr: '0x8a3c…2b91', verdict: 'safe', label: 'Known exchange hot wallet' },
+    { addr: '0xdac1…1ec7', verdict: 'danger', label: 'OFAC sanctioned' },
+    { addr: 'So1ana…9k2P', verdict: 'safe', label: 'Clean history' },
+    { addr: '0x1f98…6f88', verdict: 'caution', label: 'Unverified contract' },
+    { addr: '0xa0b8…eb48', verdict: 'safe', label: 'USDC issuer' },
+    { addr: '0xfacc…dc12', verdict: 'danger', label: 'Drainer pattern' },
+  ];
+
+  const verdictStyles: Record<string, string> = {
+    safe: 'bg-risk-low/15 text-risk-low border-risk-low/40',
+    caution: 'bg-risk-medium/15 text-risk-medium border-risk-medium/40',
+    danger: 'bg-risk-critical/15 text-risk-critical border-risk-critical/40',
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="border-b border-slate-200/50 bg-white/90 backdrop-blur-xl sticky top-0 z-50 dark:bg-slate-900/90 dark:border-slate-700/50">
+      <header className="border-b border-border/50 bg-background/70 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4 animate-fade-in">
-              {/* Enhanced logo structure ready for future custom logo */}
-              <Shield className="w-10 h-10 text-primary animate-pulse-slow" />
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Rìan</h1>
+            <div className="flex items-center space-x-3 animate-fade-in">
+              <div className="relative">
+                <Shield className="w-9 h-9 text-accent" />
+                <div className="absolute inset-0 blur-xl bg-accent/40 -z-10 animate-pulse-slow" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight">Rìan</h1>
             </div>
-            <Button 
-              onClick={() => navigate('/auth')}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground hover-scale"
-            >
-              Sign In
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/safe')}
+                className="hidden sm:inline-flex hover:text-accent"
+              >
+                Safe Check
+              </Button>
+              <Button
+                onClick={() => navigate('/auth')}
+                className="bg-foreground text-background hover:bg-foreground/90 hover-scale"
+              >
+                Sign In
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="px-4 py-16 md:py-24">
-        <div className="max-w-6xl mx-auto text-center">
-          <div className="mb-8">
-            <Badge className="bg-accent/10 text-accent border-accent/20 mb-6 text-sm px-4 py-2 animate-bounce-subtle">
-              Early Access Available
-            </Badge>
-            <h1 className="text-4xl md:text-6xl font-bold text-slate-900 dark:text-slate-100 mb-6 animate-fade-in">
-              <span className="text-accent font-extrabold animate-shimmer">Lightning-Fast</span>{' '}
-              Crypto Wallet Risk Insights & 
-              <span className="text-accent block animate-shimmer">Automated Compliance Reports</span>
-            </h1>
-            <p className="text-sm text-slate-400 dark:text-slate-500 mt-2 mb-6 animate-fade-in">The Rìan Difference.</p>
-            <div className="space-y-4 mb-8 max-w-4xl mx-auto animate-slide-up">
-              <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 font-medium">
-                Built for institutional compliance and AML investigation teams.
-              </p>
-              <p className="text-lg md:text-xl text-slate-500 dark:text-slate-400">
-                Gain clear, AI-driven risk assessments and regulatory-ready reports, empowering your team to manage crypto compliance with confidence.
-              </p>
-            </div>
-            <div className="flex justify-center animate-scale-in">
-              <Button 
-                onClick={() => setShowEarlyAccess(true)}
-                className="bg-accent hover:bg-accent/90 text-accent-foreground px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 accent-glow hover-lift"
-              >
-                Request Early Access
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
+      {/* Hero Section — aurora mesh */}
+      <section className="relative px-4 pt-20 pb-24 md:pt-28 md:pb-32 bg-mesh overflow-hidden">
+        {/* floating glow orbs */}
+        <div className="pointer-events-none absolute -top-24 left-1/4 w-96 h-96 rounded-full bg-neon-cyan/20 blur-3xl animate-float" />
+        <div className="pointer-events-none absolute top-40 right-1/4 w-[28rem] h-[28rem] rounded-full bg-neon-violet/20 blur-3xl animate-float" style={{ animationDelay: '1.5s' }} />
+
+        <div className="relative max-w-5xl mx-auto text-center">
+          <Badge className="bg-card/60 backdrop-blur border border-neon-cyan/30 text-neon-cyan mb-6 text-xs px-4 py-1.5 tracking-wider uppercase animate-fade-in">
+            <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan mr-2 animate-pulse" />
+            Live · Wallet intelligence for everyone
+          </Badge>
+
+          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 animate-fade-in leading-[1.05]">
+            Don't get rugged.
+            <span className="block text-aurora">Check before you click.</span>
+          </h1>
+
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-slide-up">
+            Paste any wallet, contract, or token. Rìan instantly screens for scams, sanctions,
+            risky approvals, and shady money trails — across BTC, ETH, and Solana.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center animate-scale-in mb-10">
+            <Button
+              onClick={() => navigate('/safe')}
+              size="lg"
+              className="bg-aurora text-white px-8 py-6 text-base font-semibold border-0 animate-glow-pulse hover:scale-[1.03] transition-transform"
+            >
+              Run a Safe Check
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setShowEarlyAccess(true)}
+              className="border-border/60 bg-card/40 backdrop-blur hover:border-neon-cyan/60 hover:text-neon-cyan px-8 py-6 text-base"
+            >
+              For compliance teams
+            </Button>
+          </div>
+
+          {/* Live verdict ticker */}
+          <div className="marquee-mask relative max-w-4xl mx-auto">
+            <div className="marquee-track gap-3 py-2">
+              {[...tickerItems, ...tickerItems].map((item, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full border text-xs font-mono backdrop-blur bg-card/40 ${verdictStyles[item.verdict]}`}
+                >
+                  <span className="font-semibold uppercase tracking-wider text-[10px]">{item.verdict}</span>
+                  <span className="opacity-80">{item.addr}</span>
+                  <span className="opacity-60">· {item.label}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Hero Visual */}
-          <div className="relative max-w-4xl mx-auto animate-fade-in">
-            <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 p-8 hover-lift">
-              <div className="grid md:grid-cols-3 gap-6">
-                <div className="text-center group">
-                  <div className="w-16 h-16 bg-gradient-to-br from-accent/10 to-accent/20 rounded-2xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-200">
-                    <Zap className="w-8 h-8 text-accent" />
-                  </div>
-                  <h3 className="font-semibold text-lg mb-2 text-slate-900 dark:text-slate-100">Rapid Analysis</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Lightning-fast crypto analysis delivering immediate risk summaries.</p>
+          {/* Feature cards */}
+          <div className="relative mt-16 grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
+            {[
+              { Icon: Zap, color: 'text-neon-cyan', title: 'Instant verdict', body: 'One paste. One score. Plain-English risk in under 2 seconds.' },
+              { Icon: Shield, color: 'text-neon-violet', title: 'Scam & approval scan', body: 'Spots drainers, fake tokens, and risky token approvals before you sign.' },
+              { Icon: Eye, color: 'text-neon-magenta', title: 'Whale & money trail', body: 'See who funds it, where it flows, and which mixers it touches.' },
+            ].map(({ Icon, color, title, body }) => (
+              <div
+                key={title}
+                className="border-glow rounded-2xl bg-card/60 backdrop-blur p-6 text-left"
+              >
+                <div className={`w-11 h-11 rounded-xl bg-background/60 flex items-center justify-center mb-4 ${color}`}>
+                  <Icon className="w-5 h-5" />
                 </div>
-                <div className="text-center group">
-                  <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-primary/20 rounded-2xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-200">
-                    <Shield className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="font-semibold text-lg mb-2 text-slate-900 dark:text-slate-100">AI-Driven Risk Assessment</h3>
-                  <p className="text-slate-600 dark:text-slate-400">AI-driven risk assessment with relevant entity insights and actionable flags.</p>
-                </div>
-                <div className="text-center group">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/20 dark:to-purple-800/20 rounded-2xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform duration-200">
-                    <Eye className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <h3 className="font-semibold text-lg mb-2 text-slate-900 dark:text-slate-100">Automated Compliance Reports</h3>
-                  <p className="text-slate-600 dark:text-slate-400">Generate clear, auditable reports and justify decisions with ease.</p>
-                </div>
+                <h3 className="font-semibold text-lg mb-1.5">{title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
