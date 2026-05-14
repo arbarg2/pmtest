@@ -172,8 +172,12 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="relative w-14 h-14">
+          <div className="absolute inset-0 rounded-full border-2 border-neon-cyan/20" />
+          <div className="absolute inset-0 rounded-full border-2 border-neon-cyan border-t-transparent animate-spin" />
+          <div className="absolute inset-0 rounded-full bg-neon-cyan/20 blur-xl animate-glow-pulse" />
+        </div>
       </div>
     );
   }
@@ -185,10 +189,14 @@ const Index = () => {
   if (recordId) {
     if (isLoadingWalletData) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+        <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-slate-600 dark:text-slate-400">Loading record data...</p>
+            <div className="relative w-14 h-14 mx-auto mb-4">
+              <div className="absolute inset-0 rounded-full border-2 border-neon-cyan/20" />
+              <div className="absolute inset-0 rounded-full border-2 border-neon-cyan border-t-transparent animate-spin" />
+              <div className="absolute inset-0 rounded-full bg-neon-cyan/20 blur-xl animate-glow-pulse" />
+            </div>
+            <p className="text-muted-foreground text-sm">Loading record data…</p>
           </div>
         </div>
       );
@@ -196,12 +204,12 @@ const Index = () => {
 
     if (recordNotFound || !walletData) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+        <div className="min-h-screen bg-background flex items-center justify-center px-4">
+          <Card className="max-w-md p-8 text-center bg-card/60 backdrop-blur-xl border-border/50">
+            <h2 className="text-xl font-semibold mb-2">
               {isDemo ? 'Demo Record Not Found' : 'Record Not Found'}
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 mb-4">
+            <p className="text-muted-foreground text-sm mb-5">
               {isDemo 
                 ? 'The demo session has expired. Please try the demo again from the landing page.'
                 : `Could not load wallet data for record ID: ${recordId}`
@@ -211,7 +219,7 @@ const Index = () => {
               <ArrowLeft className="w-4 h-4 mr-2" />
               {isDemo ? 'Back to Landing' : 'Back to Dashboard'}
             </Button>
-          </div>
+          </Card>
         </div>
       );
     }
@@ -230,68 +238,87 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/80 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Shield className="w-6 h-6 mr-3 text-primary" />
-              <div>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                  <span className="text-blue-600 dark:text-blue-400">Rìan</span> Intelligence
-                </h1>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Blockchain Investigation Platform
-                </p>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Aurora background */}
+      <div className="absolute inset-0 bg-mesh opacity-40 pointer-events-none" />
+      <div className="absolute top-0 -left-32 w-96 h-96 rounded-full bg-neon-cyan/10 blur-3xl animate-float pointer-events-none" />
+      <div className="absolute top-32 -right-32 w-96 h-96 rounded-full bg-neon-violet/10 blur-3xl animate-float pointer-events-none" style={{ animationDelay: '2s' }} />
+
+      <div className="relative">
+        <header className="border-b border-border/50 bg-background/70 backdrop-blur-xl sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Shield className="w-7 h-7 text-primary" />
+                  <div className="absolute inset-0 bg-neon-cyan/30 blur-xl -z-10 animate-glow-pulse" />
+                </div>
+                <div className="leading-tight">
+                  <h1 className="text-lg font-bold tracking-tight">
+                    <span className="text-aurora">Rìan</span> Intelligence
+                  </h1>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-widest">
+                    Blockchain Investigation Platform
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <AlertsBell />
+                <UserDropdown />
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              <AlertsBell />
-              <UserDropdown />
+          </div>
+        </header>
+
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Org Pulse */}
+          <div className="mb-8">
+            <OrgPulse />
+          </div>
+
+          {/* Top Row - Wallet Analysis Panel */}
+          <div className="mb-10">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="text-[11px] text-muted-foreground uppercase tracking-widest font-semibold">
+                Investigate a Wallet Address
+              </div>
+              <span className="text-[10px] uppercase tracking-widest text-neon-lime flex items-center gap-1.5">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-lime opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-neon-lime" />
+                </span>
+                Live
+              </span>
+            </div>
+            <div className="relative group">
+              <div className="absolute -inset-px bg-gradient-to-r from-neon-cyan/40 via-neon-violet/40 to-neon-magenta/40 rounded-lg opacity-30 blur-md group-focus-within:opacity-60 transition-opacity -z-10" />
+              <Card className="bg-card/80 backdrop-blur-xl border-border/60 shadow-2xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                    <Shield className="w-4 h-4 text-neon-cyan" />
+                    Wallet Intelligence Lookup
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <WalletLookupPanel
+                    walletAddress={walletAddress}
+                    setWalletAddress={setWalletAddress}
+                    onAnalyze={handleAnalyze}
+                    isAnalyzing={isAnalyzing}
+                  />
+                </CardContent>
+              </Card>
             </div>
           </div>
-        </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Org Pulse */}
-        <div className="mb-8">
-          <OrgPulse />
-        </div>
-
-        {/* Top Row - Wallet Analysis Panel */}
-        <div className="mb-10">
-          <div className="mb-4 text-sm text-slate-600 dark:text-slate-400 uppercase tracking-wide font-medium">
-            Investigate a Wallet Address
+          {/* Cross-Wallet Cluster View */}
+          <div className="mb-10">
+            <ClusterView />
           </div>
-          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md shadow-xl border border-slate-200 dark:border-slate-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold text-slate-800 dark:text-slate-200">
-                <Shield className="w-5 h-5 text-primary" />
-                Wallet Intelligence Lookup
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
-                  Live
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <WalletLookupPanel
-                walletAddress={walletAddress}
-                setWalletAddress={setWalletAddress}
-                onAnalyze={handleAnalyze}
-                isAnalyzing={isAnalyzing}
-              />
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Cross-Wallet Cluster View */}
-        <div className="mb-10">
-          <ClusterView />
+          {/* Main Dashboard Content */}
+          <AnalystDashboard />
         </div>
-
-        {/* Main Dashboard Content */}
-        <AnalystDashboard />
       </div>
     </div>
   );
