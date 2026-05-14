@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { Shield, Search, AlertTriangle, CheckCircle2, ShieldAlert, Share2, ArrowRight, Sparkles, Eye, Lock, ArrowLeft, Copy, Check } from "lucide-react";
+import { Shield, Search, AlertTriangle, CheckCircle2, ShieldAlert, ArrowRight, Sparkles, Eye, Lock, ArrowLeft, Copy, Check, Zap, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -21,13 +21,14 @@ interface CheckResult {
   cached?: boolean;
 }
 
-const verdictMeta: Record<Verdict, { label: string; sub: string; tone: string; ring: string; glow: string; icon: any }> = {
+const verdictMeta: Record<Verdict, { label: string; sub: string; tone: string; ring: string; glow: string; gradient: string; icon: any }> = {
   safe: {
     label: "LIKELY SAFE",
     sub: "No major red flags found.",
     tone: "text-risk-low",
     ring: "ring-risk-low/40 border-risk-low/40",
-    glow: "shadow-[0_0_60px_-10px_hsl(var(--risk-low)/0.6)]",
+    glow: "shadow-[0_0_80px_-10px_hsl(var(--risk-low)/0.7)]",
+    gradient: "from-risk-low/20 via-neon-lime/10 to-transparent",
     icon: CheckCircle2,
   },
   caution: {
@@ -35,30 +36,32 @@ const verdictMeta: Record<Verdict, { label: string; sub: string; tone: string; r
     sub: "Some signals worth reviewing before you send.",
     tone: "text-risk-medium",
     ring: "ring-risk-medium/40 border-risk-medium/40",
-    glow: "shadow-[0_0_60px_-10px_hsl(var(--risk-medium)/0.6)]",
+    glow: "shadow-[0_0_80px_-10px_hsl(var(--risk-medium)/0.7)]",
+    gradient: "from-risk-medium/20 via-neon-magenta/10 to-transparent",
     icon: AlertTriangle,
   },
   danger: {
     label: "DO NOT SEND",
     sub: "High-risk wallet. Funds could be lost or frozen.",
     tone: "text-risk-critical",
-    ring: "ring-risk-critical/40 border-risk-critical/40",
-    glow: "shadow-[0_0_80px_-10px_hsl(var(--risk-critical)/0.7)]",
+    ring: "ring-risk-critical/50 border-risk-critical/50",
+    glow: "shadow-[0_0_100px_-10px_hsl(var(--risk-critical)/0.8)]",
+    gradient: "from-risk-critical/25 via-neon-magenta/10 to-transparent",
     icon: ShieldAlert,
   },
 };
 
 function SafeHeader() {
   return (
-    <header className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-40">
+    <header className="border-b border-border/50 bg-background/70 backdrop-blur-xl sticky top-0 z-40">
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
         <Link to="/safe" className="flex items-center gap-2 group">
           <div className="relative">
             <Shield className="w-7 h-7 text-primary transition-transform group-hover:scale-110" />
-            <div className="absolute inset-0 bg-primary/30 blur-xl -z-10" />
+            <div className="absolute inset-0 bg-neon-cyan/40 blur-xl -z-10 animate-glow-pulse" />
           </div>
           <div className="leading-tight">
-            <div className="text-lg font-bold tracking-tight">Rìan <span className="text-primary">Safe</span></div>
+            <div className="text-lg font-bold tracking-tight">Rìan <span className="text-aurora">Safe</span></div>
             <div className="text-[10px] text-muted-foreground uppercase tracking-widest">Pre-send safety check</div>
           </div>
         </Link>
@@ -79,23 +82,35 @@ function VerdictCard({ result }: { result: CheckResult }) {
   const meta = verdictMeta[result.verdict];
   const Icon = meta.icon;
   return (
-    <Card className={`relative overflow-hidden p-8 md:p-10 border-2 ${meta.ring} ${meta.glow} bg-card/80 backdrop-blur-xl`}>
-      <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-current opacity-10 blur-3xl" />
+    <Card className={`relative overflow-hidden p-8 md:p-12 border-2 ${meta.ring} ${meta.glow} bg-card/80 backdrop-blur-xl animate-scale-in`}>
+      <div className={`absolute inset-0 bg-gradient-to-br ${meta.gradient} pointer-events-none`} />
+      <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-current opacity-10 blur-3xl animate-glow-pulse" />
+      <div className="absolute top-4 right-4 text-[10px] uppercase tracking-widest text-muted-foreground font-mono">Rìan · Verdict Card</div>
+
       <div className="relative flex flex-col md:flex-row md:items-center gap-6">
-        <div className={`flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-2xl flex items-center justify-center bg-background/60 border ${meta.ring}`}>
-          <Icon className={`w-12 h-12 ${meta.tone}`} strokeWidth={1.8} />
+        <div className={`flex-shrink-0 w-24 h-24 md:w-28 md:h-28 rounded-2xl flex items-center justify-center bg-background/60 border-2 ${meta.ring} ${meta.glow}`}>
+          <Icon className={`w-14 h-14 ${meta.tone}`} strokeWidth={1.6} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className={`text-xs font-semibold tracking-[0.2em] ${meta.tone}`}>VERDICT</span>
+            <span className={`text-xs font-semibold tracking-[0.25em] ${meta.tone}`}>VERDICT</span>
             {result.cached && <Badge variant="outline" className="text-[10px] h-5">cached</Badge>}
           </div>
-          <h2 className={`text-3xl md:text-4xl font-black tracking-tight ${meta.tone}`}>{meta.label}</h2>
-          <p className="text-muted-foreground mt-1">{meta.sub}</p>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-sm">
-            <span className="font-mono text-xs bg-muted/50 px-2 py-1 rounded">{result.data.short ?? result.address}</span>
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">{result.network}</span>
-            <span className="text-xs text-muted-foreground">Risk score <span className={`font-bold ${meta.tone}`}>{result.risk_score}</span>/100</span>
+          <h2 className={`text-3xl md:text-5xl font-black tracking-tight ${meta.tone} leading-[1.05]`}>
+            {meta.label}
+          </h2>
+          <p className="text-muted-foreground mt-2 text-sm md:text-base">{meta.sub}</p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 text-sm">
+            <span className="font-mono text-xs bg-background/60 border border-border/50 px-2.5 py-1 rounded">
+              {result.data.short ?? result.address}
+            </span>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground border border-border/40 px-2 py-1 rounded">
+              {result.network}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              Risk score <span className={`font-bold text-lg ${meta.tone} tabular-nums`}>{result.risk_score}</span>
+              <span className="text-muted-foreground/60">/100</span>
+            </span>
           </div>
         </div>
       </div>
@@ -110,9 +125,9 @@ function ReasonsList({ reasons }: { reasons: CheckResult["reasons"] }) {
     : s === "medium" ? "text-risk-medium bg-risk-medium/10 border-risk-medium/30"
     : "text-risk-low bg-risk-low/10 border-risk-low/30";
   return (
-    <Card className="p-6 bg-card/60 backdrop-blur-xl border-border/60">
+    <Card className="p-6 bg-card/60 backdrop-blur-xl border-border/60 animate-fade-in">
       <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
-        <Sparkles className="w-4 h-4" /> Why
+        <Sparkles className="w-4 h-4 text-neon-cyan" /> Why
       </h3>
       <ul className="space-y-3">
         {reasons.map((r, i) => (
@@ -136,9 +151,9 @@ function StatsGrid({ result }: { result: CheckResult }) {
     { label: "Sanctions", value: result.data.sanctioned ? "MATCH" : "Clear" },
   ];
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fade-in">
       {stats.map((s) => (
-        <Card key={s.label} className="p-4 bg-card/40 border-border/50">
+        <Card key={s.label} className="p-4 bg-card/40 border-border/50 hover:border-neon-cyan/40 transition-colors">
           <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">{s.label}</div>
           <div className={`text-base font-semibold tabular-nums ${s.label === "Sanctions" && s.value === "MATCH" ? "text-risk-critical" : ""}`}>{s.value}</div>
         </Card>
@@ -147,9 +162,16 @@ function StatsGrid({ result }: { result: CheckResult }) {
   );
 }
 
-function ShareBar({ address }: { address: string }) {
+function ShareBar({ address, verdict }: { address: string; verdict: Verdict }) {
   const [copied, setCopied] = useState(false);
   const url = `${window.location.origin}/safe/check/${address}`;
+  const tweetText = encodeURIComponent(
+    verdict === "danger"
+      ? `⚠️ DO NOT SEND to ${address.slice(0, 8)}… — checked with @tryrian Safe`
+      : verdict === "caution"
+      ? `⚠️ Caution on ${address.slice(0, 8)}… — checked with @tryrian Safe`
+      : `✅ ${address.slice(0, 8)}… looks safe — checked with @tryrian Safe`
+  );
   const copy = async () => {
     await navigator.clipboard.writeText(url);
     setCopied(true);
@@ -157,16 +179,37 @@ function ShareBar({ address }: { address: string }) {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <Card className="p-4 bg-card/40 border-border/50 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-      <div className="flex-1 min-w-0">
-        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Share this verdict</div>
-        <div className="font-mono text-xs truncate">{url}</div>
+    <>
+      {/* Desktop / inline */}
+      <Card className="hidden sm:flex p-4 bg-card/40 border-border/50 flex-row gap-3 items-center animate-fade-in">
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Share this verdict</div>
+          <div className="font-mono text-xs truncate">{url}</div>
+        </div>
+        <Button onClick={copy} variant="outline" size="sm" className="gap-2">
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copied ? "Copied" : "Copy link"}
+        </Button>
+        <a href={`https://twitter.com/intent/tweet?text=${tweetText}&url=${encodeURIComponent(url)}`} target="_blank" rel="noopener noreferrer">
+          <Button variant="outline" size="sm" className="gap-2">
+            <Twitter className="w-4 h-4" /> Tweet
+          </Button>
+        </a>
+      </Card>
+
+      {/* Mobile sticky */}
+      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 p-3 bg-background/90 backdrop-blur-xl border-t border-border/60 flex gap-2">
+        <Button onClick={copy} variant="outline" size="lg" className="flex-1 gap-2">
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copied ? "Copied" : "Copy link"}
+        </Button>
+        <a href={`https://twitter.com/intent/tweet?text=${tweetText}&url=${encodeURIComponent(url)}`} target="_blank" rel="noopener noreferrer" className="flex-1">
+          <Button size="lg" className="w-full gap-2">
+            <Twitter className="w-4 h-4" /> Tweet
+          </Button>
+        </a>
       </div>
-      <Button onClick={copy} variant="outline" size="sm" className="gap-2">
-        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-        {copied ? "Copied" : "Copy link"}
-      </Button>
-    </Card>
+    </>
   );
 }
 
@@ -183,12 +226,10 @@ export function SafeCheckRunner({ address, onResult }: { address: string; onResu
       try {
         const { data, error: fnErr } = await supabase.functions.invoke("safe-check", {
           method: "GET" as any,
-          // pass address via query — invoke supports body, but we use direct fetch below for GET params
         } as any).catch(() => ({ data: null, error: { message: "fallback" } } as any));
 
         let payload: any = data;
         if (!data || fnErr) {
-          // Fallback: direct fetch with query string
           const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/safe-check?address=${encodeURIComponent(address)}`;
           const r = await fetch(url, {
             headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
@@ -210,16 +251,18 @@ export function SafeCheckRunner({ address, onResult }: { address: string; onResu
 
   if (loading) {
     return (
-      <Card className="p-10 border-border/50 bg-card/60 backdrop-blur-xl">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative w-16 h-16">
-            <div className="absolute inset-0 rounded-full border-2 border-primary/20" />
-            <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-            <Shield className="absolute inset-0 m-auto w-7 h-7 text-primary" />
+      <Card className="p-12 border-border/50 bg-card/60 backdrop-blur-xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-mesh opacity-40 pointer-events-none" />
+        <div className="relative flex flex-col items-center gap-5">
+          <div className="relative w-20 h-20">
+            <div className="absolute inset-0 rounded-full border-2 border-neon-cyan/20" />
+            <div className="absolute inset-0 rounded-full border-2 border-neon-cyan border-t-transparent animate-spin" />
+            <div className="absolute inset-0 rounded-full bg-neon-cyan/20 blur-xl animate-glow-pulse" />
+            <Shield className="absolute inset-0 m-auto w-8 h-8 text-neon-cyan" />
           </div>
           <div className="text-center">
-            <div className="font-semibold">Checking the chain…</div>
-            <div className="text-xs text-muted-foreground mt-1">Sanctions, history, on-chain patterns.</div>
+            <div className="font-semibold text-base">Checking the chain…</div>
+            <div className="text-xs text-muted-foreground mt-1">Sanctions · history · on-chain patterns</div>
           </div>
         </div>
       </Card>
@@ -236,11 +279,11 @@ export function SafeCheckRunner({ address, onResult }: { address: string; onResu
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-24 sm:pb-4">
       <VerdictCard result={result} />
       <ReasonsList reasons={result.reasons} />
       <StatsGrid result={result} />
-      <ShareBar address={result.address} />
+      <ShareBar address={result.address} verdict={result.verdict} />
     </div>
   );
 }
@@ -255,59 +298,68 @@ export default function Safe() {
     navigate(`/safe/check/${v}`);
   };
   return (
-    <div className="min-h-screen bg-background">
-      <SafeHeader />
-      <main className="max-w-3xl mx-auto px-4 pt-12 md:pt-20 pb-16">
-        <div className="text-center mb-10">
-          <Badge variant="outline" className="mb-4 border-primary/40 text-primary">
-            <Sparkles className="w-3 h-3 mr-1" /> Free • No login needed
-          </Badge>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.05]">
-            Don't send to <span className="text-risk-critical">scammers</span>.<br />
-            Check first.
-          </h1>
-          <p className="text-muted-foreground mt-5 text-lg max-w-xl mx-auto">
-            Paste any wallet address. Get an instant <span className="text-risk-low font-semibold">SAFE</span> /
-            <span className="text-risk-medium font-semibold"> CAUTION</span> /
-            <span className="text-risk-critical font-semibold"> DANGER</span> verdict, in plain English.
-          </p>
-        </div>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Aurora background */}
+      <div className="absolute inset-0 bg-mesh opacity-60 pointer-events-none" />
+      <div className="absolute top-20 -left-32 w-96 h-96 rounded-full bg-neon-cyan/10 blur-3xl animate-float pointer-events-none" />
+      <div className="absolute top-40 -right-32 w-96 h-96 rounded-full bg-neon-violet/10 blur-3xl animate-float pointer-events-none" style={{ animationDelay: "1.5s" }} />
 
-        <form onSubmit={submit} className="relative">
-          <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-2xl -z-10" />
-          <Card className="p-2 flex gap-2 border-2 border-primary/30 bg-card/80 backdrop-blur-xl shadow-2xl">
-            <Search className="w-5 h-5 text-muted-foreground self-center ml-3" />
-            <Input
-              autoFocus
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="0x… / bc1… / Solana address"
-              className="border-0 bg-transparent text-base focus-visible:ring-0 font-mono"
-            />
-            <Button type="submit" size="lg" className="gap-2 font-semibold">
-              Check <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Card>
-        </form>
+      <div className="relative">
+        <SafeHeader />
+        <main className="max-w-3xl mx-auto px-4 pt-12 md:pt-20 pb-16">
+          <div className="text-center mb-10 animate-fade-in">
+            <Badge variant="outline" className="mb-4 border-neon-cyan/40 text-neon-cyan bg-neon-cyan/5">
+              <Sparkles className="w-3 h-3 mr-1" /> Free • No login needed
+            </Badge>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.05]">
+              Don't send to <span className="text-risk-critical">scammers</span>.<br />
+              <span className="text-aurora">Check first.</span>
+            </h1>
+            <p className="text-muted-foreground mt-5 text-lg max-w-xl mx-auto">
+              Paste any wallet address. Get an instant <span className="text-risk-low font-semibold">SAFE</span> /
+              <span className="text-risk-medium font-semibold"> CAUTION</span> /
+              <span className="text-risk-critical font-semibold"> DANGER</span> verdict, in plain English.
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-10">
-          {[
-            { icon: Eye, t: "Pre-send check", d: "Vet any address before you click confirm." },
-            { icon: ShieldAlert, t: "OFAC sanctions", d: "Real OFAC SDN list, synced daily." },
-            { icon: Lock, t: "Read-only", d: "We never touch your wallet or funds." },
-          ].map((f, i) => (
-            <Card key={i} className="p-5 bg-card/40 border-border/50">
-              <f.icon className="w-5 h-5 text-primary mb-2" />
-              <div className="font-semibold text-sm">{f.t}</div>
-              <div className="text-xs text-muted-foreground mt-1">{f.d}</div>
+          <form onSubmit={submit} className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-neon-cyan via-neon-violet to-neon-magenta rounded-2xl opacity-40 blur-xl group-focus-within:opacity-70 transition-opacity -z-10 animate-glow-pulse" />
+            <Card className="p-2 flex gap-2 border-2 border-primary/30 bg-card/90 backdrop-blur-xl shadow-2xl group-focus-within:border-neon-cyan/60 transition-colors">
+              <Search className="w-5 h-5 text-muted-foreground self-center ml-3" />
+              <Input
+                autoFocus
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="0x… / bc1… / Solana address"
+                className="border-0 bg-transparent text-base focus-visible:ring-0 font-mono"
+              />
+              <Button type="submit" size="lg" className="gap-2 font-semibold bg-aurora text-background hover:opacity-90">
+                Check <ArrowRight className="w-4 h-4" />
+              </Button>
             </Card>
-          ))}
-        </div>
+          </form>
 
-        <div className="text-center mt-12 text-xs text-muted-foreground">
-          Need full investigation tools? <Link to="/dashboard" className="text-primary hover:underline">Open the Pro Console →</Link>
-        </div>
-      </main>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-10">
+            {[
+              { icon: Zap, t: "Instant verdict", d: "Plain-English answer in under 2 seconds.", color: "text-neon-cyan", bg: "bg-neon-cyan/10" },
+              { icon: ShieldAlert, t: "OFAC sanctions", d: "Real OFAC SDN list, synced daily.", color: "text-neon-violet", bg: "bg-neon-violet/10" },
+              { icon: Lock, t: "Read-only", d: "We never touch your wallet or funds.", color: "text-neon-lime", bg: "bg-neon-lime/10" },
+            ].map((f, i) => (
+              <Card key={i} className="p-5 bg-card/40 border-border/50 border-glow">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${f.bg} mb-3`}>
+                  <f.icon className={`w-5 h-5 ${f.color}`} />
+                </div>
+                <div className="font-semibold text-sm">{f.t}</div>
+                <div className="text-xs text-muted-foreground mt-1">{f.d}</div>
+              </Card>
+            ))}
+          </div>
+
+          <div className="text-center mt-12 text-xs text-muted-foreground">
+            Need full investigation tools? <Link to="/dashboard" className="text-neon-cyan hover:underline">Open the Pro Console →</Link>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
@@ -319,14 +371,17 @@ export function SafeCheckPage() {
     return <Safe />;
   }
   return (
-    <div className="min-h-screen bg-background">
-      <SafeHeader />
-      <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/safe")} className="gap-1 -ml-2">
-          <ArrowLeft className="w-4 h-4" /> New check
-        </Button>
-        <SafeCheckRunner address={address} />
-      </main>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <div className="absolute inset-0 bg-mesh opacity-40 pointer-events-none" />
+      <div className="relative">
+        <SafeHeader />
+        <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/safe")} className="gap-1 -ml-2">
+            <ArrowLeft className="w-4 h-4" /> New check
+          </Button>
+          <SafeCheckRunner address={address} />
+        </main>
+      </div>
     </div>
   );
 }
