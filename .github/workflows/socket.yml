@@ -37,10 +37,13 @@ jobs:
           SOCKET_SECURITY_API_KEY: ${{ secrets.SOCKET_SECURITY_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
-          PR_NUMBER=${PR_NUMBER:-0}
-          
-          socketcli \
-            --target-path . \
-            --scm github \
-            --pr-number "$PR_NUMBER"
+          if [ "${{ github.event.pull_request.number }}" != "" ]; then
+            socketcli \
+              --target-path . \
+              --scm github \
+              --pr-number "${{ github.event.pull_request.number }}"
+          else
+            socketcli \
+              --target-path . \
+              --scm github
+          fi
