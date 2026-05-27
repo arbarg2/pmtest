@@ -3,6 +3,8 @@
 
 A comprehensive blockchain investigation and wallet analysis platform built with React, TypeScript, and Supabase.
 
+https://preview--tryrian.lovable.app/
+
 ## Features
 
 ### Core Platform
