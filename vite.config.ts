@@ -4,12 +4,15 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
+import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
+
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
   },
   plugins: [
+    mcpPlugin(),
     react(),
     mode === 'development' &&
     componentTagger(),
