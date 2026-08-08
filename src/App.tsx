@@ -18,6 +18,7 @@ import AuditLogs from "./pages/AuditLogs";
 import WalletTransactionFlow from "./pages/WalletTransactionFlow";
 import Safe, { SafeCheckPage } from "./pages/Safe";
 import { AuthPage } from "./components/auth/AuthPage";
+import OAuthConsent from "./pages/OAuthConsent";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => (
                 <Route path="/api-docs" element={<ApiDocs />} />
                 <Route path="/safe" element={<Safe />} />
                 <Route path="/safe/check/:address" element={<SafeCheckPage />} />
+                <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

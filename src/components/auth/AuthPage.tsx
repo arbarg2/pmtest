@@ -32,11 +32,18 @@ export function AuthPage() {
     }
   }, [location.state]);
 
+  const nextParam = new URLSearchParams(location.search).get('next');
+  const safeNext = nextParam && /^\/(?!\/)/.test(nextParam) ? nextParam : null;
+
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      if (safeNext) {
+        window.location.href = safeNext;
+      } else {
+        navigate('/dashboard');
+      }
     }
-  }, [user, navigate]);
+  }, [user, navigate, safeNext]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
