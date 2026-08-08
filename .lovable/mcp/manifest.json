@@ -1,0 +1,185 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://nqjorzsehawucorvaqyi.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "tryrian",
+      "version": "0.1.0",
+      "title": "tryrian"
+    },
+    "tools": [
+      {
+        "name": "list_investigations",
+        "title": "List investigations",
+        "description": "List the signed-in analyst's recent wallet investigation records, newest first, with risk score and level.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Max records to return (default 10)."
+            },
+            "risk_level": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "critical"
+              ],
+              "description": "Filter by risk level."
+            },
+            "search": {
+              "type": "string",
+              "minLength": 3,
+              "description": "Filter by wallet address substring."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_investigation",
+        "title": "Get investigation",
+        "description": "Fetch one investigation record owned by the signed-in analyst, including its AI summary and analysis data. Look it up by record_id or by wallet address.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "record_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The record_id of the investigation."
+            },
+            "wallet_address": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Wallet address to fetch the most recent investigation for."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "screen_address",
+        "title": "Screen address against sanctions",
+        "description": "Screen a crypto wallet address against the synced OFAC sanctions address list and report any direct matches.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "address": {
+              "type": "string",
+              "minLength": 4,
+              "description": "The wallet address to screen."
+            }
+          },
+          "required": [
+            "address"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_watched_wallets",
+        "title": "List watched wallets",
+        "description": "List wallets the signed-in analyst is monitoring, with current and initial risk scores.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Max wallets to return (default 25)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "watch_wallet",
+        "title": "Watch a wallet",
+        "description": "Add a wallet address to the signed-in analyst's monitoring list.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "wallet_address": {
+              "type": "string",
+              "minLength": 4,
+              "description": "Wallet address to monitor."
+            },
+            "network": {
+              "type": "string",
+              "enum": [
+                "bitcoin",
+                "ethereum",
+                "solana"
+              ],
+              "description": "Blockchain network for the address."
+            },
+            "watch_reason": {
+              "type": "string",
+              "maxLength": 500,
+              "description": "Why this wallet is being monitored."
+            },
+            "alert_threshold": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Risk score increase that should trigger an alert (default 10)."
+            }
+          },
+          "required": [
+            "wallet_address",
+            "network"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
