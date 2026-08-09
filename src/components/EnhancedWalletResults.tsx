@@ -22,6 +22,9 @@ import ExportActions from '@/components/dashboard/ExportActions';
 import RiskFactorsBreakdown from '@/components/RiskFactorsBreakdown';
 import SanctionsPanel from '@/components/wallet/SanctionsPanel';
 import VerdictBanner from '@/components/wallet/VerdictBanner';
+import ProvenanceCard from '@/components/record/ProvenanceCard';
+import SarDraftPanel from '@/components/compliance/SarDraftPanel';
+
 import AnalystNotesThread, { AnalystNotesThreadRef } from '@/components/AnalystNotesThread';
 import CaseManagement from '@/components/CaseManagement';
 import { HollyAIAnalysis } from '@/components/HollyAIAnalysis';
