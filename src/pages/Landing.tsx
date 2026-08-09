@@ -1,3 +1,4 @@
+import Seo from '@/components/Seo';
 import React, { useState } from 'react';
 import { Shield, Eye, CheckCircle, ArrowRight, Twitter, Linkedin, Lock, Zap, Globe, Users } from 'lucide-react';
 import { useDemoWalletAnalysis } from '@/hooks/useDemoWalletAnalysis';
@@ -52,6 +53,7 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <Seo title="Rìan — Blockchain Intelligence & Compliance" description="Screen any crypto wallet in seconds: risk scoring, OFAC sanctions screening and transaction tracing for compliance teams and everyday users." path="/" />
       {/* Header */}
       <header className="border-b border-border/50 bg-background/70 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4">
@@ -61,7 +63,7 @@ const Landing = () => {
                 <Shield className="w-9 h-9 text-accent" />
                 <div className="absolute inset-0 blur-xl bg-accent/40 -z-10 animate-pulse-slow" />
               </div>
-              <h1 className="text-3xl font-bold tracking-tight">Rìan</h1>
+              <div className="text-3xl font-bold tracking-tight">Rìan</div>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -140,7 +142,10 @@ const Landing = () => {
           </div>
 
           {/* Feature cards */}
-          <div className="relative mt-16 grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
+          <h2 className="relative mt-16 text-2xl md:text-3xl font-bold tracking-tight">
+            What Rìan checks
+          </h2>
+          <div className="relative mt-6 grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {[
               { Icon: Zap, color: 'text-neon-cyan', title: 'Instant verdict', body: 'One paste. One score. Plain-English risk in under 2 seconds.' },
               { Icon: Shield, color: 'text-neon-violet', title: 'Scam & approval scan', body: 'Spots drainers, fake tokens, and risky token approvals before you sign.' },

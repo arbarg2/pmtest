@@ -1,3 +1,4 @@
+import Seo from '@/components/Seo';
 import React, { useState } from 'react';
 import { Shield, Copy, Check, Terminal, Zap, Lock, Gauge, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,6 +67,7 @@ const ApiDocs = () => {
 
   return (
     <div className="min-h-screen bg-background bg-mesh">
+      <Seo title="Rìan API Docs — Wallet Screening API v1" description="REST API for wallet risk screening, batch checks and OFAC sanctions lookups, with API keys, rate limits and signed webhooks." path="/api-docs" />
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">

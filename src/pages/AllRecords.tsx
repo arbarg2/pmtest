@@ -42,9 +42,15 @@ const AllRecords = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Charts Panel */}
+        <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-slate-100">
+          Investigation analytics
+        </h2>
         <RecordChartsPanel />
-        
+
         {/* Investigation Records Table */}
+        <h2 className="text-lg font-semibold mt-10 mb-4 text-slate-900 dark:text-slate-100">
+          Investigation records
+        </h2>
         <InvestigationRecordsTable />
       </div>
     </div>
