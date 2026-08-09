@@ -152,15 +152,47 @@ ${JSON.stringify(hits, null, 2)}` : `No direct sanctions match found for ${addre
   }
 });
 
-// src/lib/mcp/tools/list-watched-wallets.ts
+// src/lib/mcp/tools/analyze-wallet.ts
 import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.26.1";
 import { z as z4 } from "npm:zod@^3.25.76";
-var list_watched_wallets_default = defineTool4({
+var analyze_wallet_default = defineTool4({
+  name: "analyze_wallet",
+  title: "Analyze wallet risk",
+  description: "Run a full live risk analysis on a crypto wallet address (BTC, ETH or Solana): sanctions screening, on-chain activity, wallet age, and behavioural risk factors. Returns a verdict (safe/caution/danger) and a 0-100 risk score.",
+  inputSchema: {
+    address: z4.string().trim().min(4).describe("The wallet address to analyze.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+  handler: async ({ address }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const supabase = supabaseForUser(ctx);
+    const { data, error } = await supabase.functions.invoke("safe-check", {
+      body: { address }
+    });
+    if (error) {
+      return { content: [{ type: "text", text: `Analysis failed: ${error.message}` }], isError: true };
+    }
+    if (data?.error) {
+      return { content: [{ type: "text", text: String(data.error) }], isError: true };
+    }
+    return {
+      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      structuredContent: data
+    };
+  }
+});
+
+// src/lib/mcp/tools/list-watched-wallets.ts
+import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.26.1";
+import { z as z5 } from "npm:zod@^3.25.76";
+var list_watched_wallets_default = defineTool5({
   name: "list_watched_wallets",
   title: "List watched wallets",
   description: "List wallets the signed-in analyst is monitoring, with current and initial risk scores.",
   inputSchema: {
-    limit: z4.number().int().min(1).max(100).optional().describe("Max wallets to return (default 25).")
+    limit: z5.number().int().min(1).max(100).optional().describe("Max wallets to return (default 25).")
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ limit }, ctx) => {
@@ -180,17 +212,17 @@ var list_watched_wallets_default = defineTool4({
 });
 
 // src/lib/mcp/tools/watch-wallet.ts
-import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.26.1";
-import { z as z5 } from "npm:zod@^3.25.76";
-var watch_wallet_default = defineTool5({
+import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.26.1";
+import { z as z6 } from "npm:zod@^3.25.76";
+var watch_wallet_default = defineTool6({
   name: "watch_wallet",
   title: "Watch a wallet",
   description: "Add a wallet address to the signed-in analyst's monitoring list.",
   inputSchema: {
-    wallet_address: z5.string().trim().min(4).describe("Wallet address to monitor."),
-    network: z5.enum(["bitcoin", "ethereum", "solana"]).describe("Blockchain network for the address."),
-    watch_reason: z5.string().trim().max(500).optional().describe("Why this wallet is being monitored."),
-    alert_threshold: z5.number().int().min(1).max(100).optional().describe("Risk score increase that should trigger an alert (default 10).")
+    wallet_address: z6.string().trim().min(4).describe("Wallet address to monitor."),
+    network: z6.enum(["bitcoin", "ethereum", "solana"]).describe("Blockchain network for the address."),
+    watch_reason: z6.string().trim().max(500).optional().describe("Why this wallet is being monitored."),
+    alert_threshold: z6.number().int().min(1).max(100).optional().describe("Risk score increase that should trigger an alert (default 10).")
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   handler: async ({ wallet_address, network, watch_reason, alert_threshold }, ctx) => {
@@ -213,18 +245,94 @@ var watch_wallet_default = defineTool5({
   }
 });
 
+// src/lib/mcp/tools/unwatch-wallet.ts
+import { defineTool as defineTool7 } from "npm:@lovable.dev/mcp-js@0.26.1";
+import { z as z7 } from "npm:zod@^3.25.76";
+var unwatch_wallet_default = defineTool7({
+  name: "unwatch_wallet",
+  title: "Stop watching a wallet",
+  description: "Remove a wallet address from the signed-in analyst's monitoring list.",
+  inputSchema: {
+    wallet_address: z7.string().trim().min(4).describe("Wallet address to stop monitoring.")
+  },
+  annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+  handler: async ({ wallet_address }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const supabase = supabaseForUser(ctx);
+    const { data, error } = await supabase.from("watched_wallets").delete().eq("user_id", ctx.getUserId()).ilike("wallet_address", wallet_address).select("wallet_address, network");
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    const removed = data ?? [];
+    return {
+      content: [
+        {
+          type: "text",
+          text: removed.length ? `Stopped monitoring ${wallet_address}.` : `No monitored wallet found matching ${wallet_address}.`
+        }
+      ],
+      structuredContent: { removed: removed.length, wallets: removed }
+    };
+  }
+});
+
+// src/lib/mcp/tools/list-alerts.ts
+import { defineTool as defineTool8 } from "npm:@lovable.dev/mcp-js@0.26.1";
+import { z as z8 } from "npm:zod@^3.25.76";
+var list_alerts_default = defineTool8({
+  name: "list_alerts",
+  title: "List monitoring alerts",
+  description: "List recent risk alerts raised on the signed-in analyst's monitored wallets, newest first.",
+  inputSchema: {
+    limit: z8.number().int().min(1).max(100).optional().describe("Max alerts to return (default 20)."),
+    unread_only: z8.boolean().optional().describe("Only return alerts that have not been read.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ limit, unread_only }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const supabase = supabaseForUser(ctx);
+    let query = supabase.from("watch_alerts").select(
+      "id, alert_type, alert_message, old_value, new_value, risk_change, is_read, created_at, watched_wallets!inner(wallet_address, network, user_id)"
+    ).eq("watched_wallets.user_id", ctx.getUserId()).order("created_at", { ascending: false }).limit(limit ?? 20);
+    if (unread_only) query = query.eq("is_read", false);
+    const { data, error } = await query;
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    const alerts = data ?? [];
+    return {
+      content: [
+        {
+          type: "text",
+          text: alerts.length ? JSON.stringify(alerts, null, 2) : "No alerts found."
+        }
+      ],
+      structuredContent: { alerts }
+    };
+  }
+});
+
 // src/lib/mcp/index.ts
 var projectRef = "nqjorzsehawucorvaqyi";
 var mcp_default = defineMcp({
   name: "tryrian",
   title: "tryrian",
   version: "0.1.0",
-  instructions: "Blockchain compliance tools for R\xECan. Use `list_investigations` and `get_investigation` to review the analyst's wallet investigation records and AI risk summaries, `screen_address` to check an address against the synced OFAC sanctions list, and `list_watched_wallets` / `watch_wallet` to manage wallet monitoring. All tools act as the signed-in analyst.",
+  instructions: "Blockchain compliance tools for R\xECan. Use `analyze_wallet` for a full live risk analysis of any address, `screen_address` for a fast OFAC sanctions check, `list_investigations` / `get_investigation` to review saved investigation records and AI risk summaries, `list_watched_wallets` / `watch_wallet` / `unwatch_wallet` to manage monitoring, and `list_alerts` to read monitoring alerts. All tools act as the signed-in analyst.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"
   }),
-  tools: [list_investigations_default, get_investigation_default, screen_address_default, list_watched_wallets_default, watch_wallet_default]
+  tools: [
+    analyze_wallet_default,
+    screen_address_default,
+    list_investigations_default,
+    get_investigation_default,
+    list_watched_wallets_default,
+    watch_wallet_default,
+    unwatch_wallet_default,
+    list_alerts_default
+  ]
 });
 
 // lovable-mcp-supabase-entry.ts
