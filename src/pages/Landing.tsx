@@ -52,8 +52,8 @@ const Landing = () => {
   };
 
   return (
-      <Seo title="Rìan — Blockchain Intelligence & Compliance" description="Screen any crypto wallet in seconds: risk scoring, OFAC sanctions screening and transaction tracing for compliance teams and everyday users." path="/" />
     <div className="min-h-screen bg-background text-foreground">
+      <Seo title="Rìan — Blockchain Intelligence & Compliance" description="Screen any crypto wallet in seconds: risk scoring, OFAC sanctions screening and transaction tracing for compliance teams and everyday users." path="/" />
       {/* Header */}
       <header className="border-b border-border/50 bg-background/70 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4">

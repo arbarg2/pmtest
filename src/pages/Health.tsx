@@ -139,8 +139,8 @@ export default function Health() {
   const M = report ? meta[report.verdict] : null;
 
   return (
-      <Seo title="Wallet Health Check — Scan Your Own Wallet" description="Connect your wallet and scan its full counterparty history for sanctions exposure, mixers and risky addresses." path="/health" />
     <div className="min-h-screen bg-background bg-mesh relative overflow-hidden">
+      <Seo title="Wallet Health Check — Scan Your Own Wallet" description="Connect your wallet and scan its full counterparty history for sanctions exposure, mixers and risky addresses." path="/health" />
       <div className="pointer-events-none absolute inset-0 opacity-60">
         <div className="absolute -top-40 -left-32 w-[36rem] h-[36rem] rounded-full bg-neon-cyan/10 blur-[120px]" />
         <div className="absolute -bottom-40 -right-32 w-[36rem] h-[36rem] rounded-full bg-neon-violet/10 blur-[120px]" />
