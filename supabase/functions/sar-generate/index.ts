@@ -106,7 +106,21 @@ serve(async (req) => {
         .eq("id", recordId)
         .maybeSingle();
       record = data;
-      if (record) {
+      if (!record) return json({ error: "Record not found" }, 404);
+
+      // Authorization: caller must own the record or belong to its workspace
+      let allowed = record.user_id === userId;
+      if (!allowed && record.workspace_id) {
+        const { data: isMember } = await admin.rpc("is_workspace_member", {
+          _workspace_id: record.workspace_id,
+          _user_id: userId,
+        });
+        allowed = isMember === true;
+      }
+      if (!allowed) return json({ error: "Forbidden" }, 403);
+
+      {
+
         evidence.push({
           id: nextId(),
           kind: "record",
