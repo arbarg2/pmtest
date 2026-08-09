@@ -1008,21 +1008,6 @@ export type Database = {
     Functions: {
       api_usage_this_month: { Args: { _key_id: string }; Returns: number }
       generate_case_id: { Args: never; Returns: string }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      has_workspace_role: {
-        Args: {
-          _roles: Database["public"]["Enums"]["workspace_role"][]
-          _user_id: string
-          _workspace_id: string
-        }
-        Returns: boolean
-      }
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
