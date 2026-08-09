@@ -279,9 +279,9 @@ const Index = () => {
           {/* Top Row - Wallet Analysis Panel */}
           <div className="mb-10">
             <div className="mb-3 flex items-center justify-between">
-              <div className="text-[11px] text-muted-foreground uppercase tracking-widest font-semibold">
+              <h2 className="text-[11px] text-muted-foreground uppercase tracking-widest font-semibold">
                 Investigate a Wallet Address
-              </div>
+              </h2>
               <span className="text-[10px] uppercase tracking-widest text-neon-lime flex items-center gap-1.5">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-lime opacity-75" />
