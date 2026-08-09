@@ -17,6 +17,7 @@ import AllRecords from "./pages/AllRecords";
 import AuditLogs from "./pages/AuditLogs";
 import WalletTransactionFlow from "./pages/WalletTransactionFlow";
 import Safe, { SafeCheckPage } from "./pages/Safe";
+import Health from "./pages/Health";
 import { AuthPage } from "./components/auth/AuthPage";
 import OAuthConsent from "./pages/OAuthConsent";
 
@@ -43,6 +44,7 @@ const App = () => (
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/api-docs" element={<ApiDocs />} />
                 <Route path="/safe" element={<Safe />} />
+                <Route path="/health" element={<Health />} />
                 <Route path="/safe/check/:address" element={<SafeCheckPage />} />
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 <Route path="*" element={<NotFound />} />
