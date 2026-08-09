@@ -61,7 +61,7 @@ const Landing = () => {
                 <Shield className="w-9 h-9 text-accent" />
                 <div className="absolute inset-0 blur-xl bg-accent/40 -z-10 animate-pulse-slow" />
               </div>
-              <h1 className="text-3xl font-bold tracking-tight">Rìan</h1>
+              <div className="text-3xl font-bold tracking-tight">Rìan</div>
             </div>
             <div className="flex items-center gap-2">
               <Button
