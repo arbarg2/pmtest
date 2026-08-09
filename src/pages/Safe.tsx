@@ -1,3 +1,4 @@
+import Seo from '@/components/Seo';
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Shield, Search, AlertTriangle, CheckCircle2, ShieldAlert, ArrowRight, Sparkles, Eye, Lock, ArrowLeft, Copy, Check, Zap, Twitter } from "lucide-react";
@@ -298,6 +299,7 @@ export default function Safe() {
     navigate(`/safe/check/${v}`);
   };
   return (
+      <Seo title="Safe Check — Is This Wallet Safe to Send To?" description="Paste any BTC, ETH or Solana address and get a plain-English safety verdict before you transact. Free instant scam and sanctions check." path="/safe" />
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Aurora background */}
       <div className="absolute inset-0 bg-mesh opacity-60 pointer-events-none" />

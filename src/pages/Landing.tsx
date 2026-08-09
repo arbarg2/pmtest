@@ -1,3 +1,4 @@
+import Seo from '@/components/Seo';
 import React, { useState } from 'react';
 import { Shield, Eye, CheckCircle, ArrowRight, Twitter, Linkedin, Lock, Zap, Globe, Users } from 'lucide-react';
 import { useDemoWalletAnalysis } from '@/hooks/useDemoWalletAnalysis';
@@ -51,6 +52,7 @@ const Landing = () => {
   };
 
   return (
+      <Seo title="Rìan — Blockchain Intelligence & Compliance" description="Screen any crypto wallet in seconds: risk scoring, OFAC sanctions screening and transaction tracing for compliance teams and everyday users." path="/" />
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="border-b border-border/50 bg-background/70 backdrop-blur-xl sticky top-0 z-50">
