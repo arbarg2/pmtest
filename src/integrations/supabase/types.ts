@@ -14,6 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          monthly_quota: number
+          name: string
+          plan: string
+          rate_limit_per_min: number
+          revoked_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          monthly_quota?: number
+          name?: string
+          plan?: string
+          rate_limit_per_min?: number
+          revoked_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          monthly_quota?: number
+          name?: string
+          plan?: string
+          rate_limit_per_min?: number
+          revoked_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      api_requests: {
+        Row: {
+          api_key_id: string
+          created_at: string
+          duration_ms: number
+          endpoint: string
+          id: string
+          status_code: number
+        }
+        Insert: {
+          api_key_id: string
+          created_at?: string
+          duration_ms?: number
+          endpoint: string
+          id?: string
+          status_code?: number
+        }
+        Update: {
+          api_key_id?: string
+          created_at?: string
+          duration_ms?: number
+          endpoint?: string
+          id?: string
+          status_code?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_requests_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -451,6 +531,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      api_usage_this_month: { Args: { _key_id: string }; Returns: number }
       generate_case_id: { Args: never; Returns: string }
       has_role: {
         Args: {
