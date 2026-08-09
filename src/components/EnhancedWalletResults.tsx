@@ -310,6 +310,21 @@ const EnhancedWalletResults = ({
           />
         </div>
 
+        {/* Audit evidence — provenance of the screening decision */}
+        <div className="mb-8">
+          <ProvenanceCard address={wallet.address} />
+        </div>
+
+        {/* Evidence-bound SAR drafting */}
+        <div className="mb-8">
+          <SarDraftPanel
+            address={wallet.address}
+            network={wallet.network}
+            recordId={recordId}
+          />
+        </div>
+
+
         {/* Fifth Row - Transaction Flow and Counterparties */}
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
           <TransactionFlowPreview wallet={wallet} onViewFlow={handleViewFlow} />
