@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { screenAddress, detectNetwork } from "../_shared/screening.ts";
+import { screenAndLog, detectNetwork } from "../_shared/screening.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,7 +53,7 @@ serve(async (req) => {
       });
     }
 
-    const result = await screenAddress(supabase, address);
+    const result = await screenAndLog(supabase, address, { source: "safe" });
 
     const payload = {
       address: result.address,
