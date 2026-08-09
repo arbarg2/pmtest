@@ -140,7 +140,10 @@ const Landing = () => {
           </div>
 
           {/* Feature cards */}
-          <div className="relative mt-16 grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
+          <h2 className="relative mt-16 text-2xl md:text-3xl font-bold tracking-tight">
+            What Rìan checks
+          </h2>
+          <div className="relative mt-6 grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {[
               { Icon: Zap, color: 'text-neon-cyan', title: 'Instant verdict', body: 'One paste. One score. Plain-English risk in under 2 seconds.' },
               { Icon: Shield, color: 'text-neon-violet', title: 'Scam & approval scan', body: 'Spots drainers, fake tokens, and risky token approvals before you sign.' },
