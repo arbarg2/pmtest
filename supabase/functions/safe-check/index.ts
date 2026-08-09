@@ -12,7 +12,15 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const address = (url.searchParams.get("address") ?? "").trim();
+    let address = (url.searchParams.get("address") ?? "").trim();
+    if (!address && req.method === "POST") {
+      try {
+        const body = await req.json();
+        address = String(body?.address ?? "").trim();
+      } catch {
+        // ignore malformed body
+      }
+    }
     if (!address) {
       return new Response(JSON.stringify({ error: "address required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },

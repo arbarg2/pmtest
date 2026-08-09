@@ -17,6 +17,58 @@
     },
     "tools": [
       {
+        "name": "analyze_wallet",
+        "title": "Analyze wallet risk",
+        "description": "Run a full live risk analysis on a crypto wallet address (BTC, ETH or Solana): sanctions screening, on-chain activity, wallet age, and behavioural risk factors. Returns a verdict (safe/caution/danger) and a 0-100 risk score.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "address": {
+              "type": "string",
+              "minLength": 4,
+              "description": "The wallet address to analyze."
+            }
+          },
+          "required": [
+            "address"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "screen_address",
+        "title": "Screen address against sanctions",
+        "description": "Screen a crypto wallet address against the synced OFAC sanctions address list and report any direct matches.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "address": {
+              "type": "string",
+              "minLength": 4,
+              "description": "The wallet address to screen."
+            }
+          },
+          "required": [
+            "address"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
         "name": "list_investigations",
         "title": "List investigations",
         "description": "List the signed-in analyst's recent wallet investigation records, newest first, with risk score and level.",
@@ -78,32 +130,6 @@
               "description": "Wallet address to fetch the most recent investigation for."
             }
           },
-          "additionalProperties": false,
-          "$schema": "http://json-schema.org/draft-07/schema#"
-        },
-        "outputSchema": null
-      },
-      {
-        "name": "screen_address",
-        "title": "Screen address against sanctions",
-        "description": "Screen a crypto wallet address against the synced OFAC sanctions address list and report any direct matches.",
-        "annotations": {
-          "readOnlyHint": true,
-          "idempotentHint": true,
-          "openWorldHint": false
-        },
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "address": {
-              "type": "string",
-              "minLength": 4,
-              "description": "The wallet address to screen."
-            }
-          },
-          "required": [
-            "address"
-          ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
@@ -175,6 +201,60 @@
             "wallet_address",
             "network"
           ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "unwatch_wallet",
+        "title": "Stop watching a wallet",
+        "description": "Remove a wallet address from the signed-in analyst's monitoring list.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "wallet_address": {
+              "type": "string",
+              "minLength": 4,
+              "description": "Wallet address to stop monitoring."
+            }
+          },
+          "required": [
+            "wallet_address"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_alerts",
+        "title": "List monitoring alerts",
+        "description": "List recent risk alerts raised on the signed-in analyst's monitored wallets, newest first.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Max alerts to return (default 20)."
+            },
+            "unread_only": {
+              "type": "boolean",
+              "description": "Only return alerts that have not been read."
+            }
+          },
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
