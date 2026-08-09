@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { screenAddress } from '../_shared/screening.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -70,11 +71,10 @@ serve(async (req) => {
       try {
         console.log(`Monitoring wallet: ${wallet.wallet_address}`);
 
-        // Simulate re-analysis (in real implementation, call actual risk API)
-        // For demo purposes, we'll simulate some risk score changes
-        const mockNewRiskScore = wallet.current_risk_score + (Math.random() - 0.5) * 2;
-        const newRiskScore = Math.max(0, Math.min(10, mockNewRiskScore));
-        const riskChange = Math.abs(newRiskScore - wallet.current_risk_score);
+        // Real re-screen using the shared screening engine
+        const screened = await screenAddress(supabaseClient, wallet.wallet_address);
+        const newRiskScore = screened.risk_score;
+        const riskChange = Math.abs(newRiskScore - Number(wallet.current_risk_score ?? 0));
 
         // Check if risk change exceeds threshold
         if (riskChange >= wallet.alert_threshold) {
