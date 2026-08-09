@@ -28,6 +28,7 @@ export type Database = {
           revoked_at: string | null
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           created_at?: string
@@ -42,6 +43,7 @@ export type Database = {
           revoked_at?: string | null
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           created_at?: string
@@ -56,8 +58,17 @@ export type Database = {
           revoked_at?: string | null
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       api_requests: {
         Row: {
@@ -121,6 +132,59 @@ export type Database = {
         }
         Relationships: []
       }
+      entity_attributions: {
+        Row: {
+          address: string
+          confidence: number
+          created_at: string
+          entity_category: string
+          entity_name: string
+          id: string
+          metadata: Json
+          network: string
+          source: string
+          updated_at: string
+          verified_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          address: string
+          confidence?: number
+          created_at?: string
+          entity_category: string
+          entity_name: string
+          id?: string
+          metadata?: Json
+          network: string
+          source?: string
+          updated_at?: string
+          verified_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          address?: string
+          confidence?: number
+          created_at?: string
+          entity_category?: string
+          entity_name?: string
+          id?: string
+          metadata?: Json
+          network?: string
+          source?: string
+          updated_at?: string
+          verified_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_attributions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       investigation_records: {
         Row: {
           ai_summary: string | null
@@ -147,6 +211,7 @@ export type Database = {
           updated_at: string
           user_id: string
           wallet_address: string
+          workspace_id: string | null
         }
         Insert: {
           ai_summary?: string | null
@@ -173,6 +238,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           wallet_address: string
+          workspace_id?: string | null
         }
         Update: {
           ai_summary?: string | null
@@ -199,8 +265,17 @@ export type Database = {
           updated_at?: string
           user_id?: string
           wallet_address?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "investigation_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -306,6 +381,89 @@ export type Database = {
           },
         ]
       }
+      risk_policies: {
+        Row: {
+          blocked_categories: string[]
+          category_overrides: Json
+          caution_threshold: number
+          created_at: string
+          created_by: string | null
+          danger_threshold: number
+          id: string
+          is_active: boolean
+          name: string
+          rule_weights: Json
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          blocked_categories?: string[]
+          category_overrides?: Json
+          caution_threshold?: number
+          created_at?: string
+          created_by?: string | null
+          danger_threshold?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          rule_weights?: Json
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          blocked_categories?: string[]
+          category_overrides?: Json
+          caution_threshold?: number
+          created_at?: string
+          created_by?: string | null
+          danger_threshold?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          rule_weights?: Json
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_policies_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rulesets: {
+        Row: {
+          created_at: string
+          definition: Json
+          definition_hash: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          definition: Json
+          definition_hash: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          version: string
+        }
+        Update: {
+          created_at?: string
+          definition?: Json
+          definition_hash?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       sanctions_addresses: {
         Row: {
           address: string
@@ -385,6 +543,150 @@ export type Database = {
             columns: ["lookup_record_id"]
             isOneToOne: false
             referencedRelation: "investigation_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sar_drafts: {
+        Row: {
+          address: string | null
+          created_at: string
+          created_by: string
+          evidence_bundle: Json
+          id: string
+          narrative: string
+          network: string | null
+          record_id: string | null
+          status: string
+          updated_at: string
+          validation: Json
+          workspace_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          created_by: string
+          evidence_bundle?: Json
+          id?: string
+          narrative: string
+          network?: string | null
+          record_id?: string | null
+          status?: string
+          updated_at?: string
+          validation?: Json
+          workspace_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          created_by?: string
+          evidence_bundle?: Json
+          id?: string
+          narrative?: string
+          network?: string | null
+          record_id?: string | null
+          status?: string
+          updated_at?: string
+          validation?: Json
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sar_drafts_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "investigation_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sar_drafts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      screening_decisions: {
+        Row: {
+          address: string
+          api_key_id: string | null
+          block_height: number | null
+          created_at: string
+          entity_category: string | null
+          id: string
+          network: string
+          payload_hash: string | null
+          policy_id: string | null
+          provenance: Json
+          provider_payloads: Json
+          risk_score: number
+          rules_evaluated: Json
+          ruleset_hash: string | null
+          ruleset_version: string
+          sanctions_snapshot_date: string | null
+          source: string
+          user_id: string | null
+          verdict: string
+          workspace_id: string | null
+        }
+        Insert: {
+          address: string
+          api_key_id?: string | null
+          block_height?: number | null
+          created_at?: string
+          entity_category?: string | null
+          id?: string
+          network: string
+          payload_hash?: string | null
+          policy_id?: string | null
+          provenance?: Json
+          provider_payloads?: Json
+          risk_score?: number
+          rules_evaluated?: Json
+          ruleset_hash?: string | null
+          ruleset_version?: string
+          sanctions_snapshot_date?: string | null
+          source?: string
+          user_id?: string | null
+          verdict: string
+          workspace_id?: string | null
+        }
+        Update: {
+          address?: string
+          api_key_id?: string | null
+          block_height?: number | null
+          created_at?: string
+          entity_category?: string | null
+          id?: string
+          network?: string
+          payload_hash?: string | null
+          policy_id?: string | null
+          provenance?: Json
+          provider_payloads?: Json
+          risk_score?: number
+          rules_evaluated?: Json
+          ruleset_hash?: string | null
+          ruleset_version?: string
+          sanctions_snapshot_date?: string | null
+          source?: string
+          user_id?: string | null
+          verdict?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screening_decisions_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "screening_decisions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -495,6 +797,7 @@ export type Database = {
           user_id: string
           wallet_address: string
           watch_reason: string | null
+          workspace_id: string | null
         }
         Insert: {
           alert_threshold?: number
@@ -509,6 +812,7 @@ export type Database = {
           user_id: string
           wallet_address: string
           watch_reason?: string | null
+          workspace_id?: string | null
         }
         Update: {
           alert_threshold?: number
@@ -523,6 +827,177 @@ export type Database = {
           user_id?: string
           wallet_address?: string
           watch_reason?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watched_wallets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_deliveries: {
+        Row: {
+          attempt: number
+          created_at: string
+          delivered_at: string | null
+          endpoint_id: string
+          error: string | null
+          event_type: string
+          id: string
+          payload: Json
+          signature: string | null
+          status_code: number | null
+        }
+        Insert: {
+          attempt?: number
+          created_at?: string
+          delivered_at?: string | null
+          endpoint_id: string
+          error?: string | null
+          event_type: string
+          id?: string
+          payload?: Json
+          signature?: string | null
+          status_code?: number | null
+        }
+        Update: {
+          attempt?: number
+          created_at?: string
+          delivered_at?: string | null
+          endpoint_id?: string
+          error?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          signature?: string | null
+          status_code?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_endpoints: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          events: string[]
+          id: string
+          is_active: boolean
+          secret_hash: string
+          secret_prefix: string
+          updated_at: string
+          url: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          events?: string[]
+          id?: string
+          is_active?: boolean
+          secret_hash: string
+          secret_prefix: string
+          updated_at?: string
+          url: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          events?: string[]
+          id?: string
+          is_active?: boolean
+          secret_hash?: string
+          secret_prefix?: string
+          updated_at?: string
+          url?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_endpoints_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_members: {
+        Row: {
+          created_at: string
+          id: string
+          invited_email: string | null
+          role: Database["public"]["Enums"]["workspace_role"]
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_email?: string | null
+          role?: Database["public"]["Enums"]["workspace_role"]
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_email?: string | null
+          role?: Database["public"]["Enums"]["workspace_role"]
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          slug: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          slug?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          slug?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -540,9 +1015,27 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_workspace_role: {
+        Args: {
+          _roles: Database["public"]["Enums"]["workspace_role"][]
+          _user_id: string
+          _workspace_id: string
+        }
+        Returns: boolean
+      }
+      is_workspace_member: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "analyst" | "user"
+      workspace_role:
+        | "owner"
+        | "compliance_officer"
+        | "analyst"
+        | "legal"
+        | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -671,6 +1164,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "analyst", "user"],
+      workspace_role: [
+        "owner",
+        "compliance_officer",
+        "analyst",
+        "legal",
+        "viewer",
+      ],
     },
   },
 } as const
