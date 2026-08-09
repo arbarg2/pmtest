@@ -313,6 +313,9 @@ const Index = () => {
 
           {/* Cross-Wallet Cluster View */}
           <div className="mb-10">
+            <h2 className="mb-3 text-[11px] text-muted-foreground uppercase tracking-widest font-semibold">
+              Cross-Wallet Cluster View
+            </h2>
             <ClusterView />
           </div>
 
