@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { screenAddress, lookupSanctions, detectNetwork } from "../_shared/screening.ts";
+import { screenAndLog, lookupSanctions, detectNetwork } from "../_shared/screening.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,7 +50,7 @@ serve(async (req) => {
   const keyHash = await sha256Hex(token);
   const { data: apiKey } = await supabase
     .from("api_keys")
-    .select("id, user_id, name, plan, monthly_quota, rate_limit_per_min, revoked_at")
+    .select("id, user_id, workspace_id, name, plan, monthly_quota, rate_limit_per_min, revoked_at")
     .eq("key_hash", keyHash)
     .maybeSingle();
 
@@ -146,7 +146,9 @@ serve(async (req) => {
           quotaHeaders,
         );
       }
-      const result = await screenAddress(supabase, address);
+      const result = await screenAndLog(supabase, address, {
+        source: "api", apiKeyId: apiKey.id, userId: apiKey.user_id, workspaceId: (apiKey as any).workspace_id ?? null,
+      });
       return await finish(result, 200, quotaHeaders);
     }
 
@@ -174,7 +176,9 @@ serve(async (req) => {
             if (!detectNetwork(a.trim())) {
               return { address: a, error: { code: "unsupported_address", message: "Address format not recognised." } };
             }
-            return await screenAddress(supabase, a);
+            return await screenAndLog(supabase, a, {
+              source: "api", apiKeyId: apiKey.id, userId: apiKey.user_id, workspaceId: (apiKey as any).workspace_id ?? null,
+            });
           } catch (e) {
             return { address: a, error: { code: "screen_failed", message: e instanceof Error ? e.message : "unknown" } };
           }

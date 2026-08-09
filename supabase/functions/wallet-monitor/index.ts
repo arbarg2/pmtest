@@ -1,7 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { screenAddress } from '../_shared/screening.ts'
+import { screenAndLog } from '../_shared/screening.ts'
+import { dispatchWebhooks } from '../_shared/webhooks.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -72,7 +73,9 @@ serve(async (req) => {
         console.log(`Monitoring wallet: ${wallet.wallet_address}`);
 
         // Real re-screen using the shared screening engine
-        const screened = await screenAddress(supabaseClient, wallet.wallet_address);
+        const screened = await screenAndLog(supabaseClient, wallet.wallet_address, {
+          source: 'monitor', userId: (wallet as any).user_id ?? null, workspaceId: (wallet as any).workspace_id ?? null,
+        });
         const newRiskScore = screened.risk_score;
         const riskChange = Math.abs(newRiskScore - Number(wallet.current_risk_score ?? 0));
 
@@ -101,6 +104,23 @@ serve(async (req) => {
               new_risk: newRiskScore,
               change: riskChange
             });
+
+            const workspaceId = (wallet as any).workspace_id ?? null;
+            if (workspaceId) {
+              await dispatchWebhooks(supabaseClient, workspaceId, {
+                type: screened.data?.sanctioned ? 'sanctions_hit' : 'risk_change',
+                data: {
+                  address: wallet.wallet_address,
+                  network: screened.network,
+                  previous_risk_score: Number(wallet.current_risk_score ?? 0),
+                  risk_score: newRiskScore,
+                  verdict: screened.verdict,
+                  decision_id: screened.decision_id,
+                  ruleset_version: screened.provenance?.ruleset_version,
+                  block_height: screened.provenance?.block_height ?? null,
+                },
+              });
+            }
           }
         }
 

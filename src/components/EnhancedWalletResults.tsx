@@ -22,6 +22,9 @@ import ExportActions from '@/components/dashboard/ExportActions';
 import RiskFactorsBreakdown from '@/components/RiskFactorsBreakdown';
 import SanctionsPanel from '@/components/wallet/SanctionsPanel';
 import VerdictBanner from '@/components/wallet/VerdictBanner';
+import ProvenanceCard from '@/components/record/ProvenanceCard';
+import SarDraftPanel from '@/components/compliance/SarDraftPanel';
+
 import AnalystNotesThread, { AnalystNotesThreadRef } from '@/components/AnalystNotesThread';
 import CaseManagement from '@/components/CaseManagement';
 import { HollyAIAnalysis } from '@/components/HollyAIAnalysis';
@@ -309,6 +312,21 @@ const EnhancedWalletResults = ({
             matches={sanctionsMatches}
           />
         </div>
+
+        {/* Audit evidence — provenance of the screening decision */}
+        <div className="mb-8">
+          <ProvenanceCard address={wallet.address} />
+        </div>
+
+        {/* Evidence-bound SAR drafting */}
+        <div className="mb-8">
+          <SarDraftPanel
+            address={wallet.address}
+            network={wallet.network}
+            recordId={recordId}
+          />
+        </div>
+
 
         {/* Fifth Row - Transaction Flow and Counterparties */}
         <div className="grid lg:grid-cols-2 gap-6 mb-8">

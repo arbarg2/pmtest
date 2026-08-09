@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import ApiKeysPanel from '@/components/api/ApiKeysPanel';
+import WebhookEndpoints from '@/components/settings/WebhookEndpoints';
 import { API_BASE_URL } from '@/services/apiKeys';
 
 const CodeBlock: React.FC<{ code: string; label?: string }> = ({ code, label }) => {
@@ -111,6 +112,12 @@ const ApiDocs = () => {
         <section id="keys" className="space-y-4">
           <h3 className="text-xl font-semibold text-foreground">1. Get an API key</h3>
           <ApiKeysPanel />
+        </section>
+
+        {/* Webhooks */}
+        <section id="webhooks" className="space-y-4">
+          <h3 className="text-xl font-semibold text-foreground">Signed webhooks</h3>
+          <WebhookEndpoints />
         </section>
 
         {/* Auth */}
