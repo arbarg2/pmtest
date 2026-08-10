@@ -17,6 +17,8 @@ import {
   Filter
 } from 'lucide-react';
 import { InvestigationRecordsTable } from '@/components/InvestigationRecordsTable';
+import ClusterView from '@/components/dashboard/ClusterView';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { useNavigate } from 'react-router-dom';
