@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserDropdown } from '@/components/UserDropdown';
+import AppHeader from '@/components/layout/AppHeader';
 import { WalletLookupPanel } from '@/components/WalletLookupPanel';
 import { AnalystDashboard } from '@/components/AnalystDashboard';
 import EnhancedWalletResults from '@/components/EnhancedWalletResults';
 import AlertsBell from '@/components/alerts/AlertsBell';
 import OrgPulse from '@/components/dashboard/OrgPulse';
-import ClusterView from '@/components/dashboard/ClusterView';
+
 import { useWalletAnalysis } from '@/hooks/useWalletAnalysis';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { riskFactorsService } from '@/services/riskFactors';
