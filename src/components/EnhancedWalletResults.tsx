@@ -2,6 +2,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AppHeader from '@/components/layout/AppHeader';
+
 import { WalletRiskResponse } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
