@@ -239,44 +239,14 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Aurora background */}
-      <div className="absolute inset-0 bg-mesh opacity-40 pointer-events-none" />
-      <div className="absolute top-0 -left-32 w-96 h-96 rounded-full bg-neon-cyan/10 blur-3xl animate-float pointer-events-none" />
-      <div className="absolute top-32 -right-32 w-96 h-96 rounded-full bg-neon-violet/10 blur-3xl animate-float pointer-events-none" style={{ animationDelay: '2s' }} />
+      {/* Subtle ambient wash — keeps working screens data-first */}
+      <div className="absolute inset-0 bg-mesh opacity-[0.15] pointer-events-none" />
 
       <div className="relative">
-        <header className="border-b border-border/50 bg-background/70 backdrop-blur-xl sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Shield className="w-7 h-7 text-primary" />
-                  <div className="absolute inset-0 bg-neon-cyan/30 blur-xl -z-10 animate-glow-pulse" />
-                </div>
-                <div className="leading-tight">
-                  <h1 className="text-lg font-bold tracking-tight">
-                    <span className="text-aurora">Rìan</span> Intelligence
-                  </h1>
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-widest">
-                    Blockchain Investigation Platform
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <AlertsBell />
-                <UserDropdown />
-              </div>
-            </div>
-          </div>
-        </header>
+        <AppHeader />
 
         <div className="max-w-7xl mx-auto px-4 py-8">
-          {/* Org Pulse */}
-          <div className="mb-8">
-            <OrgPulse />
-          </div>
-
-          {/* Top Row - Wallet Analysis Panel */}
+          {/* Primary action — Wallet lookup */}
           <div className="mb-10">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-[11px] text-muted-foreground uppercase tracking-widest font-semibold">
@@ -290,41 +260,36 @@ const Index = () => {
                 Live
               </span>
             </div>
-            <div className="relative group">
-              <div className="absolute -inset-px bg-gradient-to-r from-neon-cyan/40 via-neon-violet/40 to-neon-magenta/40 rounded-lg opacity-30 blur-md group-focus-within:opacity-60 transition-opacity -z-10" />
-              <Card className="bg-card/80 backdrop-blur-xl border-border/60 shadow-2xl">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                    <Shield className="w-4 h-4 text-neon-cyan" />
-                    Wallet Intelligence Lookup
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <WalletLookupPanel
-                    walletAddress={walletAddress}
-                    setWalletAddress={setWalletAddress}
-                    onAnalyze={handleAnalyze}
-                    isAnalyzing={isAnalyzing}
-                  />
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="bg-card/80 backdrop-blur-xl border-border/60 shadow-lg">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <Shield className="w-4 h-4 text-primary" />
+                  Wallet Intelligence Lookup
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <WalletLookupPanel
+                  walletAddress={walletAddress}
+                  setWalletAddress={setWalletAddress}
+                  onAnalyze={handleAnalyze}
+                  isAnalyzing={isAnalyzing}
+                />
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Cross-Wallet Cluster View */}
+          {/* Org Pulse — compact KPI strip, analytics behind a toggle */}
           <div className="mb-10">
-            <h2 className="mb-3 text-[11px] text-muted-foreground uppercase tracking-widest font-semibold">
-              Cross-Wallet Cluster View
-            </h2>
-            <ClusterView />
+            <OrgPulse />
           </div>
 
-          {/* Main Dashboard Content */}
+          {/* Records, cases and clusters */}
           <AnalystDashboard />
         </div>
       </div>
     </div>
   );
 };
+
 
 export default Index;
