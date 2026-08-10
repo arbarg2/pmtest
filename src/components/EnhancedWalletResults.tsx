@@ -2,6 +2,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AppHeader from '@/components/layout/AppHeader';
+
 import { WalletRiskResponse } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -210,177 +213,164 @@ const EnhancedWalletResults = ({
     }, 300);
   };
 
+  const tabPanel = 'mt-6 space-y-6 data-[state=inactive]:hidden animate-fade-in';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/80 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                  {isCase ? 'Case Investigation Report' : 'Wallet Intelligence Report'}
-                </h1>
-                <div className="flex items-center space-x-4 text-sm text-slate-500 dark:text-slate-400">
-                  <span>
-                    {isCase ? `Case ID: ${caseId}` : `Lookup ID: ${wallet.lookupId || recordId || 'N/A'}`}
-                  </span>
-                  <span>•</span>
-                  <span>Comprehensive blockchain forensics analysis</span>
-                  {assignedAnalyst && (
-                    <>
-                      <span>•</span>
-                      <span className="text-blue-600 dark:text-blue-400 font-medium">
-                        Assigned to: {assignedAnalyst}
-                      </span>
-                    </>
-                  )}
-                  {wallet.isTemporary && (
-                    <>
-                      <span>•</span>
-                      <span className="text-amber-600 dark:text-amber-400 font-medium">
-                        Temporary Record (Database Save Failed)
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <AnalystAssignment 
-                recordId={recordId || 'unknown'}
-                currentAssignee={assignedAnalyst}
-                onAssignmentChange={handleAssignmentChange}
-              />
-              <Button 
-                onClick={() => setIsEmailDialogOpen(true)}
-                disabled={isEmailingReport}
-                size="sm"
-                className="bg-accent hover:bg-accent/90 text-white"
-              >
-                <Mail className="w-4 h-4 mr-2" />
-                {isEmailingReport ? 'Sending...' : 'Email Report'}
-              </Button>
-              <AlertsBell />
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        subtitle={isCase ? 'Case Investigation Report' : 'Wallet Intelligence Report'}
+        leading={
+          <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+        }
+        actions={
+          <>
+            <AnalystAssignment
+              recordId={recordId || 'unknown'}
+              currentAssignee={assignedAnalyst}
+              onAssignmentChange={handleAssignmentChange}
+            />
+            <Button
+              onClick={() => setIsEmailDialogOpen(true)}
+              disabled={isEmailingReport}
+              size="sm"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              {isEmailingReport ? 'Sending...' : 'Email Report'}
+            </Button>
+          </>
+        }
+      />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Record meta */}
+        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          <span>
+            {isCase ? `Case ID: ${caseId}` : `Lookup ID: ${wallet.lookupId || recordId || 'N/A'}`}
+          </span>
+          {assignedAnalyst && (
+            <>
+              <span>•</span>
+              <span className="text-primary font-medium">Assigned to: {assignedAnalyst}</span>
+            </>
+          )}
+          {wallet.isTemporary && (
+            <>
+              <span>•</span>
+              <span className="text-[hsl(var(--risk-medium))] font-medium">
+                Temporary Record (Database Save Failed)
+              </span>
+            </>
+          )}
+        </div>
 
-        {/* Verdict Banner — hero risk summary */}
+        {/* Verdict Banner — hero risk summary, always visible */}
         <div className="mb-8">
           <VerdictBanner wallet={wallet} />
         </div>
 
-        {/* Top Row - Wallet Overview */}
-        <div className="mb-8">
-          <WalletOverview wallet={wallet} />
-        </div>
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="w-full justify-start overflow-x-auto">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="risk">Risk &amp; Sanctions</TabsTrigger>
+            <TabsTrigger value="evidence">Evidence</TabsTrigger>
+            <TabsTrigger value="case">Case</TabsTrigger>
+          </TabsList>
 
-        {/* AI Analysis Section - Only Holly AI Analysis */}
-        <div className="mb-8">
-          <HollyAIAnalysis 
-            walletData={wallet} 
-            recordId={recordId} 
-            onNotesUpdated={handleNotesUpdated}
-          />
-        </div>
+          {/* Overview */}
+          <TabsContent value="overview" forceMount className={tabPanel}>
+            <WalletOverview wallet={wallet} />
 
-        {/* Second Row - Entity Attribution and Geographic Risk */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
-          <EntityAttribution wallet={wallet} />
-          <GeographicRisk wallet={wallet} />
-        </div>
-
-        {/* Third Row - Volume Intelligence */}
-        <div className="mb-8">
-          <VolumeIntelligence wallet={wallet} />
-        </div>
-
-        {/* Fourth Row - Risk Factors and Merged Sanctions Panel */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
-          <RiskFactorsBreakdown factors={riskFactors} />
-          <SanctionsPanel
-            walletAddress={wallet.address}
-            network={wallet.network}
-            matches={sanctionsMatches}
-          />
-        </div>
-
-        {/* Audit evidence — provenance of the screening decision */}
-        <div className="mb-8">
-          <ProvenanceCard address={wallet.address} />
-        </div>
-
-        {/* Evidence-bound SAR drafting */}
-        <div className="mb-8">
-          <SarDraftPanel
-            address={wallet.address}
-            network={wallet.network}
-            recordId={recordId}
-          />
-        </div>
-
-
-        {/* Fifth Row - Transaction Flow and Counterparties */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
-          <TransactionFlowPreview wallet={wallet} onViewFlow={handleViewFlow} />
-          <CounterpartyIntelligence wallet={wallet} />
-        </div>
-
-        {/* Regulator Justification Section */}
-        <div className="mb-8">
-          <RegulatorJustification
-            wallet={wallet}
-            recordId={recordId}
-            caseId={caseId}
-            aiSummary={wallet.ai_summary}
-            onDownloadReport={handleDownloadRegulatorReport}
-          />
-        </div>
-
-        {/* Case Management Section */}
-        <div className="mb-8">
-          <CaseManagement
-            recordId={recordId || 'unknown'}
-            isCase={isCase}
-            caseId={caseId}
-            caseStatus={caseStatus}
-            caseCreatedAt={caseCreatedAt}
-            onCaseCreated={handleCaseCreated}
-            onStatusChanged={handleStatusChanged}
-          />
-        </div>
-
-        {/* Bottom Row - Analyst Notes and Export Actions (only show if it's a case) */}
-        {isCase && (
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* Analyst Notes Thread - use key to force refresh */}
-            <AnalystNotesThread
-              key={notesKey}
-              ref={analystNotesRef}
+            <HollyAIAnalysis
+              walletData={wallet}
               recordId={recordId}
-              onNotesUpdate={handleNotesUpdate}
+              onNotesUpdated={handleNotesUpdated}
             />
 
-            {/* Export Actions */}
-            <ExportActions
+            <div className="grid lg:grid-cols-2 gap-6">
+              <EntityAttribution wallet={wallet} />
+              <GeographicRisk wallet={wallet} />
+            </div>
+
+            <VolumeIntelligence wallet={wallet} />
+          </TabsContent>
+
+          {/* Risk & Sanctions */}
+          <TabsContent value="risk" forceMount className={tabPanel}>
+            <div className="grid lg:grid-cols-2 gap-6">
+              <RiskFactorsBreakdown factors={riskFactors} />
+              <SanctionsPanel
+                walletAddress={wallet.address}
+                network={wallet.network}
+                matches={sanctionsMatches}
+              />
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-6">
+              <TransactionFlowPreview wallet={wallet} onViewFlow={handleViewFlow} />
+              <CounterpartyIntelligence wallet={wallet} />
+            </div>
+          </TabsContent>
+
+          {/* Evidence */}
+          <TabsContent value="evidence" forceMount className={tabPanel}>
+            <ProvenanceCard address={wallet.address} />
+
+            <SarDraftPanel
+              address={wallet.address}
+              network={wallet.network}
+              recordId={recordId}
+            />
+
+            <RegulatorJustification
               wallet={wallet}
               recordId={recordId}
-              riskFactors={riskFactors}
-              sanctionsMatches={sanctionsMatches}
-              analystNotes={analystNotes}
-              investigationStatus={investigationStatus}
+              caseId={caseId}
+              aiSummary={wallet.ai_summary}
+              onDownloadReport={handleDownloadRegulatorReport}
             />
-          </div>
-        )}
+          </TabsContent>
+
+          {/* Case */}
+          <TabsContent value="case" forceMount className={tabPanel}>
+            <CaseManagement
+              recordId={recordId || 'unknown'}
+              isCase={isCase}
+              caseId={caseId}
+              caseStatus={caseStatus}
+              caseCreatedAt={caseCreatedAt}
+              onCaseCreated={handleCaseCreated}
+              onStatusChanged={handleStatusChanged}
+            />
+
+            {isCase && (
+              <div className="grid lg:grid-cols-2 gap-6">
+                {/* Analyst Notes Thread - use key to force refresh */}
+                <AnalystNotesThread
+                  key={notesKey}
+                  ref={analystNotesRef}
+                  recordId={recordId}
+                  onNotesUpdate={handleNotesUpdate}
+                />
+
+                {/* Export Actions */}
+                <ExportActions
+                  wallet={wallet}
+                  recordId={recordId}
+                  riskFactors={riskFactors}
+                  sanctionsMatches={sanctionsMatches}
+                  analystNotes={analystNotes}
+                  investigationStatus={investigationStatus}
+                />
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
+
 
       {/* Email Report Dialog */}
       <EmailReportDialog

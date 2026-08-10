@@ -23,14 +23,12 @@ export function UserDropdown() {
 
   if (!user) {
     return (
-      <Button 
-        onClick={() => navigate('/auth')}
-        className="bg-blue-600 hover:bg-blue-700 text-white"
-      >
+      <Button onClick={() => navigate('/auth')}>
         Sign In
       </Button>
     );
   }
+
 
   const handleSignOut = async () => {
     await signOut();
@@ -44,11 +42,12 @@ export function UserDropdown() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-blue-600 text-white dark:bg-blue-500">
+            <AvatarFallback className="bg-primary text-primary-foreground">
               {userInitials}
             </AvatarFallback>
           </Avatar>
         </Button>
+
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
@@ -97,7 +96,7 @@ export function UserDropdown() {
           />
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="text-red-600 dark:text-red-400">
+        <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log Out</span>
         </DropdownMenuItem>

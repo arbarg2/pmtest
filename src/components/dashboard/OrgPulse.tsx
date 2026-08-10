@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Activity, AlertTriangle, ShieldAlert, FolderOpen, TrendingUp } from "lucide-react";
+import { Activity, AlertTriangle, ShieldAlert, FolderOpen, TrendingUp, ChevronDown } from "lucide-react";
 import {
   PieChart,
   Pie,
@@ -83,6 +83,8 @@ const OrgPulse: React.FC = () => {
   const [weekHits, setWeekHits] = useState<DayPoint[]>([]);
   const [topSanctioned, setTopSanctioned] = useState<{ entity: string; count: number }[]>([]);
   const [kpis, setKpis] = useState({ total: 0, openCases: 0, sanctionsHits: 0, alerts7d: 0 });
+  const [showCharts, setShowCharts] = useState(false);
+
 
   useEffect(() => {
     if (!user) return;
@@ -190,7 +192,16 @@ const OrgPulse: React.FC = () => {
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-primary" /> Org Pulse
           </h2>
-          <span className="text-xs text-muted-foreground">Live overview of your portfolio</span>
+          <button
+            type="button"
+            onClick={() => setShowCharts((v) => !v)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+          >
+            {showCharts ? "Hide analytics" : "Show analytics"}
+            <ChevronDown
+              className={`w-3.5 h-3.5 transition-transform ${showCharts ? "rotate-180" : ""}`}
+            />
+          </button>
         </div>
 
         {/* KPI strip */}
@@ -213,7 +224,9 @@ const OrgPulse: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {showCharts && (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-in">
+
         {/* Risk donut */}
         <Card className="lg:col-span-1">
           <CardHeader className="pb-2">
@@ -347,6 +360,8 @@ const OrgPulse: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+      )}
+
     </div>
   );
 };

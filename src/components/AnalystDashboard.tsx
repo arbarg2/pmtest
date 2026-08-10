@@ -17,6 +17,8 @@ import {
   Filter
 } from 'lucide-react';
 import { InvestigationRecordsTable } from '@/components/InvestigationRecordsTable';
+import ClusterView from '@/components/dashboard/ClusterView';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { supabaseLookupRecords } from '@/services/supabaseLookupRecords';
 import { useNavigate } from 'react-router-dom';
@@ -117,60 +119,7 @@ export function AnalystDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Lookups</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total_lookups}</div>
-            <p className="text-xs text-muted-foreground">
-              Investigation records created
-            </p>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">High Risk</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.high_risk}</div>
-            <p className="text-xs text-muted-foreground">
-              Require immediate attention
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Cases</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total_cases}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.open_cases} open, {stats.escalated_cases} escalated
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Medium Risk</CardTitle>
-            <TrendingUp className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.medium_risk}</div>
-            <p className="text-xs text-muted-foreground">
-              Monitor closely
-            </p>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Main Dashboard Content */}
       <Tabs defaultValue="records" className="space-y-4">
@@ -184,7 +133,12 @@ export function AnalystDashboard() {
               <FileText className="w-4 h-4" />
               Case Management
             </TabsTrigger>
+            <TabsTrigger value="clusters" className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Clusters
+            </TabsTrigger>
           </TabsList>
+
           
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={refreshData}>
@@ -231,20 +185,20 @@ export function AnalystDashboard() {
             <CardContent>
               {cases.length === 0 ? (
                 <div className="text-center py-8">
-                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-600 mb-2">No Active Cases</h3>
-                  <p className="text-gray-500">
+                  <FileText className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No Active Cases</h3>
+                  <p className="text-muted-foreground">
                     Create cases from investigation records to enable full case management features.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {cases.slice(0, 5).map((caseRecord) => (
-                    <div key={caseRecord.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                    <div key={caseRecord.id} className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-4 mb-2">
-                            <h3 className="font-medium text-slate-900">{caseRecord.case_id}</h3>
+                            <h3 className="font-medium text-foreground">{caseRecord.case_id}</h3>
                             <Badge variant={caseRecord.case_status === 'open' ? 'default' : 
                                          caseRecord.case_status === 'escalated' ? 'destructive' : 'secondary'}>
                               {caseRecord.case_status}
@@ -255,10 +209,10 @@ export function AnalystDashboard() {
                             </Badge>
                           </div>
                           
-                          <div className="text-sm text-slate-600 space-y-1">
+                          <div className="text-sm text-muted-foreground space-y-1">
                             <div className="flex items-center space-x-4">
                               <span className="font-mono">{caseRecord.wallet_address}</span>
-                              <span className="uppercase text-xs bg-slate-100 px-2 py-1 rounded">
+                              <span className="uppercase text-xs bg-muted px-2 py-1 rounded">
                                 {caseRecord.network}
                               </span>
                             </div>
@@ -286,7 +240,12 @@ export function AnalystDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="clusters" className="space-y-4">
+          <ClusterView />
+        </TabsContent>
       </Tabs>
+
     </div>
   );
 }
