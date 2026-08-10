@@ -11,9 +11,9 @@ const AllRecords = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/80">
+      <header className="border-b border-border bg-background/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -28,10 +28,10 @@ const AllRecords = () => {
               </Button>
               <Database className="w-6 h-6 mr-3 text-primary" />
               <div>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                <h1 className="text-xl font-bold text-foreground">
                   All Records
                 </h1>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   Complete investigation history
                 </p>
               </div>
@@ -42,19 +42,20 @@ const AllRecords = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Charts Panel */}
-        <h2 className="text-lg font-semibold mb-4 text-slate-900 dark:text-slate-100">
+        <h2 className="text-lg font-semibold mb-4 text-foreground">
           Investigation analytics
         </h2>
         <RecordChartsPanel />
 
         {/* Investigation Records Table */}
-        <h2 className="text-lg font-semibold mt-10 mb-4 text-slate-900 dark:text-slate-100">
+        <h2 className="text-lg font-semibold mt-10 mb-4 text-foreground">
           Investigation records
         </h2>
         <InvestigationRecordsTable />
       </div>
     </div>
   );
+
 };
 
 export default AllRecords;
