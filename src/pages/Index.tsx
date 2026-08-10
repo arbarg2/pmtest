@@ -84,6 +84,7 @@ const Index = () => {
             console.log('✅ Using demo analysis data from demo context');
             setWalletData(demoData);
             setRecordNotFound(false);
+            setEvidenceStatus('ready');
             setIsLoadingWalletData(false);
             return;
           }
@@ -92,6 +93,7 @@ const Index = () => {
             console.log('✅ Using temporary analysis data from current session');
             setWalletData(analysisData);
             setRecordNotFound(false);
+            setEvidenceStatus('ready');
             setIsLoadingWalletData(false);
             return;
           }
@@ -148,7 +150,7 @@ const Index = () => {
 
       loadWalletData();
     }
-  }, [recordId, user, analysisData, isDemo, demoData]);
+  }, [recordId, user, analysisData, isDemo, demoData, loadEvidence]);
 
   const handleAnalyze = async () => {
     if (!walletAddress.trim()) return;
@@ -240,6 +242,8 @@ const Index = () => {
         recordId={recordId}
         riskFactors={riskFactors}
         sanctionsMatches={sanctionsMatches}
+        evidenceStatus={evidenceStatus}
+        onRetryEvidence={dbRecordId ? () => loadEvidence(dbRecordId) : undefined}
       />
     );
   }
