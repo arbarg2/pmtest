@@ -32,6 +32,27 @@ const Index = () => {
   const [walletData, setWalletData] = useState<any>(null);
   const [riskFactors, setRiskFactors] = useState([]);
   const [sanctionsMatches, setSanctionsMatches] = useState([]);
+  const [dbRecordId, setDbRecordId] = useState<string | null>(null);
+  const [evidenceStatus, setEvidenceStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+
+  const loadEvidence = React.useCallback(async (internalId: string) => {
+    setEvidenceStatus('loading');
+    try {
+      const [fetchedFactors, fetchedSanctions] = await Promise.all([
+        riskFactorsService.getRiskFactors(internalId),
+        riskFactorsService.getSanctionsScreening(internalId),
+      ]);
+      setRiskFactors(fetchedFactors || []);
+      setSanctionsMatches(fetchedSanctions || []);
+      setEvidenceStatus('ready');
+    } catch (error) {
+      console.error('❌ Failed to load risk scoring / evidence data:', error);
+      setRiskFactors([]);
+      setSanctionsMatches([]);
+      setEvidenceStatus('error');
+    }
+  }, []);
+
 
   useEffect(() => {
     // Only redirect to auth if not viewing a specific record and not in demo mode
