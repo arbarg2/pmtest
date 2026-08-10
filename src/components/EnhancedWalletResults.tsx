@@ -32,6 +32,7 @@ import AnalystNotesThread, { AnalystNotesThreadRef } from '@/components/AnalystN
 import CaseManagement from '@/components/CaseManagement';
 import { HollyAIAnalysis } from '@/components/HollyAIAnalysis';
 import AlertsBell from '@/components/alerts/AlertsBell';
+import { LoadingCard, ErrorCard, type DataStatus } from '@/components/ui/data-state';
 import AskHollyChat from '@/components/holly/AskHollyChat';
 
 interface EnhancedWalletResultsProps {
@@ -42,6 +43,8 @@ interface EnhancedWalletResultsProps {
   recordId?: string;
   riskFactors?: any[];
   sanctionsMatches?: any[];
+  evidenceStatus?: DataStatus;
+  onRetryEvidence?: () => void;
 }
 
 const EnhancedWalletResults = ({ 
@@ -51,7 +54,9 @@ const EnhancedWalletResults = ({
   onGenerateReport, 
   recordId,
   riskFactors = [],
-  sanctionsMatches = []
+  sanctionsMatches = [],
+  evidenceStatus = 'ready',
+  onRetryEvidence
 }: EnhancedWalletResultsProps) => {
   const navigate = useNavigate();
   const [investigationStatus, setInvestigationStatus] = useState('pending');
@@ -213,6 +218,9 @@ const EnhancedWalletResults = ({
     }, 300);
   };
 
+  const isEvidenceLoading = evidenceStatus === 'loading' || evidenceStatus === 'idle';
+  const hasEvidenceError = evidenceStatus === 'error';
+
   const tabPanel = 'mt-6 space-y-6 data-[state=inactive]:hidden animate-fade-in';
 
   return (
@@ -300,14 +308,27 @@ const EnhancedWalletResults = ({
 
           {/* Risk & Sanctions */}
           <TabsContent value="risk" forceMount className={tabPanel}>
-            <div className="grid lg:grid-cols-2 gap-6">
-              <RiskFactorsBreakdown factors={riskFactors} />
-              <SanctionsPanel
-                walletAddress={wallet.address}
-                network={wallet.network}
-                matches={sanctionsMatches}
+            {isEvidenceLoading ? (
+              <div className="grid lg:grid-cols-2 gap-6">
+                <LoadingCard title="Scoring risk factors" rows={4} />
+                <LoadingCard title="Screening sanctions lists" rows={3} />
+              </div>
+            ) : hasEvidenceError ? (
+              <ErrorCard
+                title="Risk scoring unavailable"
+                message="We couldn't reach the risk scoring and sanctions data for this wallet. The record itself is safe — try loading the analysis again."
+                onRetry={onRetryEvidence}
               />
-            </div>
+            ) : (
+              <div className="grid lg:grid-cols-2 gap-6">
+                <RiskFactorsBreakdown factors={riskFactors} />
+                <SanctionsPanel
+                  walletAddress={wallet.address}
+                  network={wallet.network}
+                  matches={sanctionsMatches}
+                />
+              </div>
+            )}
 
             <div className="grid lg:grid-cols-2 gap-6">
               <TransactionFlowPreview wallet={wallet} onViewFlow={handleViewFlow} />
@@ -317,6 +338,16 @@ const EnhancedWalletResults = ({
 
           {/* Evidence */}
           <TabsContent value="evidence" forceMount className={tabPanel}>
+            {isEvidenceLoading ? (
+              <LoadingCard title="Assembling evidence bundle" rows={4} />
+            ) : hasEvidenceError ? (
+              <ErrorCard
+                title="Evidence data unavailable"
+                message="Some evidence for this record couldn't be loaded. Reports generated now may be incomplete — try again before exporting."
+                onRetry={onRetryEvidence}
+              />
+            ) : null}
+
             <ProvenanceCard address={wallet.address} />
 
             <SarDraftPanel
@@ -331,6 +362,15 @@ const EnhancedWalletResults = ({
               caseId={caseId}
               aiSummary={wallet.ai_summary}
               onDownloadReport={handleDownloadRegulatorReport}
+            />
+
+            <ExportActions
+              wallet={wallet}
+              recordId={recordId}
+              riskFactors={riskFactors}
+              sanctionsMatches={sanctionsMatches}
+              analystNotes={analystNotes}
+              investigationStatus={investigationStatus}
             />
           </TabsContent>
 
@@ -347,25 +387,12 @@ const EnhancedWalletResults = ({
             />
 
             {isCase && (
-              <div className="grid lg:grid-cols-2 gap-6">
-                {/* Analyst Notes Thread - use key to force refresh */}
-                <AnalystNotesThread
-                  key={notesKey}
-                  ref={analystNotesRef}
-                  recordId={recordId}
-                  onNotesUpdate={handleNotesUpdate}
-                />
-
-                {/* Export Actions */}
-                <ExportActions
-                  wallet={wallet}
-                  recordId={recordId}
-                  riskFactors={riskFactors}
-                  sanctionsMatches={sanctionsMatches}
-                  analystNotes={analystNotes}
-                  investigationStatus={investigationStatus}
-                />
-              </div>
+              <AnalystNotesThread
+                key={notesKey}
+                ref={analystNotesRef}
+                recordId={recordId}
+                onNotesUpdate={handleNotesUpdate}
+              />
             )}
           </TabsContent>
         </Tabs>
