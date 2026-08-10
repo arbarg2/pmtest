@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Activity, AlertTriangle, ShieldAlert, FolderOpen, TrendingUp } from "lucide-react";
+import { Activity, AlertTriangle, ShieldAlert, FolderOpen, TrendingUp, ChevronDown } from "lucide-react";
 import {
   PieChart,
   Pie,
