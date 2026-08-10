@@ -83,6 +83,8 @@ const OrgPulse: React.FC = () => {
   const [weekHits, setWeekHits] = useState<DayPoint[]>([]);
   const [topSanctioned, setTopSanctioned] = useState<{ entity: string; count: number }[]>([]);
   const [kpis, setKpis] = useState({ total: 0, openCases: 0, sanctionsHits: 0, alerts7d: 0 });
+  const [showCharts, setShowCharts] = useState(false);
+
 
   useEffect(() => {
     if (!user) return;
