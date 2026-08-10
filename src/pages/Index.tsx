@@ -129,9 +129,10 @@ const Index = () => {
             setRecordNotFound(false);
             setDbRecordId(result.record.id);
 
-            // Risk scoring + evidence load with its own status so the UI can
-            // show a skeleton and a friendly retry if it fails.
-            await loadEvidence(result.record.id);
+            // Risk scoring + evidence load with its own status so the report
+            // renders immediately with skeletons, then fills in (or offers retry).
+            void loadEvidence(result.record.id);
+
 
           } else {
             console.error('❌ Record not found in database:', result.error);
