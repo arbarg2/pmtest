@@ -32,6 +32,27 @@ const Index = () => {
   const [walletData, setWalletData] = useState<any>(null);
   const [riskFactors, setRiskFactors] = useState([]);
   const [sanctionsMatches, setSanctionsMatches] = useState([]);
+  const [dbRecordId, setDbRecordId] = useState<string | null>(null);
+  const [evidenceStatus, setEvidenceStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+
+  const loadEvidence = React.useCallback(async (internalId: string) => {
+    setEvidenceStatus('loading');
+    try {
+      const [fetchedFactors, fetchedSanctions] = await Promise.all([
+        riskFactorsService.getRiskFactors(internalId),
+        riskFactorsService.getSanctionsScreening(internalId),
+      ]);
+      setRiskFactors(fetchedFactors || []);
+      setSanctionsMatches(fetchedSanctions || []);
+      setEvidenceStatus('ready');
+    } catch (error) {
+      console.error('❌ Failed to load risk scoring / evidence data:', error);
+      setRiskFactors([]);
+      setSanctionsMatches([]);
+      setEvidenceStatus('error');
+    }
+  }, []);
+
 
   useEffect(() => {
     // Only redirect to auth if not viewing a specific record and not in demo mode
@@ -63,6 +84,7 @@ const Index = () => {
             console.log('✅ Using demo analysis data from demo context');
             setWalletData(demoData);
             setRecordNotFound(false);
+            setEvidenceStatus('ready');
             setIsLoadingWalletData(false);
             return;
           }
@@ -71,6 +93,7 @@ const Index = () => {
             console.log('✅ Using temporary analysis data from current session');
             setWalletData(analysisData);
             setRecordNotFound(false);
+            setEvidenceStatus('ready');
             setIsLoadingWalletData(false);
             return;
           }
@@ -106,28 +129,13 @@ const Index = () => {
             };
             setWalletData(loadedWalletData);
             setRecordNotFound(false);
+            setDbRecordId(result.record.id);
 
-            // Fetch risk factors data
-            try {
-              console.log('🔍 Fetching risk factors for record:', result.record.id);
-              const fetchedFactors = await riskFactorsService.getRiskFactors(result.record.id);
-              console.log('✅ Risk factors fetched:', fetchedFactors);
-              setRiskFactors(fetchedFactors);
-            } catch (error) {
-              console.error('❌ Failed to fetch risk factors:', error);
-              setRiskFactors([]);
-            }
+            // Risk scoring + evidence load with its own status so the report
+            // renders immediately with skeletons, then fills in (or offers retry).
+            void loadEvidence(result.record.id);
 
-            // Fetch sanctions screening data
-            try {
-              console.log('🔍 Fetching sanctions screening for record:', result.record.id);
-              const fetchedSanctions = await riskFactorsService.getSanctionsScreening(result.record.id);
-              console.log('✅ Sanctions screening fetched:', fetchedSanctions);
-              setSanctionsMatches(fetchedSanctions);
-            } catch (error) {
-              console.error('❌ Failed to fetch sanctions screening:', error);
-              setSanctionsMatches([]);
-            }
+
           } else {
             console.error('❌ Record not found in database:', result.error);
             setRecordNotFound(true);
@@ -142,7 +150,7 @@ const Index = () => {
 
       loadWalletData();
     }
-  }, [recordId, user, analysisData, isDemo, demoData]);
+  }, [recordId, user, analysisData, isDemo, demoData, loadEvidence]);
 
   const handleAnalyze = async () => {
     if (!walletAddress.trim()) return;
@@ -234,6 +242,8 @@ const Index = () => {
         recordId={recordId}
         riskFactors={riskFactors}
         sanctionsMatches={sanctionsMatches}
+        evidenceStatus={evidenceStatus}
+        onRetryEvidence={dbRecordId ? () => loadEvidence(dbRecordId) : undefined}
       />
     );
   }
