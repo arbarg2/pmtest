@@ -131,7 +131,12 @@ export function AnalystDashboard() {
               <FileText className="w-4 h-4" />
               Case Management
             </TabsTrigger>
+            <TabsTrigger value="clusters" className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Clusters
+            </TabsTrigger>
           </TabsList>
+
           
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={refreshData}>
