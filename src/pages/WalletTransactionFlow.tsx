@@ -10,16 +10,21 @@ import { TransactionGraph } from '@/components/TransactionGraph';
 const WalletTransactionFlow = () => {
   const { recordId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [walletData, setWalletData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Wait for the auth session to hydrate before deciding to redirect,
+    // otherwise a direct page load bounces to /auth.
+    if (authLoading) return;
+
     if (!user || !recordId) {
       navigate('/auth');
       return;
     }
+
 
     const loadWalletData = async () => {
       try {
