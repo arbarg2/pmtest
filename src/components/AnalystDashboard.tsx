@@ -183,20 +183,20 @@ export function AnalystDashboard() {
             <CardContent>
               {cases.length === 0 ? (
                 <div className="text-center py-8">
-                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-600 mb-2">No Active Cases</h3>
-                  <p className="text-gray-500">
+                  <FileText className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No Active Cases</h3>
+                  <p className="text-muted-foreground">
                     Create cases from investigation records to enable full case management features.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {cases.slice(0, 5).map((caseRecord) => (
-                    <div key={caseRecord.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                    <div key={caseRecord.id} className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-4 mb-2">
-                            <h3 className="font-medium text-slate-900">{caseRecord.case_id}</h3>
+                            <h3 className="font-medium text-foreground">{caseRecord.case_id}</h3>
                             <Badge variant={caseRecord.case_status === 'open' ? 'default' : 
                                          caseRecord.case_status === 'escalated' ? 'destructive' : 'secondary'}>
                               {caseRecord.case_status}
@@ -207,10 +207,10 @@ export function AnalystDashboard() {
                             </Badge>
                           </div>
                           
-                          <div className="text-sm text-slate-600 space-y-1">
+                          <div className="text-sm text-muted-foreground space-y-1">
                             <div className="flex items-center space-x-4">
                               <span className="font-mono">{caseRecord.wallet_address}</span>
-                              <span className="uppercase text-xs bg-slate-100 px-2 py-1 rounded">
+                              <span className="uppercase text-xs bg-muted px-2 py-1 rounded">
                                 {caseRecord.network}
                               </span>
                             </div>
@@ -238,7 +238,12 @@ export function AnalystDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="clusters" className="space-y-4">
+          <ClusterView />
+        </TabsContent>
       </Tabs>
+
     </div>
   );
 }
