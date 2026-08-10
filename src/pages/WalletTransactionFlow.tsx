@@ -45,7 +45,7 @@ const WalletTransactionFlow = () => {
     };
 
     loadWalletData();
-  }, [recordId, user, navigate]);
+  }, [recordId, user, authLoading, navigate]);
 
   const handleBack = () => {
     navigate(`/record/${recordId}`);
