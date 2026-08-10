@@ -127,28 +127,12 @@ const Index = () => {
             };
             setWalletData(loadedWalletData);
             setRecordNotFound(false);
+            setDbRecordId(result.record.id);
 
-            // Fetch risk factors data
-            try {
-              console.log('🔍 Fetching risk factors for record:', result.record.id);
-              const fetchedFactors = await riskFactorsService.getRiskFactors(result.record.id);
-              console.log('✅ Risk factors fetched:', fetchedFactors);
-              setRiskFactors(fetchedFactors);
-            } catch (error) {
-              console.error('❌ Failed to fetch risk factors:', error);
-              setRiskFactors([]);
-            }
+            // Risk scoring + evidence load with its own status so the UI can
+            // show a skeleton and a friendly retry if it fails.
+            await loadEvidence(result.record.id);
 
-            // Fetch sanctions screening data
-            try {
-              console.log('🔍 Fetching sanctions screening for record:', result.record.id);
-              const fetchedSanctions = await riskFactorsService.getSanctionsScreening(result.record.id);
-              console.log('✅ Sanctions screening fetched:', fetchedSanctions);
-              setSanctionsMatches(fetchedSanctions);
-            } catch (error) {
-              console.error('❌ Failed to fetch sanctions screening:', error);
-              setSanctionsMatches([]);
-            }
           } else {
             console.error('❌ Record not found in database:', result.error);
             setRecordNotFound(true);
