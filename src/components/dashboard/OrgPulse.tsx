@@ -190,7 +190,16 @@ const OrgPulse: React.FC = () => {
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-primary" /> Org Pulse
           </h2>
-          <span className="text-xs text-muted-foreground">Live overview of your portfolio</span>
+          <button
+            type="button"
+            onClick={() => setShowCharts((v) => !v)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+          >
+            {showCharts ? "Hide analytics" : "Show analytics"}
+            <ChevronDown
+              className={`w-3.5 h-3.5 transition-transform ${showCharts ? "rotate-180" : ""}`}
+            />
+          </button>
         </div>
 
         {/* KPI strip */}
@@ -213,7 +222,9 @@ const OrgPulse: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {showCharts && (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-in">
+
         {/* Risk donut */}
         <Card className="lg:col-span-1">
           <CardHeader className="pb-2">
