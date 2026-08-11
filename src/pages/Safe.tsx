@@ -1,7 +1,7 @@
 import Seo from '@/components/Seo';
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { Shield, Search, AlertTriangle, CheckCircle2, ShieldAlert, ArrowRight, Sparkles, Eye, Lock, ArrowLeft, Copy, Check, Zap, Twitter } from "lucide-react";
+import { Shield, Search, AlertTriangle, CheckCircle2, ShieldAlert, ArrowRight, Sparkles, Eye, Lock, ArrowLeft, Copy, Check, Zap, Twitter, Bookmark, BookmarkCheck, History, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -11,13 +11,19 @@ import { supabase } from "@/integrations/supabase/client";
 
 type Verdict = "safe" | "caution" | "danger";
 
+interface EvidenceBasis {
+  sanctions_count?: number;
+  malicious_count?: number;
+}
+
 interface CheckResult {
   address: string;
   network: string;
   verdict: Verdict;
   risk_score: number;
   reasons: { type: string; severity: "low" | "medium" | "high"; text: string }[];
-  data: { balance?: number; tx_count?: number; first_seen?: number | null; sanctioned?: boolean; short?: string };
+  data: { balance?: number; tx_count?: number; first_seen?: number | null; sanctioned?: boolean; malicious?: boolean; short?: string };
+  evidence_basis?: EvidenceBasis;
   view_count?: number;
   cached?: boolean;
 }
@@ -113,6 +119,18 @@ function VerdictCard({ result }: { result: CheckResult }) {
               <span className="text-muted-foreground/60">/100</span>
             </span>
           </div>
+          {result.evidence_basis && (
+            <div className="flex items-center gap-1.5 mt-3 text-[11px] text-muted-foreground/80">
+              <Shield className="w-3.5 h-3.5 text-neon-cyan/70" />
+              <span>
+                Screened against OFAC SDN
+                {result.evidence_basis.malicious_count ? (
+                  <> + {result.evidence_basis.malicious_count.toLocaleString()} known scam / drainer addresses</>
+                ) : null}
+                {" · "}on-chain behaviour
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </Card>
@@ -149,14 +167,15 @@ function StatsGrid({ result }: { result: CheckResult }) {
     { label: "Balance", value: result.data.balance != null ? `${result.data.balance.toFixed(4)} ${result.network.slice(0, 3).toUpperCase()}` : "—" },
     { label: "Transactions", value: result.data.tx_count?.toLocaleString() ?? "—" },
     { label: "First seen", value: result.data.first_seen ? new Date(result.data.first_seen).toLocaleDateString() : "—" },
-    { label: "Sanctions", value: result.data.sanctioned ? "MATCH" : "Clear" },
+    { label: "Sanctions", value: result.data.sanctioned ? "MATCH" : "Clear", danger: result.data.sanctioned },
+    { label: "Scam / drainer", value: result.data.malicious ? "MATCH" : "Clear", danger: result.data.malicious },
   ];
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fade-in">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 animate-fade-in">
       {stats.map((s) => (
         <Card key={s.label} className="p-4 bg-card/40 border-border/50 hover:border-neon-cyan/40 transition-colors">
           <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">{s.label}</div>
-          <div className={`text-base font-semibold tabular-nums ${s.label === "Sanctions" && s.value === "MATCH" ? "text-risk-critical" : ""}`}>{s.value}</div>
+          <div className={`text-base font-semibold tabular-nums ${s.danger ? "text-risk-critical" : ""}`}>{s.value}</div>
         </Card>
       ))}
     </div>
@@ -211,6 +230,106 @@ function ShareBar({ address, verdict }: { address: string; verdict: Verdict }) {
         </a>
       </div>
     </>
+  );
+}
+
+// ---- lightweight local return-loop (anon users): recent checks + watchlist ----
+const RECENT_KEY = "rian:safe:recent";
+const WATCH_KEY = "rian:safe:watch";
+const MAX_RECENT = 6;
+
+interface RecentCheck {
+  address: string;
+  network: string;
+  verdict: Verdict;
+  risk_score: number;
+  at: number;
+}
+
+function readRecent(): RecentCheck[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]"); } catch { return []; }
+}
+function writeRecent(list: RecentCheck[]) {
+  localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, MAX_RECENT)));
+}
+export function recordCheck(r: CheckResult) {
+  const list = readRecent().filter((c) => c.address.toLowerCase() !== r.address.toLowerCase());
+  list.unshift({ address: r.address, network: r.network, verdict: r.verdict, risk_score: r.risk_score, at: Date.now() });
+  writeRecent(list);
+}
+
+export function useRecentChecks() {
+  const [items, setItems] = useState<RecentCheck[]>([]);
+  useEffect(() => { setItems(readRecent()); }, []);
+  const remove = (address: string) => {
+    const next = readRecent().filter((c) => c.address !== address);
+    writeRecent(next);
+    setItems(next);
+  };
+  return { items, remove, refresh: () => setItems(readRecent()) };
+}
+
+function isWatched(address: string) {
+  try { return JSON.parse(localStorage.getItem(WATCH_KEY) ?? "[]").some((a: string) => a.toLowerCase() === address.toLowerCase()); } catch { return false; }
+}
+function toggleWatch(address: string): boolean {
+  const list: string[] = (() => { try { return JSON.parse(localStorage.getItem(WATCH_KEY) ?? "[]"); } catch { return []; } })();
+  const i = list.findIndex((a) => a.toLowerCase() === address.toLowerCase());
+  let watched: boolean;
+  if (i >= 0) { list.splice(i, 1); watched = false; }
+  else { list.push(address); watched = true; }
+  localStorage.setItem(WATCH_KEY, JSON.stringify(list));
+  return watched;
+}
+
+function WatchToggle({ address }: { address: string }) {
+  const [watched, setWatched] = useState(() => isWatched(address));
+  const onClick = () => {
+    const now = toggleWatch(address);
+    setWatched(now);
+    toast.success(now ? "Watching — we'll keep it on your radar" : "Removed from watch");
+  };
+  return (
+    <Button onClick={onClick} variant={watched ? "default" : "outline"} size="sm" className={`gap-2 ${watched ? "bg-aurora text-background hover:opacity-90" : ""}`}>
+      {watched ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+      {watched ? "Watching" : "Watch"}
+    </Button>
+  );
+}
+
+export function RecentChecksStrip() {
+  const { items, remove } = useRecentChecks();
+  if (!items.length) return null;
+  const tone: Record<Verdict, string> = {
+    safe: "text-risk-low border-risk-low/40",
+    caution: "text-risk-medium border-risk-medium/40",
+    danger: "text-risk-critical border-risk-critical/50",
+  };
+  return (
+    <div className="mt-10 animate-fade-in">
+      <div className="flex items-center gap-2 mb-3 text-muted-foreground">
+        <History className="w-4 h-4" />
+        <span className="text-xs uppercase tracking-widest">Recently checked</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {items.map((c) => (
+          <div key={c.address} className="group relative">
+            <Link to={`/safe/check/${c.address}`} className={`flex items-center gap-2 px-3 py-2 rounded-lg border bg-card/50 backdrop-blur-md hover:border-neon-cyan/50 transition-colors ${tone[c.verdict]}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${c.verdict === "safe" ? "bg-risk-low" : c.verdict === "caution" ? "bg-risk-medium" : "bg-risk-critical"}`} />
+              <span className="font-mono text-xs">{c.address.slice(0, 6)}…{c.address.slice(-4)}</span>
+              <span className="text-[10px] text-muted-foreground uppercase">{c.network}</span>
+            </Link>
+            <button
+              onClick={() => remove(c.address)}
+              className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-background border border-border/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:text-risk-critical"
+              aria-label="Remove"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

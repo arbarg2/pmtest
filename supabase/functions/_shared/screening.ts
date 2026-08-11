@@ -94,6 +94,12 @@ export interface ScreenResult {
     program?: string | null;
     date_listed?: string | null;
   };
+  malicious?: {
+    matched: boolean;
+    category?: string | null;
+    label?: string | null;
+    source?: string | null;
+  };
   provenance: Provenance;
   provider_payloads: Record<string, unknown>;
 }
@@ -188,23 +194,60 @@ async function fetchBtc(address: string): Promise<ChainData> {
 
 async function fetchSol(address: string): Promise<ChainData> {
   const endpoint = "https://api.mainnet-beta.solana.com";
-  const r = await fetch(endpoint, {
+  const fetchedAt = new Date().toISOString();
+  const providers: Provenance["providers"] = [];
+
+  // Balance
+  const balRes = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getBalance", params: [address] }),
   });
-  const fetchedAt = new Date().toISOString();
-  const d = await r.json();
-  const balance = d?.result?.value ? d.result.value / 1e9 : 0;
-  const slot = d?.result?.context?.slot ?? null;
+  const balJson = await balRes.json().catch(() => ({}));
+  const balance = balJson?.result?.value ? balJson.result.value / 1e9 : 0;
+  const slot = balJson?.result?.context?.slot ?? null;
+  providers.push({ name: "solana_rpc", endpoint, fetched_at: fetchedAt, ok: balRes.ok, status: balRes.status });
+
+  // Transaction history — getSignaturesForAddress gives real tx count + first-seen age
+  let txCount = 0;
+  let firstSeen: number | null = null;
+  const txs: any[] = [];
+  let sigOk = true;
+  try {
+    const sigRes = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 2, method: "getSignaturesForAddress",
+        params: [address, { limit: 100 }],
+      }),
+    });
+    sigOk = sigRes.ok;
+    providers.push({ name: "solana_rpc", endpoint, fetched_at: fetchedAt, ok: sigRes.ok, status: sigRes.status });
+    if (sigRes.ok) {
+      const sigJson = await sigRes.json();
+      const sigs: any[] = Array.isArray(sigJson?.result) ? sigJson.result : [];
+      txCount = sigs.length;
+      // Oldest signature is last (default order is newest-first)
+      if (sigs.length) {
+        const oldest = sigs[sigs.length - 1];
+        if (oldest?.blockTime) firstSeen = oldest.blockTime * 1000;
+      }
+      txs.push(...sigs);
+    }
+  } catch (e) {
+    sigOk = false;
+    providers.push({ name: "solana_rpc", endpoint, fetched_at: fetchedAt, ok: false, error: String(e) });
+  }
+
   return {
     balance,
-    txCount: 0,
-    txs: [],
-    firstSeen: null,
+    txCount,
+    firstSeen,
+    txs,
     blockHeight: typeof slot === "number" ? slot : null,
-    raw: { getBalance: d },
-    providers: [{ name: "solana_rpc", endpoint, fetched_at: fetchedAt, ok: r.ok, status: r.status }],
+    raw: { getBalance: balJson, signatures: { count: txCount } },
+    providers,
   };
 }
 
@@ -215,6 +258,16 @@ export async function lookupSanctions(supabase: any, address: string) {
     .from("sanctions_addresses")
     .select("entity_name, source_list, program, date_listed, network, updated_at, metadata")
     .ilike("address", address)
+    .maybeSingle();
+  return data ?? null;
+}
+
+export async function lookupMalicious(supabase: any, address: string) {
+  const { data } = await supabase
+    .from("malicious_addresses")
+    .select("address, network, category, label, source, source_url")
+    .ilike("address", address)
+    .limit(1)
     .maybeSingle();
   return data ?? null;
 }
@@ -285,8 +338,9 @@ export async function screenAddress(
   const network = detectNetwork(address);
   if (!network) throw new Error("Unsupported address format");
 
-  const [sanctionsHit, attribution, ruleset, policyResolved] = await Promise.all([
+  const [sanctionsHit, maliciousHit, attribution, ruleset, policyResolved] = await Promise.all([
     lookupSanctions(supabase, address),
+    lookupMalicious(supabase, address),
     lookupAttribution(supabase, network, address, opts.workspaceId),
     getActiveRuleset(supabase),
     opts.policy ? Promise.resolve(opts.policy) : getWorkspacePolicy(supabase, opts.workspaceId),
@@ -351,6 +405,21 @@ export async function screenAddress(
           program: sanctionsHit.program,
           date_listed: sanctionsHit.date_listed,
         },
+      ),
+    );
+  }
+
+  if (maliciousHit) {
+    const cat = maliciousHit.category ?? "malicious";
+    const isDrainer = cat === "drainer";
+    score = Math.max(
+      score,
+      fire(
+        isDrainer ? "known_drainer" : "known_scam",
+        "high",
+        isDrainer ? 95 : 90,
+        `Known ${isDrainer ? "drainer" : "scam / phishing"} address${maliciousHit.label ? ` — ${maliciousHit.label}` : ""} (source: ${maliciousHit.source ?? "community registry"}). Do NOT send funds or approve transactions.`,
+        { category: cat, label: maliciousHit.label, source: maliciousHit.source },
       ),
     );
   }
@@ -464,6 +533,7 @@ export async function screenAddress(
       tx_count: chain.txCount,
       first_seen: chain.firstSeen,
       sanctioned: !!sanctionsHit,
+      malicious: !!maliciousHit,
       short: shortAddr(address),
       entity_category: category,
       entity_name: entityName,
@@ -474,6 +544,12 @@ export async function screenAddress(
       source_list: sanctionsHit?.source_list ?? null,
       program: sanctionsHit?.program ?? null,
       date_listed: sanctionsHit?.date_listed ?? null,
+    },
+    malicious: {
+      matched: !!maliciousHit,
+      category: maliciousHit?.category ?? null,
+      label: maliciousHit?.label ?? null,
+      source: maliciousHit?.source ?? null,
     },
     provenance,
     provider_payloads,

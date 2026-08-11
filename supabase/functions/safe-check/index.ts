@@ -37,6 +37,17 @@ serve(async (req) => {
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
+    // Screening-basis counts — surfaced on the verdict so users trust the result.
+    const [sanCount, malCount] = await Promise.all([
+      supabase.from("sanctions_addresses").select("*", { count: "exact", head: true }),
+      supabase.from("malicious_addresses").select("*", { count: "exact", head: true }),
+    ]);
+    const evidence_basis = {
+      sanctions_count: sanCount.count ?? 0,
+      malicious_count: malCount.count ?? 0,
+      screened_at: new Date().toISOString(),
+    };
+
     // Cache hit (15 min)
     const { data: cached } = await supabase
       .from("public_checks")
@@ -48,7 +59,7 @@ serve(async (req) => {
 
     if (cached) {
       await supabase.from("public_checks").update({ view_count: (cached.view_count ?? 0) + 1 }).eq("id", cached.id);
-      return new Response(JSON.stringify({ ...cached, cached: true }), {
+      return new Response(JSON.stringify({ ...cached, cached: true, evidence_basis }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -62,6 +73,7 @@ serve(async (req) => {
       risk_score: result.risk_score,
       reasons: result.reasons,
       data: result.data,
+      evidence_basis,
       view_count: 1,
     };
 
@@ -73,7 +85,7 @@ serve(async (req) => {
 
     if (error) console.warn("cache insert failed", error.message);
 
-    return new Response(JSON.stringify({ ...(inserted ?? payload), cached: false }), {
+    return new Response(JSON.stringify({ ...(inserted ?? payload), cached: false, evidence_basis }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
