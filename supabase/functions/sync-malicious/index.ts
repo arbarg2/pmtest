@@ -28,12 +28,12 @@ const KNOWN_DRAINERS: Array<{ network: string; address: string; label: string; c
 // These are real on-chain addresses (not domains) with Etherscan-verified labels.
 const LABELS_URL = "https://raw.githubusercontent.com/dawsbot/evm-labels/master/src/mainnet/phish-hack/all.csv";
 
-async function fetchEtherscanLabels(): Promise<Array<{ address: string; label: string; category: string }>> {
+async function fetchEtherscanLabels(): Promise<Array<{ address: string; label: string | null; category: string }>> {
   const res = await fetch(LABELS_URL, { signal: AbortSignal.timeout(20000) });
   if (!res.ok) throw new Error(`evm-labels ${res.status}`);
   const text = await res.text();
   const lines = text.split("\n").slice(1); // drop header
-  const out: Array<{ address: string; label: string; category: string }> = [];
+  const out: Array<{ address: string; label: string | null; category: string }> = [];
   for (const line of lines) {
     const idx = line.indexOf(",");
     if (idx < 0) continue;
