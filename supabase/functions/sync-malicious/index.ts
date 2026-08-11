@@ -78,16 +78,16 @@ serve(async (req) => {
 
     const summary: Record<string, { fetched: number; upserted: number }> = {};
 
-    // --- Ethereum phishing blocklist (MetaMask eth-phishing-detect) ---
+    // --- Etherscan public phishing/hack name-tags (dawsbot/evm-labels) ---
     try {
-      const addresses = await fetchMetaMaskBlocklist();
-      const rows = addresses.map((address) => ({
+      const entries = await fetchEtherscanLabels();
+      const rows = entries.map((e) => ({
         network: "ethereum",
-        address,
-        category: "phisher",
-        label: null,
-        source: "eth-phishing-detect",
-        source_url: "https://github.com/MetaMask/eth-phishing-detect",
+        address: e.address,
+        category: e.category,
+        label: e.label,
+        source: "Etherscan name-tags (dawsbot/evm-labels)",
+        source_url: LABELS_URL,
       }));
       let upserted = 0;
       for (let i = 0; i < rows.length; i += 500) {
@@ -95,14 +95,14 @@ serve(async (req) => {
         const { error } = await supabase
           .from("malicious_addresses")
           .upsert(batch, { onConflict: "network,address,source" });
-        if (error) console.error(`phishing batch @${i}:`, error.message);
+        if (error) console.error(`labels batch @${i}:`, error.message);
         else upserted += batch.length;
       }
-      summary["eth-phishing-detect"] = { fetched: addresses.length, upserted };
-      console.log(`✅ eth-phishing-detect: ${upserted}/${addresses.length} upserted`);
+      summary["evm-labels"] = { fetched: entries.length, upserted };
+      console.log(`✅ evm-labels: ${upserted}/${entries.length} upserted`);
     } catch (e) {
-      console.error("eth-phishing-detect failed:", e instanceof Error ? e.message : e);
-      summary["eth-phishing-detect"] = { fetched: 0, upserted: 0 };
+      console.error("evm-labels failed:", e instanceof Error ? e.message : e);
+      summary["evm-labels"] = { fetched: 0, upserted: 0 };
     }
 
     // --- Curated drainer seed (always upserted) ---
