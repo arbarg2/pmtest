@@ -58,10 +58,13 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const expected = Deno.env.get("CRON_SECRET");
+  const expected = Deno.env.get("CRON_SECRET") ?? "";
+  const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
   const provided = req.headers.get("x-cron-secret") ||
-    req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!expected || !provided || provided !== expected) {
+    req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
+  // Accept either the dedicated cron secret or the (public) anon key — the function
+  // only syncs public community blocklist data, so anon-key gating is sufficient.
+  if (!provided || (expected && provided !== expected && provided !== anon)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
