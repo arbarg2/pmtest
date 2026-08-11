@@ -480,6 +480,8 @@ export default function Safe() {
             ))}
           </div>
 
+          <RecentChecksStrip />
+
           <div className="text-center mt-12 text-xs text-muted-foreground">
             Need full investigation tools? <Link to="/dashboard" className="text-neon-cyan hover:underline">Open the Pro Console →</Link>
           </div>
