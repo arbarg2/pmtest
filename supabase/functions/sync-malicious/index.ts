@@ -1,7 +1,7 @@
 // Syncs known scam / drainer / phisher addresses into the database.
 // Sources: free, open-source, community-maintained registries.
-//   - MetaMask eth-phishing-detect blocklist (Ethereum phishing addresses)
-//   - A curated seed of well-known drainer contracts (Inferno, Pink, Monkey)
+//   - Etherscan public phishing/hack name-tags (dawsbot/evm-labels) — real addresses
+//   - A curated seed of well-known drainer / hack contracts (Inferno, Pink, Angel...)
 // Parsing is defensive: any source that fails to fetch or parse is skipped
 // without aborting the whole sync, exactly like sync-sanctions.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
