@@ -401,6 +401,9 @@ export function SafeCheckRunner({ address, onResult }: { address: string; onResu
 
   return (
     <div className="space-y-4 pb-24 sm:pb-4">
+      <div className="flex items-center justify-end -mb-1">
+        <WatchToggle address={result.address} />
+      </div>
       <VerdictCard result={result} />
       <ReasonsList reasons={result.reasons} />
       <StatsGrid result={result} />
