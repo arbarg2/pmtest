@@ -277,6 +277,45 @@ export type Database = {
           },
         ]
       }
+      malicious_addresses: {
+        Row: {
+          address: string
+          category: string
+          created_at: string
+          id: string
+          label: string | null
+          metadata: Json
+          network: string
+          source: string
+          source_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          category?: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          metadata?: Json
+          network: string
+          source?: string
+          source_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          category?: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          metadata?: Json
+          network?: string
+          source?: string
+          source_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
