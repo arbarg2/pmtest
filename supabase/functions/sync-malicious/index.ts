@@ -12,30 +12,45 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Well-known drainer / sweeper contracts seeded directly (verified public addresses).
+// Verified, publicly-documented drainer / scam contracts (each source-checkable on Etherscan).
 const KNOWN_DRAINERS: Array<{ network: string; address: string; label: string; category: string }> = [
-  // Inferno Drainer
-  { network: "ethereum", address: "0x0000a26a005e6300007d40b00bd61000000b80005", label: "Inferno Drainer Router", category: "drainer" },
-  { network: "ethereum", address: "0x6588b10d396906bef84c60a065c7f3fd9b9d9d0d", label: "Inferno Drainer", category: "drainer" },
-  // Pink Drainer
-  { network: "ethereum", address: "0x21f8a0b00f2bb4d0d0a6832c98ab2f1b2b3c4d5e", label: "Pink Drainer", category: "drainer" },
-  // Monkey Drainer
-  { network: "ethereum", address: "0x401f675c8a558b0c3b5be0b3b3c4d5e6f7a8b9c0", label: "Monkey Drainer", category: "drainer" },
-  // Common approve/transfer-from drainer proxy
-  { network: "ethereum", address: "0x1aa33a425a08e6cc60e4a58d3579c6c8e5a5b7c8", label: "Wallet Drainer Proxy", category: "drainer" },
+  { network: "ethereum", address: "0x0000daf60a1becf1bd617c584dea964455890000", label: "Inferno Drainer Phishing Contract", category: "drainer" },
+  { network: "ethereum", address: "0x00000f312c54d0dd25888ee9cdc3dee988700000", label: "Pink Drainer", category: "drainer" },
+  { network: "ethereum", address: "0x0000c3ace9e31a26ce1870d418cb045d73b30000", label: "Angel Drainer Phishing Contract", category: "drainer" },
+  { network: "ethereum", address: "0x0000d38a234679f88dd6343d34e26dcb50c30000", label: "Angel Drainer", category: "drainer" },
+  { network: "ethereum", address: "0x533db465afbeea29fd6f2d6acadb2e2d0cee7e46", label: "Angel Drainer Deployer", category: "drainer" },
+  { network: "ethereum", address: "0x9f26ae5cd245bfeeb5926d61497550f79d9c6c1c", label: "Akropolis Hacker 1", category: "hack" },
+  { network: "ethereum", address: "0xbceaa0040764009fdcff407e82ad1f06465fd2c4", label: "Bancor Hacker", category: "hack" },
+  { network: "ethereum", address: "0xeda5066780de29d00dfb54581a707ef6f52d8113", label: "ChainSwap Hacker", category: "hack" },
 ];
 
-async function fetchMetaMaskBlocklist(): Promise<string[]> {
-  const url = "https://raw.githubusercontent.com/MetaMask/eth-phishing-detect/main/src/config.json";
-  const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
-  if (!res.ok) throw new Error(`eth-phishing-detect ${res.status}`);
-  const json: any = await res.json();
-  // The config exposes a `blocklist` array of 0x addresses.
-  const blocklist: unknown = json?.blocklist ?? json?.blacklist ?? [];
-  if (!Array.isArray(blocklist)) return [];
-  return blocklist
-    .filter((a): a is string => typeof a === "string" && /^0x[a-fA-F0-9]{40}$/.test(a))
-    .map((a) => a.toLowerCase());
+// Etherscan's own public phishing/hack name-tags, compiled by dawsbot/evm-labels.
+// These are real on-chain addresses (not domains) with Etherscan-verified labels.
+const LABELS_URL = "https://raw.githubusercontent.com/dawsbot/evm-labels/master/src/mainnet/phish-hack/all.csv";
+
+async function fetchEtherscanLabels(): Promise<Array<{ address: string; label: string; category: string }>> {
+  const res = await fetch(LABELS_URL, { signal: AbortSignal.timeout(20000) });
+  if (!res.ok) throw new Error(`evm-labels ${res.status}`);
+  const text = await res.text();
+  const lines = text.split("\n").slice(1); // drop header
+  const out: Array<{ address: string; label: string; category: string }> = [];
+  for (const line of lines) {
+    const idx = line.indexOf(",");
+    if (idx < 0) continue;
+    const address = line.slice(0, idx).trim().toLowerCase();
+    const tag = line.slice(idx + 1).trim();
+    if (!/^0x[a-f0-9]{40}$/.test(address)) continue;
+    const tl = tag.toLowerCase();
+    const category = tl.includes("drainer")
+      ? "drainer"
+      : tl.includes("hacker") || tl.includes("hack")
+      ? "hack"
+      : tl.includes("phishing")
+      ? "phishing"
+      : "scam";
+    out.push({ address, label: tag || null, category });
+  }
+  return out;
 }
 
 serve(async (req) => {
