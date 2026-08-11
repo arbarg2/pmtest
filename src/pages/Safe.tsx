@@ -359,6 +359,7 @@ export function SafeCheckRunner({ address, onResult }: { address: string; onResu
         }
         if (cancelled) return;
         setResult(payload);
+        recordCheck(payload);
         onResult?.(payload);
       } catch (e: any) {
         if (!cancelled) setError(e.message ?? "Check failed");
