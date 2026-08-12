@@ -1,71 +1,59 @@
-# Rìan — Honest Assessment and Route to Market
+# Rìan — Phases 0, 1, 2 and 4 (monetisation deferred)
 
-## The blunt version
-
-Rìan is a genuinely impressive engineering artifact with a real screening engine, but it is not yet a product. It has no revenue mechanism, no retention loop, and its marketing copy currently promises two capabilities that do not exist in the code. Roughly: strong core, over-claimed surface, missing business.
+Goal: make every claim on the site true, give users a reason to come back, sharpen the wedge, and make the product defensible to a compliance buyer. No billing in this scope.
 
 ---
 
-## Pros — what is genuinely real
+## Phase 0 — Integrity pass
 
-- **The screening engine is real.** `_shared/screening.ts` makes live Etherscan V2, Blockstream and Solana RPC calls, matches against a real OFAC SDN table synced daily, and logs decisions with provenance. `/safe`, the public API and wallet monitoring all share it, so verdicts are consistent.
-- **Real scam data.** ~5.6k Etherscan-tagged phishing/hack addresses synced daily via `sync-malicious`. Most competitors at this stage fake this.
-- **`wallet-monitor` re-screens for real** — no random scores, alerts only on genuine threshold crossings.
-- **Serious depth for compliance**: evidence logging, audit trail, workspaces/RBAC, HMAC-signed webhooks, SAR generation bound to evidence, RLS everywhere, hashed API keys with quotas.
-- **Distribution surface most tools lack**: public REST API v1 plus an OAuth 2.1 MCP server, so agents in ChatGPT/Claude/Cursor can call it.
-- **The dual-audience framing (consumer `/safe` + analyst dashboard) is the right strategic bet.**
+Make the product honest before anything else.
 
-## Cons — what undermines it
+1. **Token approval scanning (build the claim, don't delete it).**
+   - New shared module `supabase/functions/_shared/approvals.ts`: for an ETH address, pull ERC-20 `Approval` logs via the Etherscan proxy, reduce to current allowances per (token, spender), and flag: unlimited allowances, allowances to addresses in `malicious_addresses`, and allowances to contracts with no name tag.
+   - Return `{ risky_approvals: [...], unlimited_count, total_spenders }`.
+   - Surface in `wallet-health-check` output and as a new screening reason (`risky_approval`) when the address being screened is a known drainer spender.
+2. **Drop the unbacked "fake tokens" claim** from `Landing.tsx` copy; replace with "approval & drainer exposure", which will then be real.
+3. **Real ticker.** Replace the hardcoded `tickerItems` array in `Landing.tsx` with the most recent rows from `public_checks` (address truncated, verdict chip). If the table is empty, hide the ticker rather than faking it.
+4. **Solana honesty.** Label Solana as "Beta — sanctions + balance only" in `/safe` and the network badge, and make `/health` show an explicit "Solana not supported yet" state instead of a generic rejection.
+5. **BTC counterparty truncation.** Paginate Blockstream `/txs/chain/:last_txid` in `wallet-health-check` up to a sane cap (e.g. 500 txs), and label the figure "based on last N transactions" when capped.
+6. **Delete `src/components/ReportGenerator.tsx`** (orphaned duplicate of `services/reportExport.ts`).
 
-1. **Landing page claims with zero backing code.** "Fake tokens" and "risky token approvals" have no implementation anywhere — no allowance scanning, no token-metadata checks. This is the single biggest credibility risk.
-2. **No retention loop.** After a `/safe` or `/health` verdict there is no watch/save/alert CTA, even though `WatchWalletButton`, `watched_wallets` and `wallet-monitor` already exist and work. Users check once and never return.
-3. **No money.** No Stripe, no tiers, no quotas on the consumer side. Everything expensive is free and unlimited.
-4. **Solana is a stub** presented as equal to BTC/ETH: balance only, no tx history, so no age/behaviour signals — and `/health` rejects Solana outright.
-5. **Fake homepage ticker.** `Landing.tsx` hardcodes "live" scan results. Any technical viewer who inspects this discounts everything else.
-6. **Over-stated depth.** "Walking the transaction graph" is a single-hop counterparty scan; BTC counterparties are truncated to one un-paginated Blockstream page, so `total_transactions` is silently wrong for active wallets.
-7. **Dead code:** `ReportGenerator.tsx` is never imported and duplicates the real export path.
-8. **Too many features, no sharp wedge.** Cases, clusters, Org Pulse, bulk, API, MCP, SAR, webhooks — nothing is clearly *the* reason to use Rìan.
+## Phase 1 — Retention loop
 
-## What is missing to be a business
+7. **Watch CTA where intent is highest.** Surface watch on the `/safe` verdict card and the `/health` report.
+   - Signed in → `watched_wallets` via the existing service.
+   - Signed out → localStorage watchlist + a single "sign in to get alerts" prompt.
+   - Reuse `WatchWalletButton`, but add a compact variant (no required reason, default threshold) so the consumer flow stays one tap.
+8. **Deep-linkable health reports.** Persist each health report and add `/health/report/:id` so shares land on the actual result instead of the generic page. Public read of the report row only (no user identity attached).
+9. **External alerts.** Send an email when `wallet-monitor` raises a threshold-crossing alert, using the project's transactional email setup. Per-user toggle stored on `profiles`.
 
-- Billing and plan gating
-- Onboarding + a first-run "aha" that does not require pasting an address
-- Any proof of accuracy (benchmark / known-bad test set / false-positive rate)
-- Notifications outside the app (email or Telegram)
-- Support, terms, SLA, data-retention statement — table stakes for any compliance buyer
+## Phase 2 — Sharpen the wedge
 
----
+10. **"Is it safe to sign this?"** becomes the primary consumer surface: one input, one verdict, with three fixed evidence blocks — sanctions, scam/drainer lists, and approval exposure. Reorder `/safe` and the landing hero around this single question; move everything else below the fold.
+11. **One-tap escalation** from the consumer verdict into the analyst console (`investigation_records` → `/record/:id`) for signed-in users.
 
-## Route to market
+## Phase 4 — Credibility
 
-### Phase 0 — Integrity pass (do first, small)
-- Remove or actually build the "fake tokens" and "risky token approvals" claims. Recommended: build **token approval scanning** (real, high-value, well-defined) and drop the fake-token claim until backed.
-- Replace the hardcoded ticker with real recent `public_checks` rows, or remove it.
-- Label Solana as "beta — balance and sanctions only" wherever it appears; either extend `fetchSol` to pull signatures or stop advertising parity.
-- Fix BTC pagination in `wallet-health-check`, or label counts as "recent activity".
-- Delete `ReportGenerator.tsx`.
-
-### Phase 1 — Retention loop
-- Surface `WatchWalletButton` directly on the `/safe` verdict and the `/health` report.
-- Deep-linkable health reports (`/health/report/:id`) so shares actually land on the result.
-- External alert delivery (email first, Telegram second) from `wallet-monitor`.
-
-### Phase 2 — The wedge
-Pick one and make it best-in-class rather than adding more surface. Strongest candidate: **"Is it safe to sign this?" — approval + counterparty exposure check for everyday users**, with the compliance dashboard as the upsell, not the headline.
-
-### Phase 3 — Monetisation
-- Free: 5 checks/day, 1 health scan, no monitoring.
-- Pro (~$19/mo): unlimited checks, monitoring + alerts, Ask Holly, reports.
-- Team/API: seats, workspace, higher API quotas, SAR export.
-- Lovable-managed Stripe, `subscriptions` table, `useSubscription` gate, upgrade modal, `/settings`.
-
-### Phase 4 — Credibility for buyers
-- Publish a methodology page: data sources, sync cadence, what each rule means, known limitations.
-- Run against a labelled set of known-bad and known-good addresses and publish precision/recall.
-- Add data-retention and terms pages.
+12. **Methodology page (`/methodology`)**: every data source, sync cadence, what each rule means and its weight, and an explicit "known limitations" section (Solana depth, one-hop counterparty scan, BTC caps). Linked from the verdict card's evidence basis line.
+13. **Accuracy benchmark**: a script that screens a labelled set of known-bad (OFAC, tagged drainers) and known-good (major exchanges, ENS treasury) addresses, plus a results section on `/methodology`. Only published numbers we actually measure.
+14. **Owner-authored `/security` and `/terms` pages** covering data retention, sub-processors and vulnerability reporting, linked from the footer alongside the existing privacy policy.
 
 ---
 
-## Suggested first slice
+## Order of work
 
-Phase 0 plus Phase 1. It is a small amount of work, it removes every claim the product cannot defend, and it turns one-shot visitors into returning users — which must exist before billing is worth building.
+```
+Phase 0 → Phase 1 → Phase 2 → Phase 4
+```
+Phase 0 items 2-6 are quick and land first. The approval scanner (item 1) is the largest single piece and is the foundation of the Phase 2 wedge, so it lands before Phase 2 starts.
+
+## Main files
+
+Create: `supabase/functions/_shared/approvals.ts`, `src/pages/Methodology.tsx`, `src/pages/Security.tsx`, `src/pages/Terms.tsx`, `src/components/wallet/ApprovalExposure.tsx`, `src/components/wallet/QuickWatchButton.tsx`, benchmark script, migration for health reports + alert-email preference.
+
+Modify: `Landing.tsx`, `Safe.tsx`, `Health.tsx`, `App.tsx`, `_shared/screening.ts`, `wallet-health-check/index.ts`, `wallet-monitor/index.ts`.
+
+Delete: `src/components/ReportGenerator.tsx`.
+
+## Out of scope
+Stripe, plans, quotas and any paywall — deferred until the product earns it.
