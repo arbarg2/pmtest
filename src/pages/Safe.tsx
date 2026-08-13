@@ -439,15 +439,16 @@ export default function Safe() {
               <Sparkles className="w-3 h-3 mr-1" /> Free • No login needed
             </Badge>
             <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.05]">
-              Don't send to <span className="text-risk-critical">scammers</span>.<br />
-              <span className="text-aurora">Check first.</span>
+              Is it safe to <span className="text-aurora">sign this?</span>
             </h1>
             <p className="text-muted-foreground mt-5 text-lg max-w-xl mx-auto">
-              Paste any wallet address. Get an instant <span className="text-risk-low font-semibold">SAFE</span> /
+              Paste the wallet or contract address you're about to send to, approve or interact with.
+              Get an instant <span className="text-risk-low font-semibold">SAFE</span> /
               <span className="text-risk-medium font-semibold"> CAUTION</span> /
               <span className="text-risk-critical font-semibold"> DANGER</span> verdict, in plain English.
             </p>
           </div>
+
 
           <form onSubmit={submit} className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-neon-cyan via-neon-violet to-neon-magenta rounded-2xl opacity-40 blur-xl group-focus-within:opacity-70 transition-opacity -z-10 animate-glow-pulse" />
