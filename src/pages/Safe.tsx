@@ -1,13 +1,15 @@
 import Seo from '@/components/Seo';
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import { Shield, Search, AlertTriangle, CheckCircle2, ShieldAlert, ArrowRight, Sparkles, Eye, Lock, ArrowLeft, Copy, Check, Zap, Twitter, Bookmark, BookmarkCheck, History, X } from "lucide-react";
+import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
+import { Shield, Search, AlertTriangle, CheckCircle2, ShieldAlert, ArrowRight, Sparkles, Lock, ArrowLeft, Copy, Check, Zap, Twitter, History, X, KeyRound, Briefcase, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import QuickWatchButton from "@/components/wallet/QuickWatchButton";
+
 
 type Verdict = "safe" | "caution" | "danger";
 
@@ -233,9 +235,9 @@ function ShareBar({ address, verdict }: { address: string; verdict: Verdict }) {
   );
 }
 
-// ---- lightweight local return-loop (anon users): recent checks + watchlist ----
+// ---- lightweight local return-loop: recently checked addresses ----
 const RECENT_KEY = "rian:safe:recent";
-const WATCH_KEY = "rian:safe:watch";
+
 const MAX_RECENT = 6;
 
 interface RecentCheck {
@@ -269,33 +271,8 @@ export function useRecentChecks() {
   return { items, remove, refresh: () => setItems(readRecent()) };
 }
 
-function isWatched(address: string) {
-  try { return JSON.parse(localStorage.getItem(WATCH_KEY) ?? "[]").some((a: string) => a.toLowerCase() === address.toLowerCase()); } catch { return false; }
-}
-function toggleWatch(address: string): boolean {
-  const list: string[] = (() => { try { return JSON.parse(localStorage.getItem(WATCH_KEY) ?? "[]"); } catch { return []; } })();
-  const i = list.findIndex((a) => a.toLowerCase() === address.toLowerCase());
-  let watched: boolean;
-  if (i >= 0) { list.splice(i, 1); watched = false; }
-  else { list.push(address); watched = true; }
-  localStorage.setItem(WATCH_KEY, JSON.stringify(list));
-  return watched;
-}
 
-function WatchToggle({ address }: { address: string }) {
-  const [watched, setWatched] = useState(() => isWatched(address));
-  const onClick = () => {
-    const now = toggleWatch(address);
-    setWatched(now);
-    toast.success(now ? "Watching — we'll keep it on your radar" : "Removed from watch");
-  };
-  return (
-    <Button onClick={onClick} variant={watched ? "default" : "outline"} size="sm" className={`gap-2 ${watched ? "bg-aurora text-background hover:opacity-90" : ""}`}>
-      {watched ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
-      {watched ? "Watching" : "Watch"}
-    </Button>
-  );
-}
+
 
 export function RecentChecksStrip() {
   const { items, remove } = useRecentChecks();
@@ -402,18 +379,108 @@ export function SafeCheckRunner({ address, onResult }: { address: string; onResu
   return (
     <div className="space-y-4 pb-24 sm:pb-4">
       <div className="flex items-center justify-end -mb-1">
-        <WatchToggle address={result.address} />
+        <QuickWatchButton
+          address={result.address}
+          network={result.network}
+          riskScore={result.risk_score}
+        />
       </div>
       <VerdictCard result={result} />
+      <EvidenceBlocks result={result} />
       <ReasonsList reasons={result.reasons} />
       <StatsGrid result={result} />
+      <EscalateCard address={result.address} />
       <ShareBar address={result.address} verdict={result.verdict} />
     </div>
   );
 }
 
+function EvidenceBlocks({ result }: { result: CheckResult }) {
+  const behaviouralFlags = result.reasons.filter(
+    (r) => !["sanctions", "scam", "malicious"].includes(r.type) && r.severity !== "low",
+  );
+  const blocks = [
+    {
+      icon: ShieldAlert,
+      title: "OFAC sanctions",
+      hit: !!result.data.sanctioned,
+      hitText: "Direct match on the OFAC SDN list.",
+      clearText: `No match against the OFAC SDN list${
+        result.evidence_basis?.sanctions_count
+          ? ` (${result.evidence_basis.sanctions_count.toLocaleString()} addresses)`
+          : ""
+      }.`,
+    },
+    {
+      icon: KeyRound,
+      title: "Scam & drainer registry",
+      hit: !!result.data.malicious,
+      hitText: "This address is tagged as a known scam or wallet-drainer.",
+      clearText: `Not listed among ${
+        result.evidence_basis?.malicious_count?.toLocaleString() ?? "known"
+      } tagged scam / drainer addresses.`,
+    },
+    {
+      icon: PenLine,
+      title: "On-chain behaviour",
+      hit: behaviouralFlags.length > 0,
+      hitText: behaviouralFlags.map((r) => r.text).join(" "),
+      clearText: "Nothing unusual in the address's activity pattern.",
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-fade-in">
+      {blocks.map((b) => (
+        <Card
+          key={b.title}
+          className={`p-4 backdrop-blur-xl ${
+            b.hit
+              ? "border-risk-critical/40 bg-risk-critical/5"
+              : "border-risk-low/25 bg-card/40"
+          }`}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <b.icon className={`w-4 h-4 ${b.hit ? "text-risk-critical" : "text-risk-low"}`} />
+            <span className="text-xs font-semibold uppercase tracking-wider">{b.title}</span>
+          </div>
+          <div className={`text-sm font-semibold ${b.hit ? "text-risk-critical" : "text-risk-low"}`}>
+            {b.hit ? "Match" : "Clear"}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+            {b.hit ? b.hitText : b.clearText}
+          </p>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function EscalateCard({ address }: { address: string }) {
+  return (
+    <Card className="p-4 bg-card/40 border-border/50 flex flex-col sm:flex-row sm:items-center gap-3 animate-fade-in">
+      <div className="flex-1">
+        <div className="text-sm font-semibold flex items-center gap-2">
+          <Briefcase className="w-4 h-4 text-neon-violet" /> Need the full picture?
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Open this address in the analyst console for counterparty tracing, evidence logging and a
+          case file.
+        </p>
+      </div>
+      <Link to={`/dashboard?address=${encodeURIComponent(address)}`} className="shrink-0">
+        <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto">
+          Escalate to analyst console <ArrowRight className="w-4 h-4" />
+        </Button>
+      </Link>
+    </Card>
+  );
+}
+
+
 export default function Safe() {
-  const [input, setInput] = useState("");
+  const [searchParams] = useSearchParams();
+  const [input, setInput] = useState(searchParams.get("address") ?? "");
   const navigate = useNavigate();
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -421,6 +488,7 @@ export default function Safe() {
     if (!v) return;
     navigate(`/safe/check/${v}`);
   };
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       <Seo title="Safe Check — Is This Wallet Safe to Send To?" description="Paste any BTC, ETH or Solana address and get a plain-English safety verdict before you transact. Free instant scam and sanctions check." path="/safe" />
@@ -437,15 +505,16 @@ export default function Safe() {
               <Sparkles className="w-3 h-3 mr-1" /> Free • No login needed
             </Badge>
             <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.05]">
-              Don't send to <span className="text-risk-critical">scammers</span>.<br />
-              <span className="text-aurora">Check first.</span>
+              Is it safe to <span className="text-aurora">sign this?</span>
             </h1>
             <p className="text-muted-foreground mt-5 text-lg max-w-xl mx-auto">
-              Paste any wallet address. Get an instant <span className="text-risk-low font-semibold">SAFE</span> /
+              Paste the wallet or contract address you're about to send to, approve or interact with.
+              Get an instant <span className="text-risk-low font-semibold">SAFE</span> /
               <span className="text-risk-medium font-semibold"> CAUTION</span> /
               <span className="text-risk-critical font-semibold"> DANGER</span> verdict, in plain English.
             </p>
           </div>
+
 
           <form onSubmit={submit} className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-neon-cyan via-neon-violet to-neon-magenta rounded-2xl opacity-40 blur-xl group-focus-within:opacity-70 transition-opacity -z-10 animate-glow-pulse" />

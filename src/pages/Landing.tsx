@@ -1,5 +1,5 @@
 import Seo from '@/components/Seo';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Shield, Eye, CheckCircle, ArrowRight, Twitter, Linkedin, Lock, Zap, Globe, Users } from 'lucide-react';
 import { useDemoWalletAnalysis } from '@/hooks/useDemoWalletAnalysis';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,12 +11,51 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import EarlyAccessModal from '@/components/auth/EarlyAccessModal';
 import { QuickStartDemo } from '@/components/QuickStartDemo';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+
+interface TickerItem {
+  addr: string;
+  verdict: string;
+  label: string;
+}
+
+const shorten = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+
+const verdictLabel: Record<string, string> = {
+  safe: 'No matches found',
+  caution: 'Signals worth reviewing',
+  danger: 'Flagged address',
+};
 
 const Landing = () => {
   const [showEarlyAccess, setShowEarlyAccess] = useState(false);
   const navigate = useNavigate();
   const { analyzeDemoWallet } = useDemoWalletAnalysis();
+  const [tickerItems, setTickerItems] = useState<TickerItem[]>([]);
+
+  // Real recent public checks — no invented verdicts on the ticker.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('public_checks')
+        .select('address, network, verdict, risk_score, created_at')
+        .order('created_at', { ascending: false })
+        .limit(12);
+      if (cancelled || !data?.length) return;
+      setTickerItems(
+        data.map((c: any) => ({
+          addr: shorten(String(c.address)),
+          verdict: String(c.verdict ?? 'safe'),
+          label: `${verdictLabel[String(c.verdict)] ?? 'Checked'} · ${c.risk_score ?? 0}/100`,
+        })),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleTryDemo = async (address: string) => {
     try {
@@ -34,22 +73,12 @@ const Landing = () => {
     }
   };
 
-  const tickerItems = [
-    { addr: '0x742d…f44e', verdict: 'safe', label: 'Verified DEX router' },
-    { addr: 'bc1q…h7sm', verdict: 'caution', label: 'Mixer proximity' },
-    { addr: '0x8a3c…2b91', verdict: 'safe', label: 'Known exchange hot wallet' },
-    { addr: '0xdac1…1ec7', verdict: 'danger', label: 'OFAC sanctioned' },
-    { addr: 'So1ana…9k2P', verdict: 'safe', label: 'Clean history' },
-    { addr: '0x1f98…6f88', verdict: 'caution', label: 'Unverified contract' },
-    { addr: '0xa0b8…eb48', verdict: 'safe', label: 'USDC issuer' },
-    { addr: '0xfacc…dc12', verdict: 'danger', label: 'Drainer pattern' },
-  ];
-
   const verdictStyles: Record<string, string> = {
     safe: 'bg-risk-low/15 text-risk-low border-risk-low/40',
     caution: 'bg-risk-medium/15 text-risk-medium border-risk-medium/40',
     danger: 'bg-risk-critical/15 text-risk-critical border-risk-critical/40',
   };
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -98,15 +127,16 @@ const Landing = () => {
 
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 animate-fade-in leading-[1.05]">
             Don't get rugged.
-            <span className="block text-aurora">Check before you click.</span>
+            <span className="block text-aurora">Check before you sign.</span>
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-slide-up">
-            Paste any wallet, contract, or token. Rìan instantly screens for scams, sanctions,
-            risky approvals, and shady money trails — across BTC, ETH, and Solana.
+            Paste any wallet or contract address. Rìan screens it against the live OFAC sanctions
+            list, thousands of tagged scam and drainer addresses, and its own on-chain history —
+            then tells you plainly whether it's safe.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center animate-scale-in mb-10">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center animate-scale-in mb-4">
             <Button
               onClick={() => navigate('/safe')}
               size="lg"
@@ -125,21 +155,30 @@ const Landing = () => {
             </Button>
           </div>
 
-          {/* Live verdict ticker */}
-          <div className="marquee-mask relative max-w-4xl mx-auto">
-            <div className="marquee-track gap-3 py-2">
-              {[...tickerItems, ...tickerItems].map((item, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full border text-xs font-mono backdrop-blur bg-card/40 ${verdictStyles[item.verdict]}`}
-                >
-                  <span className="font-semibold uppercase tracking-wider text-[10px]">{item.verdict}</span>
-                  <span className="opacity-80">{item.addr}</span>
-                  <span className="opacity-60">· {item.label}</span>
-                </div>
-              ))}
+          <p className="text-xs text-muted-foreground mb-10">
+            Free · no login · read-only. Bitcoin and Ethereum in full, Solana screening only.{' '}
+            <Link to="/methodology" className="text-neon-cyan hover:underline">
+              How we score it
+            </Link>
+          </p>
+
+          {/* Live verdict ticker — real recent public checks */}
+          {tickerItems.length > 0 && (
+            <div className="marquee-mask relative max-w-4xl mx-auto">
+              <div className="marquee-track gap-3 py-2">
+                {[...tickerItems, ...tickerItems].map((item, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full border text-xs font-mono backdrop-blur bg-card/40 ${verdictStyles[item.verdict]}`}
+                  >
+                    <span className="font-semibold uppercase tracking-wider text-[10px]">{item.verdict}</span>
+                    <span className="opacity-80">{item.addr}</span>
+                    <span className="opacity-60">· {item.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Feature cards */}
           <h2 className="relative mt-16 text-2xl md:text-3xl font-bold tracking-tight">
@@ -147,9 +186,9 @@ const Landing = () => {
           </h2>
           <div className="relative mt-6 grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {[
-              { Icon: Zap, color: 'text-neon-cyan', title: 'Instant verdict', body: 'One paste. One score. Plain-English risk in under 2 seconds.' },
-              { Icon: Shield, color: 'text-neon-violet', title: 'Scam & approval scan', body: 'Spots drainers, fake tokens, and risky token approvals before you sign.' },
-              { Icon: Eye, color: 'text-neon-magenta', title: 'Whale & money trail', body: 'See who funds it, where it flows, and which mixers it touches.' },
+              { Icon: Zap, color: 'text-neon-cyan', title: 'Sanctions & scam lists', body: 'The real OFAC SDN list plus thousands of Etherscan-tagged phishing and drainer addresses, re-synced daily.' },
+              { Icon: Shield, color: 'text-neon-violet', title: 'Live token approvals', body: 'Scans your Ethereum wallet for unlimited and high-risk allowances that a contract could still drain.' },
+              { Icon: Eye, color: 'text-neon-magenta', title: 'Counterparty trail', body: 'Walks who a wallet has actually transacted with and flags mixers and sanctioned counterparties.' },
             ].map(({ Icon, color, title, body }) => (
               <div
                 key={title}
@@ -163,6 +202,7 @@ const Landing = () => {
               </div>
             ))}
           </div>
+
         </div>
       </section>
 
@@ -368,7 +408,10 @@ const Landing = () => {
                   </ScrollArea>
                 </DialogContent>
               </Dialog>
-              <a href="#" className="text-slate-400 hover:text-white transition-colors hover-scale">Terms of Service</a>
+              <Link to="/terms" className="text-slate-400 hover:text-white transition-colors hover-scale">Terms of Service</Link>
+              <Link to="/methodology" className="text-slate-400 hover:text-white transition-colors hover-scale">Methodology</Link>
+              <Link to="/security-policy" className="text-slate-400 hover:text-white transition-colors hover-scale">Security</Link>
+
             </div>
             
             <div className="flex items-center space-x-4">

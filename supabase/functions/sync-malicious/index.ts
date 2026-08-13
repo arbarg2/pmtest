@@ -6,6 +6,7 @@
 // without aborting the whole sync, exactly like sync-sanctions.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { isAuthorizedCronCall } from "../_shared/cron-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,16 +59,20 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // No auth gate: this function only syncs public community blocklist data and is
-  // meant to be triggered by pg_cron (which passes the public anon key as `apikey`,
-  // not a custom header). Re-running it is idempotent and cheap.
+  // Scheduler-only: pg_cron authenticates with the Vault-held cron secret.
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
 
+  if (!(await isAuthorizedCronCall(req, supabase))) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+
 
     const summary: Record<string, { fetched: number; upserted: number }> = {};
 

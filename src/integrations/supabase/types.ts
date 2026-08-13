@@ -185,6 +185,36 @@ export type Database = {
           },
         ]
       }
+      health_reports: {
+        Row: {
+          address: string
+          created_at: string
+          id: string
+          network: string
+          report: Json
+          risk_score: number
+          verdict: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          id?: string
+          network: string
+          report: Json
+          risk_score: number
+          verdict: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          id?: string
+          network?: string
+          report?: Json
+          risk_score?: number
+          verdict?: string
+        }
+        Relationships: []
+      }
       investigation_records: {
         Row: {
           ai_summary: string | null
@@ -318,6 +348,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          alert_email_enabled: boolean
           created_at: string
           email: string | null
           full_name: string | null
@@ -325,6 +356,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          alert_email_enabled?: boolean
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -332,6 +364,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          alert_email_enabled?: boolean
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -1051,6 +1084,7 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      verify_cron_secret: { Args: { _provided: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "analyst" | "user"

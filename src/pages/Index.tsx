@@ -70,6 +70,14 @@ const Index = () => {
     }
   }, [location.state, navigate, location.pathname]);
 
+  // One-tap escalation from the consumer Safe check: /dashboard?address=0x…
+  useEffect(() => {
+    const escalated = searchParams.get('address');
+    if (escalated) setWalletAddress(escalated);
+  }, [searchParams]);
+
+
+
   useEffect(() => {
     if (recordId && (user || isDemo)) {
       console.log('🔄 Loading data for record:', recordId, 'Demo mode:', isDemo);

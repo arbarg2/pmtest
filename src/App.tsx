@@ -18,6 +18,11 @@ import AuditLogs from "./pages/AuditLogs";
 import WalletTransactionFlow from "./pages/WalletTransactionFlow";
 import Safe, { SafeCheckPage } from "./pages/Safe";
 import Health from "./pages/Health";
+import HealthReportPage from "./pages/HealthReport";
+import Methodology from "./pages/Methodology";
+import SecurityPolicy from "./pages/SecurityPolicy";
+import Terms from "./pages/Terms";
+
 import { AuthPage } from "./components/auth/AuthPage";
 import OAuthConsent from "./pages/OAuthConsent";
 
@@ -45,7 +50,12 @@ const App = () => (
                 <Route path="/api-docs" element={<ApiDocs />} />
                 <Route path="/safe" element={<Safe />} />
                 <Route path="/health" element={<Health />} />
+                <Route path="/health/report/:id" element={<HealthReportPage />} />
+                <Route path="/methodology" element={<Methodology />} />
+                <Route path="/security-policy" element={<SecurityPolicy />} />
+                <Route path="/terms" element={<Terms />} />
                 <Route path="/safe/check/:address" element={<SafeCheckPage />} />
+
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
