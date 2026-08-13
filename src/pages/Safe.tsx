@@ -235,9 +235,9 @@ function ShareBar({ address, verdict }: { address: string; verdict: Verdict }) {
   );
 }
 
-// ---- lightweight local return-loop (anon users): recent checks + watchlist ----
+// ---- lightweight local return-loop: recently checked addresses ----
 const RECENT_KEY = "rian:safe:recent";
-const WATCH_KEY = "rian:safe:watch";
+
 const MAX_RECENT = 6;
 
 interface RecentCheck {
