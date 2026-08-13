@@ -271,33 +271,8 @@ export function useRecentChecks() {
   return { items, remove, refresh: () => setItems(readRecent()) };
 }
 
-function isWatched(address: string) {
-  try { return JSON.parse(localStorage.getItem(WATCH_KEY) ?? "[]").some((a: string) => a.toLowerCase() === address.toLowerCase()); } catch { return false; }
-}
-function toggleWatch(address: string): boolean {
-  const list: string[] = (() => { try { return JSON.parse(localStorage.getItem(WATCH_KEY) ?? "[]"); } catch { return []; } })();
-  const i = list.findIndex((a) => a.toLowerCase() === address.toLowerCase());
-  let watched: boolean;
-  if (i >= 0) { list.splice(i, 1); watched = false; }
-  else { list.push(address); watched = true; }
-  localStorage.setItem(WATCH_KEY, JSON.stringify(list));
-  return watched;
-}
 
-function WatchToggle({ address }: { address: string }) {
-  const [watched, setWatched] = useState(() => isWatched(address));
-  const onClick = () => {
-    const now = toggleWatch(address);
-    setWatched(now);
-    toast.success(now ? "Watching — we'll keep it on your radar" : "Removed from watch");
-  };
-  return (
-    <Button onClick={onClick} variant={watched ? "default" : "outline"} size="sm" className={`gap-2 ${watched ? "bg-aurora text-background hover:opacity-90" : ""}`}>
-      {watched ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
-      {watched ? "Watching" : "Watch"}
-    </Button>
-  );
-}
+
 
 export function RecentChecksStrip() {
   const { items, remove } = useRecentChecks();
