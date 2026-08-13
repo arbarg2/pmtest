@@ -9,6 +9,8 @@ import { WalletRiskResponse } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { FunctionsHttpError } from '@supabase/supabase-js';
+
 import RegulatorJustification from './RegulatorJustification';
 import { regulatorReportExportService } from '@/services/regulatorReportExport';
 import EmailReportDialog from './EmailReportDialog';
