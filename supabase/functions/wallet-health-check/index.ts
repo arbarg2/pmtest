@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { detectNetwork, shortAddr } from "../_shared/screening.ts";
+import { scanApprovals, EMPTY_APPROVAL_SCAN, type ApprovalScan } from "../_shared/approvals.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,17 +18,19 @@ const KNOWN_MIXERS: Record<string, string> = {
   "0xa160cdab225685da1d56aa342ad8841c3b53f291": "Tornado Cash 100 ETH",
 };
 
+const ETH_TX_CAP = 500;
+const BTC_TX_CAP = 500;
+
 async function ethCounterparties(address: string, key: string) {
   const base = "https://api.etherscan.io/v2/api?chainid=1";
   const q = (action: string) =>
-    `${base}&module=account&action=${action}&address=${address}&startblock=0&endblock=99999999&page=1&offset=500&sort=desc&apikey=${key}`;
+    `${base}&module=account&action=${action}&address=${address}&startblock=0&endblock=99999999&page=1&offset=${ETH_TX_CAP}&sort=desc&apikey=${key}`;
   const [txRes, tokenRes] = await Promise.all([fetch(q("txlist")), fetch(q("tokentx"))]);
   const txs = await txRes.json().catch(() => ({}));
   const tokens = await tokenRes.json().catch(() => ({}));
-  const all: any[] = [
-    ...(Array.isArray(txs?.result) ? txs.result : []),
-    ...(Array.isArray(tokens?.result) ? tokens.result : []),
-  ];
+  const nativeList: any[] = Array.isArray(txs?.result) ? txs.result : [];
+  const tokenList: any[] = Array.isArray(tokens?.result) ? tokens.result : [];
+  const all: any[] = [...nativeList, ...tokenList];
   const me = address.toLowerCase();
   const counterparties = new Map<string, { sent: number; received: number }>();
   let firstSeen: number | null = null;
@@ -43,12 +46,39 @@ async function ethCounterparties(address: string, key: string) {
     else rec.received += 1;
     counterparties.set(other, rec);
   }
-  return { counterparties, txCount: all.length, firstSeen };
+  // Etherscan returns at most `offset` records per list, so hitting the cap
+  // means we only saw the most recent slice of this wallet's history.
+  const truncated = nativeList.length >= ETH_TX_CAP || tokenList.length >= ETH_TX_CAP;
+  return { counterparties, txCount: all.length, firstSeen, truncated };
 }
 
+/**
+ * Blockstream returns 25 confirmed txs per page and requires cursor pagination
+ * via /txs/chain/:last_seen_txid. Without this the counterparty count and the
+ * transaction total were silently limited to the first page.
+ */
 async function btcCounterparties(address: string) {
-  const r = await fetch(`https://blockstream.info/api/address/${address}/txs`);
-  const txs: any[] = r.ok ? await r.json() : [];
+  const txs: any[] = [];
+  let cursor: string | null = null;
+  let truncated = false;
+
+  while (txs.length < BTC_TX_CAP) {
+    const url = cursor
+      ? `https://blockstream.info/api/address/${address}/txs/chain/${cursor}`
+      : `https://blockstream.info/api/address/${address}/txs`;
+    const r = await fetch(url);
+    if (!r.ok) break;
+    const page: any[] = await r.json().catch(() => []);
+    if (!page.length) break;
+    txs.push(...page);
+    cursor = page[page.length - 1]?.txid ?? null;
+    if (!cursor || page.length < 25) break;
+    if (txs.length >= BTC_TX_CAP) {
+      truncated = true;
+      break;
+    }
+  }
+
   const counterparties = new Map<string, { sent: number; received: number }>();
   let firstSeen: number | null = null;
   for (const t of txs) {
@@ -74,7 +104,7 @@ async function btcCounterparties(address: string) {
       counterparties.set(a, rec);
     }
   }
-  return { counterparties, txCount: txs.length, firstSeen };
+  return { counterparties, txCount: txs.length, firstSeen, truncated };
 }
 
 serve(async (req) => {
@@ -107,19 +137,36 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const address = String(body?.address ?? "").trim();
     const network = detectNetwork(address);
-    if (!address || !network || network === "solana") {
+
+    if (!address || !network) {
       return new Response(
         JSON.stringify({ error: "Provide a valid Ethereum or Bitcoin address" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+    if (network === "solana") {
+      return new Response(
+        JSON.stringify({
+          error: "solana_unsupported",
+          message:
+            "Wallet Health Check does not support Solana yet — the counterparty graph is Ethereum and Bitcoin only. Use Safe Check for a Solana address.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const admin = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const etherscanKey = Deno.env.get("ETHERSCAN_API_KEY") ?? "";
 
-    const { counterparties, txCount, firstSeen } =
+    const [graph, approvals] = await Promise.all([
       network === "ethereum"
-        ? await ethCounterparties(address, Deno.env.get("ETHERSCAN_API_KEY") ?? "")
-        : await btcCounterparties(address);
+        ? ethCounterparties(address, etherscanKey)
+        : btcCounterparties(address),
+      network === "ethereum"
+        ? scanApprovals(admin, address, etherscanKey)
+        : Promise.resolve({ ...EMPTY_APPROVAL_SCAN } as ApprovalScan),
+    ]);
+    const { counterparties, txCount, firstSeen, truncated } = graph;
 
     const cpList = [...counterparties.keys()];
 
@@ -155,6 +202,20 @@ serve(async (req) => {
       };
     });
 
+    // Known scam / drainer counterparties
+    const maliciousContacts: any[] = [];
+    for (let i = 0; i < cpList.length; i += 200) {
+      const chunk = cpList.slice(i, i + 200);
+      const { data } = await admin
+        .from("malicious_addresses")
+        .select("address, label, category, source")
+        .in("address", chunk);
+      for (const m of data ?? []) {
+        const flow = counterparties.get(String(m.address).toLowerCase());
+        maliciousContacts.push({ ...m, sent_txs: flow?.sent ?? 0, received_txs: flow?.received ?? 0 });
+      }
+    }
+
     const mixerContacts = cpList
       .filter((a) => KNOWN_MIXERS[a])
       .map((a) => ({ address: a, label: KNOWN_MIXERS[a], ...counterparties.get(a)! }));
@@ -170,6 +231,14 @@ serve(async (req) => {
         text: `Direct interaction with ${sanctionedContacts.length} OFAC-sanctioned address(es).`,
       });
     }
+    if (maliciousContacts.length) {
+      score = Math.max(score, 90);
+      reasons.push({
+        type: "scam",
+        severity: "high",
+        text: `Interaction with ${maliciousContacts.length} known scam / drainer address(es).`,
+      });
+    }
     if (mixerContacts.length) {
       score = Math.max(score, 75);
       reasons.push({
@@ -178,6 +247,30 @@ serve(async (req) => {
         text: `Exposure to ${mixerContacts.length} known mixer contract(s).`,
       });
     }
+
+    const highRiskApprovals = approvals.risky_approvals.filter((a) => a.risk === "high");
+    if (highRiskApprovals.length) {
+      score = Math.max(score, 70);
+      reasons.push({
+        type: "approval",
+        severity: "high",
+        text: `${highRiskApprovals.length} high-risk token approval(s) still active — a contract can move those tokens without asking you again.`,
+      });
+    } else if (approvals.unlimited_count) {
+      score = Math.max(score, 40);
+      reasons.push({
+        type: "approval",
+        severity: "medium",
+        text: `${approvals.unlimited_count} unlimited token approval(s) still active.`,
+      });
+    } else if (approvals.supported) {
+      reasons.push({
+        type: "approval",
+        severity: "low",
+        text: "No unlimited or high-risk token approvals outstanding.",
+      });
+    }
+
     if (txCount === 0) {
       score = Math.max(score, 30);
       reasons.push({
@@ -189,7 +282,9 @@ serve(async (req) => {
       reasons.push({
         type: "history",
         severity: "low",
-        text: `${txCount} transactions across ${cpList.length} unique counterparties.`,
+        text: truncated
+          ? `${txCount} most recent transactions reviewed across ${cpList.length} unique counterparties (history capped for speed).`
+          : `${txCount} transactions across ${cpList.length} unique counterparties.`,
       });
     }
     const ageDays = firstSeen ? (Date.now() - firstSeen) / 86400000 : null;
@@ -205,15 +300,17 @@ serve(async (req) => {
         reasons.push({
           type: "age",
           severity: "low",
-          text: `Wallet has been active for ${Math.round(ageDays)} days.`,
+          text: truncated
+            ? `Active for at least ${Math.round(ageDays)} days within the reviewed window.`
+            : `Wallet has been active for ${Math.round(ageDays)} days.`,
         });
       }
     }
-    if (!sanctionedContacts.length && !mixerContacts.length && txCount > 0) {
+    if (!sanctionedContacts.length && !mixerContacts.length && !maliciousContacts.length && txCount > 0) {
       reasons.push({
         type: "clean",
         severity: "low",
-        text: "No sanctioned or mixer counterparties found in the reviewed history.",
+        text: "No sanctioned, scam or mixer counterparties found in the reviewed history.",
       });
     }
 
@@ -228,12 +325,33 @@ serve(async (req) => {
       risk_score: score,
       total_counterparties: cpList.length,
       total_transactions: txCount,
+      history_truncated: truncated,
       first_seen: firstSeen,
       sanctioned_contacts: sanctionedContacts,
+      malicious_contacts: maliciousContacts,
       mixer_contacts: mixerContacts,
+      approvals: {
+        supported: approvals.supported,
+        total_spenders: approvals.total_spenders,
+        unlimited_count: approvals.unlimited_count,
+        risky: approvals.risky_approvals,
+      },
       reasons,
       scanned_at: new Date().toISOString(),
     };
+
+    // Shareable, deep-linkable copy of the report
+    const { data: shared } = await admin
+      .from("health_reports")
+      .insert({
+        address,
+        network,
+        verdict,
+        risk_score: score,
+        report,
+      })
+      .select("id")
+      .maybeSingle();
 
     // Persist as an investigation record for dashboard history
     const { data: saved } = await admin
@@ -250,9 +368,14 @@ serve(async (req) => {
       .select("record_id")
       .maybeSingle();
 
-    return new Response(JSON.stringify({ ...report, record_id: saved?.record_id ?? null }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        ...report,
+        report_id: shared?.id ?? null,
+        record_id: saved?.record_id ?? null,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e) {
     console.error("wallet-health-check error", e);
     return new Response(
