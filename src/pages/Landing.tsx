@@ -1,5 +1,5 @@
 import Seo from '@/components/Seo';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Shield, Eye, CheckCircle, ArrowRight, Twitter, Linkedin, Lock, Zap, Globe, Users } from 'lucide-react';
 import { useDemoWalletAnalysis } from '@/hooks/useDemoWalletAnalysis';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,12 +11,51 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import EarlyAccessModal from '@/components/auth/EarlyAccessModal';
 import { QuickStartDemo } from '@/components/QuickStartDemo';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+
+interface TickerItem {
+  addr: string;
+  verdict: string;
+  label: string;
+}
+
+const shorten = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+
+const verdictLabel: Record<string, string> = {
+  safe: 'No matches found',
+  caution: 'Signals worth reviewing',
+  danger: 'Flagged address',
+};
 
 const Landing = () => {
   const [showEarlyAccess, setShowEarlyAccess] = useState(false);
   const navigate = useNavigate();
   const { analyzeDemoWallet } = useDemoWalletAnalysis();
+  const [tickerItems, setTickerItems] = useState<TickerItem[]>([]);
+
+  // Real recent public checks — no invented verdicts on the ticker.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('public_checks')
+        .select('address, network, verdict, risk_score, created_at')
+        .order('created_at', { ascending: false })
+        .limit(12);
+      if (cancelled || !data?.length) return;
+      setTickerItems(
+        data.map((c: any) => ({
+          addr: shorten(String(c.address)),
+          verdict: String(c.verdict ?? 'safe'),
+          label: `${verdictLabel[String(c.verdict)] ?? 'Checked'} · ${c.risk_score ?? 0}/100`,
+        })),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleTryDemo = async (address: string) => {
     try {
@@ -34,22 +73,12 @@ const Landing = () => {
     }
   };
 
-  const tickerItems = [
-    { addr: '0x742d…f44e', verdict: 'safe', label: 'Verified DEX router' },
-    { addr: 'bc1q…h7sm', verdict: 'caution', label: 'Mixer proximity' },
-    { addr: '0x8a3c…2b91', verdict: 'safe', label: 'Known exchange hot wallet' },
-    { addr: '0xdac1…1ec7', verdict: 'danger', label: 'OFAC sanctioned' },
-    { addr: 'So1ana…9k2P', verdict: 'safe', label: 'Clean history' },
-    { addr: '0x1f98…6f88', verdict: 'caution', label: 'Unverified contract' },
-    { addr: '0xa0b8…eb48', verdict: 'safe', label: 'USDC issuer' },
-    { addr: '0xfacc…dc12', verdict: 'danger', label: 'Drainer pattern' },
-  ];
-
   const verdictStyles: Record<string, string> = {
     safe: 'bg-risk-low/15 text-risk-low border-risk-low/40',
     caution: 'bg-risk-medium/15 text-risk-medium border-risk-medium/40',
     danger: 'bg-risk-critical/15 text-risk-critical border-risk-critical/40',
   };
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
