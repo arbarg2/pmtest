@@ -408,7 +408,10 @@ const Landing = () => {
                   </ScrollArea>
                 </DialogContent>
               </Dialog>
-              <a href="#" className="text-slate-400 hover:text-white transition-colors hover-scale">Terms of Service</a>
+              <Link to="/terms" className="text-slate-400 hover:text-white transition-colors hover-scale">Terms of Service</Link>
+              <Link to="/methodology" className="text-slate-400 hover:text-white transition-colors hover-scale">Methodology</Link>
+              <Link to="/security-policy" className="text-slate-400 hover:text-white transition-colors hover-scale">Security</Link>
+
             </div>
             
             <div className="flex items-center space-x-4">
