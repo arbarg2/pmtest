@@ -9,6 +9,8 @@ import { WalletRiskResponse } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { FunctionsHttpError } from '@supabase/supabase-js';
+
 import RegulatorJustification from './RegulatorJustification';
 import { regulatorReportExportService } from '@/services/regulatorReportExport';
 import EmailReportDialog from './EmailReportDialog';
@@ -103,53 +105,49 @@ const EnhancedWalletResults = ({
     }
   };
 
-  // Updated function to handle email addresses
+  // Sends the report via the delivery webhook. The report body is rebuilt
+  // server-side from the record — we only send what the function needs.
   const handleEmailReport = async (emailAddresses: string[]) => {
     setIsEmailingReport(true);
     try {
-      const reportData = {
-        wallet,
-        recordId: recordId || 'unknown',
-        riskFactors,
-        sanctionsMatches,
-        analystNotes,
-        investigationStatus,
-        isCase,
-        caseId,
-        caseStatus,
-        caseCreatedAt,
-        assignedAnalyst,
-        timestamp: new Date().toISOString(),
-        reportType: 'wallet_intelligence',
-        source: 'rian_platform',
-        emailAddresses: emailAddresses
-      };
-
-      console.log('📧 Sending report via Edge Function with email addresses:', emailAddresses);
-      
       const { data, error } = await supabase.functions.invoke('send-report-webhook', {
-        body: reportData
+        body: {
+          recordId: recordId || wallet.lookupId,
+          reportType: 'wallet_intelligence',
+          timestamp: new Date().toISOString(),
+          emailAddresses,
+        },
       });
 
       if (error) {
-        console.error('Edge Function error:', error);
-        throw new Error(error.message || 'Failed to send report');
+        const details =
+          error instanceof FunctionsHttpError ? await error.context.text() : error.message;
+        console.error('send-report-webhook failed:', details);
+        let message = 'Failed to send report. Please try again.';
+        try {
+          const parsed = JSON.parse(details);
+          if (parsed?.error) message = String(parsed.error);
+        } catch {
+          /* keep default message */
+        }
+        throw new Error(message);
       }
 
-      if (data?.success) {
-        console.log('✅ Report sent successfully');
-        toast.success(`Report sent successfully to ${emailAddresses.length} recipient(s).`);
-        setIsEmailDialogOpen(false);
-      } else {
-        throw new Error(data?.error || 'Failed to send report');
+      if (!data?.success) {
+        throw new Error(data?.error || 'The report was not delivered. Please try again.');
       }
+
+      toast.success(`Report sent to ${data.recipients ?? emailAddresses.length} recipient(s).`);
+      setIsEmailDialogOpen(false);
     } catch (error) {
-      console.error('❌ Failed to send report:', error);
-      toast.error("Failed to send report. Please try again.");
+      console.error('Failed to send report:', error);
+      // Dialog stays open so the recipient list isn't lost.
+      toast.error(error instanceof Error ? error.message : 'Failed to send report. Please try again.');
     } finally {
       setIsEmailingReport(false);
     }
   };
+
 
   const handleNotesUpdate = (notes: any[], status: string) => {
     setInvestigationStatus(status);
