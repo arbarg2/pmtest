@@ -50,7 +50,12 @@ const App = () => (
                 <Route path="/api-docs" element={<ApiDocs />} />
                 <Route path="/safe" element={<Safe />} />
                 <Route path="/health" element={<Health />} />
+                <Route path="/health/report/:id" element={<HealthReportPage />} />
+                <Route path="/methodology" element={<Methodology />} />
+                <Route path="/security-policy" element={<SecurityPolicy />} />
+                <Route path="/terms" element={<Terms />} />
                 <Route path="/safe/check/:address" element={<SafeCheckPage />} />
+
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
