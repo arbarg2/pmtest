@@ -18,6 +18,11 @@ import AuditLogs from "./pages/AuditLogs";
 import WalletTransactionFlow from "./pages/WalletTransactionFlow";
 import Safe, { SafeCheckPage } from "./pages/Safe";
 import Health from "./pages/Health";
+import HealthReportPage from "./pages/HealthReport";
+import Methodology from "./pages/Methodology";
+import SecurityPolicy from "./pages/SecurityPolicy";
+import Terms from "./pages/Terms";
+
 import { AuthPage } from "./components/auth/AuthPage";
 import OAuthConsent from "./pages/OAuthConsent";
 
