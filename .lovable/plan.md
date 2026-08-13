@@ -1,35 +1,30 @@
-# Fix emailed wallet reports
+# Stopgap: make emailed wallet reports send again
 
-## What's actually happening
+Restore the data the Tines automation needs, and stop the UI claiming success when nothing was delivered.
 
-The "Email report" dialog never sends an email from the app. When you add recipients and hit send, the app calls the `send-report-webhook` backend function, which forwards a payload to an external Tines automation webhook.
+Tradeoff accepted: delivery still depends on the external automation, and recipient email addresses leave the platform.
 
-During the earlier security hardening pass, that function was changed to strip the payload down to four fields: record ID, report type, timestamp, and user ID. The recipient list and the report content are no longer forwarded at all. So the external automation receives a ping with no addresses and no report to send — the UI still shows "Report sent successfully" because the webhook returns 200.
+## Backend — `send-report-webhook`
 
-That explains why it worked before and silently stopped.
+Keep the existing auth check (Bearer token, verified user), then:
 
-## Recommended fix: send the report from the app itself
+- Validate the body with Zod instead of ad-hoc string slicing:
+  - `emailAddresses`: 1-10 valid email addresses, required
+  - `recordId`, `reportType`, `timestamp`, plus a bounded report summary
+- Verify the caller actually owns the record (or is a member of its workspace) before forwarding anything — reuse the ownership check pattern from `sar-generate`. Reject with 403 otherwise.
+- Re-read the record server-side (`investigation_records`) rather than trusting the browser's copy, and build a minimal summary from it: wallet address, network, risk score, risk level, verdict, top risk factors (capped, truncated), sanctions match count, investigation status, case ID/status, assigned analyst, and a deep link to the record.
+- Forward recipients + summary to the Tines webhook.
+- Treat the webhook response strictly: only return `success: true` on a 2xx. On non-2xx, return the webhook's status and body text so the failure is visible instead of a generic 500.
 
-Stop depending on an external automation for delivery and send the report through Lovable's built-in email system.
+## Frontend — `EnhancedWalletResults`
 
-1. Set up a sender domain (a domain you own) — required before any app email can be delivered.
-2. Provision the email infrastructure and the send function.
-3. Build a branded "Wallet Intelligence Report" email template: verdict/risk score, wallet address and network, key risk reasons, sanctions screening result, analyst notes and case status, plus a link back to the record in Rìan.
-4. Rewire the `send-report-webhook` function (renamed to a report-send function) to:
-   - verify the caller owns / has workspace access to the record,
-   - re-fetch the record server-side rather than trusting the browser payload,
-   - cap recipients (the UI already caps at 10) and send one email per recipient with an idempotency key,
-   - return a real per-recipient result.
-5. Make the UI honest: show which recipients succeeded, and surface real errors instead of a blanket success toast.
-6. Keep the Tines webhook call as an optional side-channel notification (no PII), or drop it — your call.
-
-## Interim option if you don't have a sender domain yet
-
-Restore the recipient list and a minimal report summary in the webhook payload so the existing Tines automation can send again, and change the success toast to only fire when the webhook confirms delivery. This is a stopgap: delivery still depends on the external automation, and recipient emails leave the platform.
+- Send only what the function needs: `recordId`, `reportType`, `timestamp`, `emailAddresses`. The rest is rebuilt server-side.
+- Only show the success toast when the response confirms delivery; otherwise show the real error text from the function (read it via `FunctionsHttpError` context rather than the generic "non-2xx" message).
+- Keep the dialog open on failure so the recipient list isn't lost.
 
 ## Technical notes
 
-- Files touched: `supabase/functions/send-report-webhook/index.ts`, `src/components/EnhancedWalletResults.tsx`, `src/components/EmailReportDialog.tsx` (result states), plus a new email template under `supabase/functions/_shared/transactional-email-templates/`.
-- Server-side authorization: reuse the ownership/workspace-membership check pattern already used in `sar-generate`.
-- Existing risk-alert emails in `wallet-monitor` use a Resend key directly; once built-in email is in place, that path should be migrated too so there's one sending route. Can be a follow-up.
-- Sending requires a sender domain you own; there is no shared/free sender for app emails.
+- Files: `supabase/functions/send-report-webhook/index.ts`, `src/components/EnhancedWalletResults.tsx`.
+- Deploy the edge function after the change.
+- The Tines automation must be expecting `emailAddresses` and the summary fields; if its payload contract differs, the field names may need adjusting once you see what it receives.
+- The proper fix (sending from the app via a verified sender domain, no third-party hop) remains available whenever you want it.
