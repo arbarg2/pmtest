@@ -19,6 +19,60 @@ interface WatchedWallet {
   user_id: string;
 }
 
+const APP_URL = Deno.env.get('APP_URL') ?? 'https://tryrian.lovable.app';
+
+/**
+ * Emails the watcher when a monitored wallet's risk moves, if they have
+ * email alerts enabled. Silently skipped when no mail provider is configured.
+ */
+async function sendAlertEmail(
+  supabase: any,
+  userId: string | null,
+  address: string,
+  oldScore: number,
+  newScore: number,
+) {
+  const apiKey = Deno.env.get('RESEND_API_KEY');
+  if (!apiKey || !userId) return;
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('alert_email_enabled')
+    .eq('id', userId)
+    .maybeSingle();
+  if (profile && profile.alert_email_enabled === false) return;
+
+  const { data: userRes } = await supabase.auth.admin.getUserById(userId);
+  const email = userRes?.user?.email;
+  if (!email) return;
+
+  const rising = newScore > oldScore;
+  const short = `${address.slice(0, 8)}…${address.slice(-6)}`;
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: Deno.env.get('ALERT_FROM_EMAIL') ?? 'Rìan Alerts <alerts@tryrian.app>',
+        to: [email],
+        subject: `${rising ? '⚠️' : '✅'} Risk ${rising ? 'increased' : 'decreased'} for ${short}`,
+        html: `
+          <p>A wallet you're monitoring has changed risk score.</p>
+          <p><strong>${address}</strong></p>
+          <p>Risk score: ${oldScore.toFixed(1)} → <strong>${newScore.toFixed(1)}</strong></p>
+          <p><a href="${APP_URL}/safe/check/${address}">Open the latest check</a></p>
+          <p style="color:#888;font-size:12px">You can turn these emails off in your Rìan alert settings.</p>
+        `,
+      }),
+    });
+    if (!res.ok) console.error('Alert email failed', await res.text());
+  } catch (e) {
+    console.error('Alert email error', e);
+  }
+}
+
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
