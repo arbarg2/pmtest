@@ -404,15 +404,104 @@ export function SafeCheckRunner({ address, onResult }: { address: string; onResu
   return (
     <div className="space-y-4 pb-24 sm:pb-4">
       <div className="flex items-center justify-end -mb-1">
-        <WatchToggle address={result.address} />
+        <QuickWatchButton
+          address={result.address}
+          network={result.network}
+          riskScore={result.risk_score}
+        />
       </div>
       <VerdictCard result={result} />
+      <EvidenceBlocks result={result} />
       <ReasonsList reasons={result.reasons} />
       <StatsGrid result={result} />
+      <EscalateCard address={result.address} />
       <ShareBar address={result.address} verdict={result.verdict} />
     </div>
   );
 }
+
+function EvidenceBlocks({ result }: { result: CheckResult }) {
+  const behaviouralFlags = result.reasons.filter(
+    (r) => !["sanctions", "scam", "malicious"].includes(r.type) && r.severity !== "low",
+  );
+  const blocks = [
+    {
+      icon: ShieldAlert,
+      title: "OFAC sanctions",
+      hit: !!result.data.sanctioned,
+      hitText: "Direct match on the OFAC SDN list.",
+      clearText: `No match against the OFAC SDN list${
+        result.evidence_basis?.sanctions_count
+          ? ` (${result.evidence_basis.sanctions_count.toLocaleString()} addresses)`
+          : ""
+      }.`,
+    },
+    {
+      icon: KeyRound,
+      title: "Scam & drainer registry",
+      hit: !!result.data.malicious,
+      hitText: "This address is tagged as a known scam or wallet-drainer.",
+      clearText: `Not listed among ${
+        result.evidence_basis?.malicious_count?.toLocaleString() ?? "known"
+      } tagged scam / drainer addresses.`,
+    },
+    {
+      icon: PenLine,
+      title: "On-chain behaviour",
+      hit: behaviouralFlags.length > 0,
+      hitText: behaviouralFlags.map((r) => r.text).join(" "),
+      clearText: "Nothing unusual in the address's activity pattern.",
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-fade-in">
+      {blocks.map((b) => (
+        <Card
+          key={b.title}
+          className={`p-4 backdrop-blur-xl ${
+            b.hit
+              ? "border-risk-critical/40 bg-risk-critical/5"
+              : "border-risk-low/25 bg-card/40"
+          }`}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <b.icon className={`w-4 h-4 ${b.hit ? "text-risk-critical" : "text-risk-low"}`} />
+            <span className="text-xs font-semibold uppercase tracking-wider">{b.title}</span>
+          </div>
+          <div className={`text-sm font-semibold ${b.hit ? "text-risk-critical" : "text-risk-low"}`}>
+            {b.hit ? "Match" : "Clear"}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+            {b.hit ? b.hitText : b.clearText}
+          </p>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function EscalateCard({ address }: { address: string }) {
+  return (
+    <Card className="p-4 bg-card/40 border-border/50 flex flex-col sm:flex-row sm:items-center gap-3 animate-fade-in">
+      <div className="flex-1">
+        <div className="text-sm font-semibold flex items-center gap-2">
+          <Briefcase className="w-4 h-4 text-neon-violet" /> Need the full picture?
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Open this address in the analyst console for counterparty tracing, evidence logging and a
+          case file.
+        </p>
+      </div>
+      <Link to={`/dashboard?address=${encodeURIComponent(address)}`} className="shrink-0">
+        <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto">
+          Escalate to analyst console <ArrowRight className="w-4 h-4" />
+        </Button>
+      </Link>
+    </Card>
+  );
+}
+
 
 export default function Safe() {
   const [searchParams] = useSearchParams();
