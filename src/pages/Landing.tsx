@@ -127,15 +127,16 @@ const Landing = () => {
 
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 animate-fade-in leading-[1.05]">
             Don't get rugged.
-            <span className="block text-aurora">Check before you click.</span>
+            <span className="block text-aurora">Check before you sign.</span>
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-slide-up">
-            Paste any wallet, contract, or token. Rìan instantly screens for scams, sanctions,
-            risky approvals, and shady money trails — across BTC, ETH, and Solana.
+            Paste any wallet or contract address. Rìan screens it against the live OFAC sanctions
+            list, thousands of tagged scam and drainer addresses, and its own on-chain history —
+            then tells you plainly whether it's safe.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center animate-scale-in mb-10">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center animate-scale-in mb-4">
             <Button
               onClick={() => navigate('/safe')}
               size="lg"
@@ -154,21 +155,30 @@ const Landing = () => {
             </Button>
           </div>
 
-          {/* Live verdict ticker */}
-          <div className="marquee-mask relative max-w-4xl mx-auto">
-            <div className="marquee-track gap-3 py-2">
-              {[...tickerItems, ...tickerItems].map((item, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full border text-xs font-mono backdrop-blur bg-card/40 ${verdictStyles[item.verdict]}`}
-                >
-                  <span className="font-semibold uppercase tracking-wider text-[10px]">{item.verdict}</span>
-                  <span className="opacity-80">{item.addr}</span>
-                  <span className="opacity-60">· {item.label}</span>
-                </div>
-              ))}
+          <p className="text-xs text-muted-foreground mb-10">
+            Free · no login · read-only. Bitcoin and Ethereum in full, Solana screening only.{' '}
+            <Link to="/methodology" className="text-neon-cyan hover:underline">
+              How we score it
+            </Link>
+          </p>
+
+          {/* Live verdict ticker — real recent public checks */}
+          {tickerItems.length > 0 && (
+            <div className="marquee-mask relative max-w-4xl mx-auto">
+              <div className="marquee-track gap-3 py-2">
+                {[...tickerItems, ...tickerItems].map((item, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full border text-xs font-mono backdrop-blur bg-card/40 ${verdictStyles[item.verdict]}`}
+                  >
+                    <span className="font-semibold uppercase tracking-wider text-[10px]">{item.verdict}</span>
+                    <span className="opacity-80">{item.addr}</span>
+                    <span className="opacity-60">· {item.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Feature cards */}
           <h2 className="relative mt-16 text-2xl md:text-3xl font-bold tracking-tight">
@@ -176,9 +186,9 @@ const Landing = () => {
           </h2>
           <div className="relative mt-6 grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {[
-              { Icon: Zap, color: 'text-neon-cyan', title: 'Instant verdict', body: 'One paste. One score. Plain-English risk in under 2 seconds.' },
-              { Icon: Shield, color: 'text-neon-violet', title: 'Scam & approval scan', body: 'Spots drainers, fake tokens, and risky token approvals before you sign.' },
-              { Icon: Eye, color: 'text-neon-magenta', title: 'Whale & money trail', body: 'See who funds it, where it flows, and which mixers it touches.' },
+              { Icon: Zap, color: 'text-neon-cyan', title: 'Sanctions & scam lists', body: 'The real OFAC SDN list plus thousands of Etherscan-tagged phishing and drainer addresses, re-synced daily.' },
+              { Icon: Shield, color: 'text-neon-violet', title: 'Live token approvals', body: 'Scans your Ethereum wallet for unlimited and high-risk allowances that a contract could still drain.' },
+              { Icon: Eye, color: 'text-neon-magenta', title: 'Counterparty trail', body: 'Walks who a wallet has actually transacted with and flags mixers and sanctioned counterparties.' },
             ].map(({ Icon, color, title, body }) => (
               <div
                 key={title}
@@ -192,6 +202,7 @@ const Landing = () => {
               </div>
             ))}
           </div>
+
         </div>
       </section>
 
