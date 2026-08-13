@@ -1084,6 +1084,7 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      verify_cron_secret: { Args: { _provided: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "analyst" | "user"
