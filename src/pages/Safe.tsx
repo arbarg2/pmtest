@@ -1,13 +1,15 @@
 import Seo from '@/components/Seo';
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import { Shield, Search, AlertTriangle, CheckCircle2, ShieldAlert, ArrowRight, Sparkles, Eye, Lock, ArrowLeft, Copy, Check, Zap, Twitter, Bookmark, BookmarkCheck, History, X } from "lucide-react";
+import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
+import { Shield, Search, AlertTriangle, CheckCircle2, ShieldAlert, ArrowRight, Sparkles, Lock, ArrowLeft, Copy, Check, Zap, Twitter, History, X, KeyRound, Briefcase, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import QuickWatchButton from "@/components/wallet/QuickWatchButton";
+
 
 type Verdict = "safe" | "caution" | "danger";
 
