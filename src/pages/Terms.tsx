@@ -78,7 +78,7 @@ export default function Terms() {
 
       <main className="max-w-3xl mx-auto px-4 py-14">
         <h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Terms of Service</h1>
-        <p className="text-muted-foreground mb-10">Last updated: 20 March 2026</p>
+        <p className="text-muted-foreground mb-10">Last updated: 13 August 2026</p>
         <div className="space-y-6">
           {sections.map((s) => (
             <Card key={s.h} className="p-6 bg-card/70 backdrop-blur-xl">
