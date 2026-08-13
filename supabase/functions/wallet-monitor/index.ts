@@ -159,6 +159,16 @@ serve(async (req) => {
               change: riskChange
             });
 
+            await sendAlertEmail(
+              supabaseClient,
+              (wallet as any).user_id ?? null,
+              wallet.wallet_address,
+              Number(wallet.current_risk_score ?? 0),
+              newRiskScore,
+            );
+
+
+
             const workspaceId = (wallet as any).workspace_id ?? null;
             if (workspaceId) {
               await dispatchWebhooks(supabaseClient, workspaceId, {
