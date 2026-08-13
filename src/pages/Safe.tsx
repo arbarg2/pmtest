@@ -415,7 +415,8 @@ export function SafeCheckRunner({ address, onResult }: { address: string; onResu
 }
 
 export default function Safe() {
-  const [input, setInput] = useState("");
+  const [searchParams] = useSearchParams();
+  const [input, setInput] = useState(searchParams.get("address") ?? "");
   const navigate = useNavigate();
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -423,6 +424,7 @@ export default function Safe() {
     if (!v) return;
     navigate(`/safe/check/${v}`);
   };
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       <Seo title="Safe Check — Is This Wallet Safe to Send To?" description="Paste any BTC, ETH or Solana address and get a plain-English safety verdict before you transact. Free instant scam and sanctions check." path="/safe" />
