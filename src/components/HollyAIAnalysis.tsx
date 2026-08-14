@@ -220,41 +220,7 @@ export function HollyAIAnalysis({ walletData, recordId, onNotesUpdated }: HollyA
       
       {!isCollapsed && (
         <CardContent className="px-4 pt-2 pb-4 space-y-3">
-          {/* Quick Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
-              <div className="flex items-center space-x-2 mb-1">
-                <Activity className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                <span className="font-medium text-purple-800 dark:text-purple-200 text-sm">Behavioral Score</span>
-              </div>
-              <div className="text-xl font-bold text-purple-900 dark:text-purple-100">
-                {aiInsights.riskBreakdown.temporalAnomalies.toFixed(1)}/10
-              </div>
-              <p className="text-xs text-purple-600 dark:text-purple-400">Anomaly Detection</p>
-            </div>
-            
-            <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
-              <div className="flex items-center space-x-2 mb-1">
-                <Target className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                <span className="font-medium text-purple-800 dark:text-purple-200 text-sm">Confidence</span>
-              </div>
-              <div className="text-xl font-bold text-purple-900 dark:text-purple-100">
-                {(aiInsights.confidenceLevel * 100).toFixed(0)}%
-              </div>
-              <p className="text-xs text-purple-600 dark:text-purple-400">Analysis Certainty</p>
-            </div>
-            
-            <div className="bg-white/80 dark:bg-slate-800/80 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
-              <div className="flex items-center space-x-2 mb-1">
-                <AlertTriangle className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                <span className="font-medium text-purple-800 dark:text-purple-200 text-sm">Alerts</span>
-              </div>
-              <div className="text-xl font-bold text-purple-900 dark:text-purple-100">
-                {aiInsights.behavioralAnomalies.length}
-              </div>
-              <p className="text-xs text-purple-600 dark:text-purple-400">Active Anomalies</p>
-            </div>
-          </div>
+
 
           {/* AI Summary Section */}
           <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 rounded-lg p-4 border border-indigo-200 dark:border-indigo-800">
