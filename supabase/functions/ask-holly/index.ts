@@ -70,13 +70,25 @@ serve(async (req) => {
     let evidenceComplete = false;
 
     if (recordId) {
-      const { data: record } = await userClient
+      const COLS =
+        "id, record_id, wallet_address, network, risk_score, risk_level, investigation_status, case_id, case_status, created_at";
+      const isUuid =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recordId);
+
+      // The caller may pass either the human record_id (LR_...) or the internal UUID.
+      let { data: record } = await userClient
         .from("investigation_records")
-        .select(
-          "id, record_id, wallet_address, network, risk_score, risk_level, investigation_status, case_id, case_status, created_at",
-        )
-        .eq("record_id", recordId)
+        .select(COLS)
+        .eq(isUuid ? "id" : "record_id", recordId)
         .maybeSingle();
+
+      if (!record && !isUuid) {
+        ({ data: record } = await userClient
+          .from("investigation_records")
+          .select(COLS)
+          .eq("id", recordId)
+          .maybeSingle());
+      }
 
       if (!record) {
         return new Response(
