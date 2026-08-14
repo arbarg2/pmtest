@@ -163,25 +163,6 @@ export function HollyAIAnalysis({ walletData, recordId, onNotesUpdated }: HollyA
     </div>
   );
 
-  const aiInsights = {
-    behavioralAnomalies: [
-      "Unusual transaction frequency spike detected in last 7 days (+340%)",
-      "Atypical interaction with privacy-focused protocols", 
-      "Pattern deviation from historical transaction timing"
-    ],
-    riskBreakdown: {
-      transactionPatterns: 7.2,
-      counterpartyRisk: 5.8,
-      geographicRisk: 3.1,
-      temporalAnomalies: 8.5
-    },
-    actionableInsights: [
-      "Enhanced monitoring recommended for next 14 days",
-      "Consider additional KYC verification for high-value transactions",
-      "Flag for manual review if transaction volume exceeds $50,000"
-    ],
-    confidenceLevel: 0.87
-  };
 
   return (
     <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950 border-purple-200 dark:border-purple-800">
