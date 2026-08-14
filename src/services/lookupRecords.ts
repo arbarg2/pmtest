@@ -54,67 +54,10 @@ class LookupRecordService {
     };
   }
 
-  // Generate mock transaction data
-  private generateRecentTransactions(network: string, riskLevel: string) {
-    const transactionCount = Math.floor(Math.random() * 5) + 3;
-    return Array.from({ length: transactionCount }, (_, i) => ({
-      direction: (Math.random() > 0.5 ? 'inbound' : 'outbound') as 'inbound' | 'outbound',
-      amount: Math.random() * 100,
-      risk_score: riskLevel === 'High' ? Math.random() * 4 + 6 : Math.random() * 6,
-      timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString()
-    }));
-  }
+  // Records are created and persisted server-side from real chain data via
+  // `supabaseLookupRecords.createLookupRecord`. No synthetic transactions are
+  // generated here.
 
-  // Create a new lookup record
-  async createLookupRecord(walletData: WalletRiskResponse): Promise<LookupRecord> {
-    const recentTransactions = this.generateRecentTransactions(walletData.network, walletData.risk_level);
-    const totalInbound = recentTransactions
-      .filter(tx => tx.direction === 'inbound')
-      .reduce((sum, tx) => sum + tx.amount, 0);
-    const totalOutbound = recentTransactions
-      .filter(tx => tx.direction === 'outbound')
-      .reduce((sum, tx) => sum + tx.amount, 0);
-
-    // Ensure network is either BTC or ETH
-    const network = (walletData.network === 'bitcoin' || walletData.network === 'BTC') ? 'BTC' as const : 'ETH' as const;
-
-    const record: LookupRecord = {
-      id: `LR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date().toISOString(),
-      wallet_address: walletData.address,
-      network: network,
-      
-      risk_assessment: {
-        risk_score: walletData.risk_score,
-        risk_level: walletData.risk_level as any,
-        key_risk_factors: Object.entries(walletData.risk_factors)
-          .filter(([_, value]) => value)
-          .map(([key, _]) => key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())),
-        recent_transactions: recentTransactions,
-        flow_analysis: {
-          total_inbound: totalInbound,
-          total_outbound: totalOutbound,
-          net_flow: totalInbound - totalOutbound
-        }
-      },
-      
-      compliance_summary: this.generateComplianceSummary(walletData),
-      
-      analyst_fields: {
-        case_notes: '',
-        analyst_decision: 'pending',
-        tags: [],
-        attachments: []
-      },
-      
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      processing_time_ms: walletData.processing_time_ms
-    };
-
-    this.records.unshift(record);
-    return record;
-  }
 
   // Update an existing lookup record
   async updateLookupRecord(id: string, updates: Partial<LookupRecord['analyst_fields']>): Promise<LookupRecord | null> {

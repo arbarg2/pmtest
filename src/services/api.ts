@@ -118,51 +118,6 @@ export interface WalletRiskResponse {
   analyst_notes?: string;
 }
 
-// Mock implementation - to be replaced with real API calls
-export const analyzeWalletRisk = async (address: string): Promise<WalletRiskResponse> => {
-  // This is a mock implementation
-  // In production, this would call the real blockchain analysis API
-  
-  return {
-    address,
-    network: address.startsWith('0x') ? 'ethereum' : 'bitcoin',
-    risk_score: Math.random() * 10,
-    risk_level: Math.random() > 0.5 ? 'Low' : 'Medium',
-    risk_factors: {
-      sanctioned: {
-        present: false,
-        severity: 'low',
-        description: 'No sanctions exposure detected'
-      },
-      fraud_reports: {
-        present: false,
-        severity: 'low',
-        description: 'No fraud reports found'
-      },
-      dark_market_exposure: {
-        present: false,
-        severity: 'low',
-        description: 'No dark market connections'
-      },
-      sanctions_exposure: {
-        present: false,
-        severity: 'low',
-        description: 'No sanctions exposure'
-      },
-      mixer_usage: false,
-      high_frequency_trading: false
-    },
-    explanation: 'Mock analysis result',
-    entity_attribution: null,
-    volume_metrics: null,
-    geographic_risk: null,
-    sanctions_exposure: null,
-    top_counterparties: [],
-    temporal_patterns: null,
-    behavioral_classification: null,
-    transaction_count: 0,
-    last_activity: new Date().toISOString(),
-    processing_time_ms: 100,
-    lookupId: `LR_${Date.now()}`
-  };
-};
+// NOTE: There is no mock wallet analysis. All wallet risk analysis runs through
+// `enhancedApi` / the `wallet-health-check` edge function against live chain data.
+
