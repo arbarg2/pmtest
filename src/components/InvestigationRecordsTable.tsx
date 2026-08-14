@@ -351,7 +351,40 @@ export const InvestigationRecordsTable = ({ bare = false }: { bare?: boolean }) 
               </TableBody>
             </Table>
           )}
-        </CardContent>
+    </>
+  );
+
+  if (bare) {
+    return (
+      <div className="space-y-4">
+        {filters}
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            Filters &amp; Search
+          </CardTitle>
+        </CardHeader>
+        <CardContent>{filters}</CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Investigation Records ({filteredRecords.length})</span>
+            <Button variant="outline" onClick={loadRecords}>
+              Refresh
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>{body}</CardContent>
       </Card>
     </div>
   );
