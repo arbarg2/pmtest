@@ -149,24 +149,16 @@ export function AnalystDashboard() {
         </div>
 
         <TabsContent value="records" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Investigation Records</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{records.length} records</Badge>
-                  <Button variant="outline" size="sm" onClick={() => navigate('/all-records')}>
-                    <Eye className="w-4 h-4 mr-2" />
-                    View All
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <InvestigationRecordsTable />
-            </CardContent>
-          </Card>
+          <div className="flex items-center justify-end gap-2">
+            <Badge variant="secondary">{records.length} records</Badge>
+            <Button variant="outline" size="sm" onClick={() => navigate('/all-records')}>
+              <Eye className="w-4 h-4 mr-2" />
+              View All
+            </Button>
+          </div>
+          <InvestigationRecordsTable bare />
         </TabsContent>
+
 
         <TabsContent value="cases" className="space-y-4">
           <Card>

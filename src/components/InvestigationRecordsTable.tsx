@@ -36,7 +36,7 @@ interface InvestigationRecord {
   case_status?: string;
 }
 
-export const InvestigationRecordsTable = () => {
+export const InvestigationRecordsTable = ({ bare = false }: { bare?: boolean }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [records, setRecords] = useState<InvestigationRecord[]>([]);
@@ -162,18 +162,8 @@ export const InvestigationRecordsTable = () => {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            Filters & Search
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+  const filters = (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -240,20 +230,10 @@ export const InvestigationRecordsTable = () => {
               Clear Filters
             </Button>
           </div>
-        </CardContent>
-      </Card>
+  );
 
-      {/* Records Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Investigation Records ({filteredRecords.length})</span>
-            <Button variant="outline" onClick={loadRecords}>
-              Refresh
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+  const body = (
+    <>
           {filteredRecords.length === 0 ? (
             <div className="text-center py-8">
               <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -351,7 +331,40 @@ export const InvestigationRecordsTable = () => {
               </TableBody>
             </Table>
           )}
-        </CardContent>
+    </>
+  );
+
+  if (bare) {
+    return (
+      <div className="space-y-4">
+        {filters}
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            Filters &amp; Search
+          </CardTitle>
+        </CardHeader>
+        <CardContent>{filters}</CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Investigation Records ({filteredRecords.length})</span>
+            <Button variant="outline" onClick={loadRecords}>
+              Refresh
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>{body}</CardContent>
       </Card>
     </div>
   );
