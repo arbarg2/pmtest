@@ -406,17 +406,8 @@ const EnhancedWalletResults = ({
       />
 
       {/* Ask Holly — floating conversational investigator */}
-      <AskHollyChat
-        context={{
-          address: wallet.address,
-          network: wallet.network,
-          risk_score: wallet.risk_score,
-          risk_level: wallet.risk_level,
-          risk_factors: riskFactors,
-          sanctions: sanctionsMatches,
-          counterparties: wallet.top_counterparties,
-        }}
-      />
+      <AskHollyChat recordId={recordId} />
+
     </div>
   );
 };
