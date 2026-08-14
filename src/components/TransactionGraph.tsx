@@ -72,36 +72,9 @@ type Selection =
   | { kind: 'node'; node: GraphNode }
   | { kind: 'edge'; edge: GraphEdge; from: GraphNode; to: GraphNode };
 
-// ---------- Mock data ----------
-const generateMockGraphData = (targetAddress: string): GraphData => {
-  const mockNodes: GraphNode[] = [
-    { id: targetAddress, address: targetAddress, type: 'target', riskLevel: 'medium', transactionCount: 156, totalValue: 45.7, label: 'Target Wallet' },
-    { id: '0x742d35Cc6663C0532925a3b8D8c1e8b2A6c3F2a1', address: '0x742d35Cc6663C0532925a3b8D8c1e8b2A6c3F2a1', type: 'exchange', riskLevel: 'low', transactionCount: 1250, totalValue: 2340.5, label: 'Binance Hot Wallet' },
-    { id: '0x8c7e97f6e7b5d4c3b2a1f0e9d8c7b6a5f4e3d2c1', address: '0x8c7e97f6e7b5d4c3b2a1f0e9d8c7b6a5f4e3d2c1', type: 'mixer', riskLevel: 'high', transactionCount: 45, totalValue: 12.3, label: 'Tornado Cash' },
-    { id: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', type: 'unknown', riskLevel: 'low', transactionCount: 1, totalValue: 50.0, label: 'Genesis Block' },
-    { id: '0xa5f2b8d9c3e7f1a6b4c8d2e9f7a3b5c6d8e1f4a7', address: '0xa5f2b8d9c3e7f1a6b4c8d2e9f7a3b5c6d8e1f4a7', type: 'counterparty', riskLevel: 'medium', transactionCount: 23, totalValue: 8.9, label: 'Unknown Wallet' },
-    { id: '0xb7c3e8f2a9d6c1b5e4f7a2d8c5b9e6f3a1d4c7b0', address: '0xb7c3e8f2a9d6c1b5e4f7a2d8c5b9e6f3a1d4c7b0', type: 'counterparty', riskLevel: 'high', transactionCount: 89, totalValue: 156.7, label: 'Suspicious Entity' },
-  ];
+// No sample/mock graph data is ever generated. If the chain provider returns
+// nothing, the component shows an explicit empty or unavailable state instead.
 
-  const mockEdges: GraphEdge[] = [
-    { from: targetAddress, to: '0x742d35Cc6663C0532925a3b8D8c1e8b2A6c3F2a1', value: 15.5, transactionCount: 12, direction: 'outbound', riskScore: 0.1 },
-    { from: '0x742d35Cc6663C0532925a3b8D8c1e8b2A6c3F2a1', to: targetAddress, value: 20.3, transactionCount: 8, direction: 'inbound', riskScore: 0.1 },
-    { from: targetAddress, to: '0x8c7e97f6e7b5d4c3b2a1f0e9d8c7b6a5f4e3d2c1', value: 5.2, transactionCount: 3, direction: 'outbound', riskScore: 0.9 },
-    { from: '0xa5f2b8d9c3e7f1a6b4c8d2e9f7a3b5c6d8e1f4a7', to: targetAddress, value: 3.1, transactionCount: 5, direction: 'inbound', riskScore: 0.4 },
-    { from: targetAddress, to: '0xb7c3e8f2a9d6c1b5e4f7a2d8c5b9e6f3a1d4c7b0', value: 12.8, transactionCount: 15, direction: 'outbound', riskScore: 0.8 },
-  ];
-
-  return {
-    nodes: mockNodes,
-    edges: mockEdges,
-    metadata: {
-      totalNodes: mockNodes.length,
-      totalEdges: mockEdges.length,
-      riskNodes: mockNodes.filter((n) => n.riskLevel === 'high').length,
-      maxDepth: 2,
-    },
-  };
-};
 
 // ---------- Helpers ----------
 const tierFromRiskScore = (score: number) => {
@@ -111,38 +84,9 @@ const tierFromRiskScore = (score: number) => {
   return 'low' as const;
 };
 
-// Deterministic pseudo-hash so edges always have a stable tx id when none exists
-const synthHash = (seed: string): string => {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619) >>> 0;
-  }
-  let out = '0x';
-  let cur = h;
-  for (let i = 0; i < 16; i++) {
-    cur = Math.imul(cur ^ (cur >>> 13), 2654435761) >>> 0;
-    out += cur.toString(16).padStart(8, '0').slice(0, 4);
-  }
-  return out.slice(0, 66);
-};
+// Transaction hashes and timestamps are shown only when the chain provider
+// actually returned them — they are never synthesised.
 
-const synthTimestamp = (seed: string): string => {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
-  const daysAgo = Math.abs(h % 180);
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  d.setHours(Math.abs(h % 24), Math.abs((h >> 3) % 60), 0, 0);
-  return d.toISOString();
-};
-
-const enrichEdges = (edges: GraphEdge[]): GraphEdge[] =>
-  edges.map((e, i) => ({
-    ...e,
-    txHash: e.txHash || synthHash(`${e.from}-${e.to}-${i}`),
-    timestamp: e.timestamp || synthTimestamp(`${e.from}-${e.to}-${i}`),
-  }));
 
 const shorten = (s: string, head = 8, tail = 6) =>
   s.length > head + tail + 3 ? `${s.slice(0, head)}…${s.slice(-tail)}` : s;
@@ -155,21 +99,31 @@ const copy = (text: string, label = 'Copied') => {
 // ---------- Component ----------
 export const TransactionGraph: React.FC<TransactionGraphProps> = ({ address, wallet }) => {
   const [graphData, setGraphData] = useState<GraphData | null>(null);
-  const [isUsingMockData, setIsUsingMockData] = useState(false);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'empty' | 'unavailable'>('loading');
   const [selection, setSelection] = useState<Selection | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  const network: string = wallet?.network || wallet?.blockchain || 'this chain';
+  const providerError: string | undefined =
+    wallet?.graph_error || wallet?.analysis_data?.graph_error || wallet?.analysis_data?.provider_error;
+
   useEffect(() => {
     const realGraphData = wallet?.transaction_graph || wallet?.analysis_data?.transaction_graph;
-    if (realGraphData && realGraphData.nodes && realGraphData.nodes.length > 0) {
-      setGraphData({ ...realGraphData, edges: enrichEdges(realGraphData.edges || []) });
-      setIsUsingMockData(false);
+    if (realGraphData && Array.isArray(realGraphData.nodes) && realGraphData.nodes.length > 0) {
+      setGraphData({ ...realGraphData, edges: realGraphData.edges || [] });
+      setStatus('ready');
+    } else if (providerError) {
+      setGraphData(null);
+      setStatus('unavailable');
+    } else if (wallet) {
+      setGraphData(null);
+      setStatus('empty');
     } else {
-      const mockData = generateMockGraphData(address);
-      setGraphData({ ...mockData, edges: enrichEdges(mockData.edges) });
-      setIsUsingMockData(true);
+      setGraphData(null);
+      setStatus('loading');
     }
-  }, [address, wallet]);
+  }, [address, wallet, providerError]);
+
 
   // Pre-compute node positions
   const positions = useMemo(() => {
@@ -216,7 +170,7 @@ export const TransactionGraph: React.FC<TransactionGraphProps> = ({ address, wal
     URL.revokeObjectURL(url);
   };
 
-  if (!graphData) {
+  if (status === 'loading') {
     return (
       <Card className="shadow-lg border-border/60 bg-card/80 backdrop-blur">
         <CardContent className="p-8 text-center">
@@ -227,15 +181,49 @@ export const TransactionGraph: React.FC<TransactionGraphProps> = ({ address, wal
     );
   }
 
+  if (status === 'unavailable') {
+    return (
+      <Card className="shadow-lg border-border/60 bg-card/80 backdrop-blur">
+        <CardHeader>
+          <CardTitle className="flex items-center"><GitBranch className="w-5 h-5 mr-2 text-primary" />Transaction Network Graph</CardTitle>
+        </CardHeader>
+        <CardContent className="p-8 text-center space-y-4">
+          <Alert variant="destructive" className="text-left">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Chain data provider unavailable.</strong> We could not retrieve transaction
+              history for this address on {network} ({providerError}). No graph is shown — Rìan
+              never substitutes sample data.
+            </AlertDescription>
+          </Alert>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            <RotateCcw className="w-4 h-4 mr-2" />Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (status === 'empty' || !graphData) {
+    return (
+      <Card className="shadow-lg border-border/60 bg-card/80 backdrop-blur">
+        <CardHeader>
+          <CardTitle className="flex items-center"><GitBranch className="w-5 h-5 mr-2 text-primary" />Transaction Network Graph</CardTitle>
+        </CardHeader>
+        <CardContent className="text-center p-8">
+          <h3 className="text-lg font-semibold mb-2">No graph data available for this address</h3>
+          <p className="text-muted-foreground text-sm max-w-md mx-auto">
+            No counterparty relationships were returned for this address on {network} within the
+            lookback window. This is a verified empty result, not a data failure.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (graphData.nodes.length === 1) {
     return (
       <div className="space-y-4">
-        {isUsingMockData && (
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription><strong>Mock Data:</strong> This visualization uses sample data for demonstration purposes.</AlertDescription>
-          </Alert>
-        )}
         <Card className="shadow-lg border-border/60 bg-card/80 backdrop-blur">
           <CardHeader>
             <CardTitle className="flex items-center"><GitBranch className="w-5 h-5 mr-2 text-primary" />Isolated Wallet Analysis</CardTitle>
@@ -243,7 +231,7 @@ export const TransactionGraph: React.FC<TransactionGraphProps> = ({ address, wal
           <CardContent className="text-center p-8">
             <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-xl font-bold mx-auto mb-4">W</div>
             <h3 className="text-lg font-semibold mb-2">No Connected Wallets Found</h3>
-            <p className="text-muted-foreground mb-4">This wallet has no transaction relationships in our current dataset.</p>
+            <p className="text-muted-foreground mb-4">This wallet has no transaction relationships on {network} in the analysed window.</p>
             <Badge variant="outline">Isolated Entity</Badge>
           </CardContent>
         </Card>
@@ -253,12 +241,7 @@ export const TransactionGraph: React.FC<TransactionGraphProps> = ({ address, wal
 
   return (
     <div className="space-y-4">
-      {isUsingMockData && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription><strong>Mock Data:</strong> Sample data shown for demonstration. Real transaction data appears when available.</AlertDescription>
-        </Alert>
-      )}
+
 
       <div className="grid lg:grid-cols-4 gap-6">
         {/* Main Graph */}
@@ -549,18 +532,25 @@ const EdgeDetail: React.FC<{ edge: GraphEdge; from: GraphNode; to: GraphNode }> 
 
       <div className="mt-6 space-y-4">
         <DetailRow icon={<Hash className="w-4 h-4" />} label="Transaction ID">
-          <div className="flex items-center gap-2">
-            <Mono className="text-xs break-all">{edge.txHash}</Mono>
-            <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => copy(edge.txHash!, 'Tx hash copied')}>
-              <Copy className="w-3.5 h-3.5" />
-            </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" asChild>
-              <a href={`https://etherscan.io/tx/${edge.txHash}`} target="_blank" rel="noreferrer">
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </Button>
-          </div>
+          {edge.txHash ? (
+            <div className="flex items-center gap-2">
+              <Mono className="text-xs break-all">{edge.txHash}</Mono>
+              <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => copy(edge.txHash!, 'Tx hash copied')}>
+                <Copy className="w-3.5 h-3.5" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" asChild>
+                <a href={`https://etherscan.io/tx/${edge.txHash}`} target="_blank" rel="noreferrer">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </Button>
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">
+              Not recorded — this edge aggregates {edge.transactionCount} transfer{edge.transactionCount === 1 ? '' : 's'}.
+            </span>
+          )}
         </DetailRow>
+
 
         <DetailRow icon={<Calendar className="w-4 h-4" />} label="Date">
           {date ? (

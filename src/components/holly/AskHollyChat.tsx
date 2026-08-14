@@ -6,23 +6,19 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-interface HollyContext {
-  address?: string;
-  network?: string;
-  risk_score?: number;
-  risk_level?: string;
-  risk_factors?: any[];
-  sanctions?: any[];
-  counterparties?: any[];
-}
-
 interface AskHollyChatProps {
-  context?: HollyContext;
+  /**
+   * Investigation record id. Holly rebuilds ALL evidence server-side from this
+   * record — no facts are sent from the browser.
+   */
+  recordId?: string;
   suggestedPrompts?: string[];
 }
+
 
 const SAR_PROMPT =
   "Generate a compliance-ready SAR narrative for this wallet using all available risk signals, sanctions exposure, and counterparty data. Follow the standard SAR section structure.";
@@ -36,7 +32,7 @@ const DEFAULT_PROMPTS = [
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ask-holly`;
 
-const AskHollyChat: React.FC<AskHollyChatProps> = ({ context, suggestedPrompts }) => {
+const AskHollyChat: React.FC<AskHollyChatProps> = ({ recordId, suggestedPrompts }) => {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -90,18 +86,25 @@ const AskHollyChat: React.FC<AskHollyChatProps> = ({ context, suggestedPrompts }
     try {
       const controller = new AbortController();
       abortRef.current = controller;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error("Sign in to use Holly.");
+        setStreaming(false);
+        return;
+      }
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           messages: [...messages, userMsg].map((m) => ({ role: m.role, content: m.content })),
-          context: context ?? {},
+          record_id: recordId ?? null,
         }),
       });
+
 
       if (!resp.ok || !resp.body) {
         if (resp.status === 429) toast.error("Holly is rate-limited. Try again shortly.");

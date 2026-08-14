@@ -122,45 +122,47 @@ const Landing = () => {
         <div className="relative max-w-5xl mx-auto text-center">
           <Badge className="bg-card/60 backdrop-blur border border-neon-cyan/30 text-neon-cyan mb-6 text-xs px-4 py-1.5 tracking-wider uppercase animate-fade-in">
             <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan mr-2 animate-pulse" />
-            Live · Wallet intelligence for everyone
+            Live · Multi-chain sanctions & risk intelligence
           </Badge>
 
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 animate-fade-in leading-[1.05]">
-            Don't get rugged.
-            <span className="block text-aurora">Check before you sign.</span>
+            Institutional-grade
+            <span className="block text-aurora">blockchain compliance intelligence.</span>
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-slide-up">
-            Paste any wallet or contract address. Rìan screens it against the live OFAC sanctions
-            list, thousands of tagged scam and drainer addresses, and its own on-chain history —
-            then tells you plainly whether it's safe.
+            Rìan screens addresses across Bitcoin, Ethereum and Solana against the live OFAC SDN
+            list and thousands of tagged scam and drainer addresses — then turns the evidence into
+            audit-ready SAR narratives, case files and agentic MCP and API workflows for your team.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center animate-scale-in mb-4">
             <Button
-              onClick={() => navigate('/safe')}
+              onClick={() => setShowEarlyAccess(true)}
               size="lg"
               className="bg-aurora text-white px-8 py-6 text-base font-semibold border-0 animate-glow-pulse hover:scale-[1.03] transition-transform"
             >
-              Run a Safe Check
+              Book a compliance demo
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
             <Button
               variant="outline"
               size="lg"
-              onClick={() => setShowEarlyAccess(true)}
+              onClick={() => navigate('/safe')}
               className="border-border/60 bg-card/40 backdrop-blur hover:border-neon-cyan/60 hover:text-neon-cyan px-8 py-6 text-base"
             >
-              For compliance teams
+              Run a free Safe Check
             </Button>
           </div>
 
           <p className="text-xs text-muted-foreground mb-10">
-            Free · no login · read-only. Bitcoin and Ethereum in full, Solana screening only.{' '}
+            Evidence-bound scoring · no fabricated data · Bitcoin and Ethereum in full, Solana
+            screening only.{' '}
             <Link to="/methodology" className="text-neon-cyan hover:underline">
               How we score it
             </Link>
           </p>
+
 
           {/* Live verdict ticker — real recent public checks */}
           {tickerItems.length > 0 && (
