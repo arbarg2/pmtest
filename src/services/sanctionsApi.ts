@@ -34,38 +34,32 @@ interface SanctionsResult {
 
 class SanctionsScreeningService {
   private readonly OPENSANCTIONS_API = 'https://api.opensanctions.org';
-  private readonly MOCK_MODE = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_SANCTIONS === 'true';
 
+  /**
+   * Screens an entity/address against OpenSanctions. Never fabricates results:
+   * if the provider is unavailable the error is propagated so callers can flag
+   * the screening as incomplete rather than reporting a clean result.
+   */
   async screenEntity(entityName: string, walletAddress?: string): Promise<SanctionsResult[]> {
     console.log(`Screening entity: ${entityName} ${walletAddress ? `(${walletAddress})` : ''}`);
-    
-    if (this.MOCK_MODE) {
-      console.log('Using mock sanctions screening');
-      return this.getMockSanctionsResults(entityName, walletAddress);
+
+    const results: SanctionsResult[] = [];
+
+    if (entityName && entityName !== 'Unknown Entity') {
+      const entityResults = await this.queryOpenSanctions(entityName);
+      results.push(...entityResults);
     }
 
-    try {
-      // Screen entity name if provided
-      const results: SanctionsResult[] = [];
-      
-      if (entityName && entityName !== 'Unknown Entity') {
-        const entityResults = await this.queryOpenSanctions(entityName);
-        results.push(...entityResults);
-      }
-
-      // Screen wallet address for known sanctioned addresses
-      if (walletAddress) {
-        const addressResults = await this.queryOpenSanctions(walletAddress);
-        results.push(...addressResults);
-      }
-
-      console.log(`Found ${results.length} sanctions matches`);
-      return results;
-    } catch (error) {
-      console.error('Sanctions screening API failed, using fallback:', error);
-      return this.getMockSanctionsResults(entityName, walletAddress);
+    // Screen wallet address for known sanctioned addresses
+    if (walletAddress) {
+      const addressResults = await this.queryOpenSanctions(walletAddress);
+      results.push(...addressResults);
     }
+
+    console.log(`Found ${results.length} sanctions matches`);
+    return results;
   }
+
 
   private async queryOpenSanctions(query: string): Promise<SanctionsResult[]> {
     try {
