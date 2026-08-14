@@ -36,7 +36,7 @@ interface InvestigationRecord {
   case_status?: string;
 }
 
-export const InvestigationRecordsTable = () => {
+export const InvestigationRecordsTable = ({ bare = false }: { bare?: boolean }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [records, setRecords] = useState<InvestigationRecord[]>([]);
