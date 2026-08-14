@@ -144,76 +144,10 @@ class SanctionsScreeningService {
     return datasets[0] || 'International Sanctions Database';
   }
 
-  private getMockSanctionsResults(entityName: string, walletAddress?: string): SanctionsResult[] {
-    const results: SanctionsResult[] = [];
-    
-    // Generate hash-based mock results for consistency
-    const entityHash = this.hashString(entityName || '');
-    const addressHash = walletAddress ? this.hashString(walletAddress) : 0;
-    
-    // High-risk entities that should trigger sanctions
-    const highRiskEntities = ['mixer', 'tumbler', 'tornado', 'blender', 'wasabi'];
-    const isHighRisk = highRiskEntities.some(risk => 
-      entityName?.toLowerCase().includes(risk)
-    );
-    
-    // Known problematic addresses for demo
-    const knownSanctionedAddresses = [
-      '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', // Genesis block
-      '12c6DSiU4Rq3P4ZxziKxzrL5LmMBrzjrJX', // Silk Road
-      '1FeexV6bAHb8ybZjqQMjJrcCrHGW9sb6uF'  // BitFinex hack
-    ];
-    
-    if (walletAddress && knownSanctionedAddresses.some(addr => walletAddress.includes(addr))) {
-      results.push({
-        entity_name: 'Known Sanctioned Address',
-        entity_type: 'Sanctioned Wallet',
-        match_type: 'direct',
-        confidence_score: 0.95,
-        source_list: 'Demo Sanctions List',
-        matched_entity: walletAddress.substring(0, 20) + '...',
-        sanction_match: true
-      });
-    }
-    
-    // Entity-based sanctions (mixers, etc.)
-    if (isHighRisk) {
-      results.push({
-        entity_name: entityName,
-        entity_type: 'High-Risk Service',
-        match_type: 'direct',
-        confidence_score: 0.85,
-        source_list: 'OFAC SDN List (Mock)',
-        matched_entity: entityName,
-        sanction_match: true
-      });
-    }
-    
-    // Random sanctions based on hash (for demo consistency)
-    if (entityHash % 20 === 0) { // 5% chance
-      results.push({
-        entity_name: 'Sanctioned Exchange',
-        entity_type: 'Exchange',
-        match_type: '1-hop',
-        confidence_score: 0.65,
-        source_list: 'EU Consolidated List (Mock)',
-        matched_entity: 'Related sanctioned entity',
-        sanction_match: true
-      });
-    }
-    
-    return results;
-  }
+  // No mock/demo sanctions results exist. A screening either returns real
+  // provider matches or throws so the caller can mark it as unverified.
 
-  private hashString(str: string): number {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash);
-  }
+
 
   // Method to calculate risk score adjustment based on sanctions
   calculateRiskAdjustment(sanctionsResults: SanctionsResult[]): number {
