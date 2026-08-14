@@ -240,20 +240,10 @@ export const InvestigationRecordsTable = ({ bare = false }: { bare?: boolean }) 
               Clear Filters
             </Button>
           </div>
-        </CardContent>
-      </Card>
+  );
 
-      {/* Records Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Investigation Records ({filteredRecords.length})</span>
-            <Button variant="outline" onClick={loadRecords}>
-              Refresh
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+  const body = (
+    <>
           {filteredRecords.length === 0 ? (
             <div className="text-center py-8">
               <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
