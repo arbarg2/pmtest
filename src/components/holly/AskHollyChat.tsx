@@ -9,20 +9,15 @@ import { toast } from "sonner";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-interface HollyContext {
-  address?: string;
-  network?: string;
-  risk_score?: number;
-  risk_level?: string;
-  risk_factors?: any[];
-  sanctions?: any[];
-  counterparties?: any[];
-}
-
 interface AskHollyChatProps {
-  context?: HollyContext;
+  /**
+   * Investigation record id. Holly rebuilds ALL evidence server-side from this
+   * record — no facts are sent from the browser.
+   */
+  recordId?: string;
   suggestedPrompts?: string[];
 }
+
 
 const SAR_PROMPT =
   "Generate a compliance-ready SAR narrative for this wallet using all available risk signals, sanctions exposure, and counterparty data. Follow the standard SAR section structure.";
