@@ -127,8 +127,10 @@ const VerdictBanner = ({ wallet }: VerdictBannerProps) => {
     return () => { cancelled = true; };
   }, [wallet.address, wallet.network]);
 
+  const txKnown = typeof wallet.transaction_count === 'number';
   const animatedTx = useCountUp(wallet.transaction_count ?? 0);
   const animatedTime = useCountUp(wallet.processing_time_ms ?? 0, 600);
+
 
   const sanctioned = (ofacHits ?? 0) > 0;
   const effectiveTier: RiskTier = sanctioned ? 'critical' : tier;
