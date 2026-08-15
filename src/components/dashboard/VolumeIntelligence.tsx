@@ -39,33 +39,32 @@ const VolumeIntelligence = ({ wallet }: VolumeIntelligenceProps) => {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Main Volume Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div className="text-center p-4 bg-gradient-to-br from-green-500/10 to-green-400/5 rounded-lg">
             <TrendingUp className="w-6 h-6 text-green-600 mx-auto mb-2" />
             <div className="text-lg font-bold text-green-600">
-              {volumeMetrics.lifetime_value?.inbound?.toFixed(2) || '0'} {wallet.network.toUpperCase()}
+              {typeof volumeMetrics.lifetime_value?.inbound === 'number'
+                ? `${volumeMetrics.lifetime_value.inbound.toFixed(2)} ${wallet.network.toUpperCase()}`
+                : 'Not available'}
             </div>
             <div className="text-xs text-slate-600 dark:text-slate-400">Total Inbound</div>
           </div>
-          
+
           <div className="text-center p-4 bg-gradient-to-br from-red-500/10 to-red-400/5 rounded-lg">
             <TrendingDown className="w-6 h-6 text-red-600 mx-auto mb-2" />
             <div className="text-lg font-bold text-red-600">
-              {volumeMetrics.lifetime_value?.outbound?.toFixed(2) || '0'} {wallet.network.toUpperCase()}
+              {typeof volumeMetrics.lifetime_value?.outbound === 'number'
+                ? `${volumeMetrics.lifetime_value.outbound.toFixed(2)} ${wallet.network.toUpperCase()}`
+                : 'Not available'}
             </div>
             <div className="text-xs text-slate-600 dark:text-slate-400">Total Outbound</div>
           </div>
-          
-          <div className="text-center p-4 bg-gradient-to-br from-blue-500/10 to-blue-400/5 rounded-lg">
-            <div className="text-lg font-bold text-blue-600">
-              ${volumeMetrics.lifetime_value?.usd_equivalent?.toLocaleString() || '0'}
-            </div>
-            <div className="text-xs text-slate-600 dark:text-slate-400">USD Equivalent</div>
-          </div>
-          
+
           <div className="text-center p-4 bg-gradient-to-br from-purple-500/10 to-purple-400/5 rounded-lg">
             <div className="text-lg font-bold text-purple-600">
-              {volumeMetrics.average_transaction_size?.toFixed(3) || '0'} {wallet.network.toUpperCase()}
+              {typeof volumeMetrics.average_transaction_size === 'number'
+                ? `${volumeMetrics.average_transaction_size.toFixed(3)} ${wallet.network.toUpperCase()}`
+                : 'Not available'}
             </div>
             <div className="text-xs text-slate-600 dark:text-slate-400">Avg TX Size</div>
           </div>
@@ -76,13 +75,16 @@ const VolumeIntelligence = ({ wallet }: VolumeIntelligenceProps) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <ArrowUpRight className="w-5 h-5 text-slate-500" />
-              <span className="font-medium text-slate-900 dark:text-slate-100">Net Flow</span>
+              <span className="font-medium text-slate-900 dark:text-slate-100">Current balance</span>
             </div>
             <div className="text-lg font-bold text-slate-900 dark:text-slate-100">
-              {volumeMetrics.lifetime_value?.net?.toFixed(2) || '0'} {wallet.network.toUpperCase()}
+              {typeof volumeMetrics.lifetime_value?.net === 'number'
+                ? `${volumeMetrics.lifetime_value.net.toFixed(2)} ${wallet.network.toUpperCase()}`
+                : 'Not available'}
             </div>
           </div>
         </div>
+
 
         {/* Largest Transaction */}
         {volumeMetrics.largest_transaction && (

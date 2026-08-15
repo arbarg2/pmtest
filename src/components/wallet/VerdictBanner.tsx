@@ -127,8 +127,10 @@ const VerdictBanner = ({ wallet }: VerdictBannerProps) => {
     return () => { cancelled = true; };
   }, [wallet.address, wallet.network]);
 
+  const txKnown = typeof wallet.transaction_count === 'number';
   const animatedTx = useCountUp(wallet.transaction_count ?? 0);
   const animatedTime = useCountUp(wallet.processing_time_ms ?? 0, 600);
+
 
   const sanctioned = (ofacHits ?? 0) > 0;
   const effectiveTier: RiskTier = sanctioned ? 'critical' : tier;
@@ -227,7 +229,13 @@ const VerdictBanner = ({ wallet }: VerdictBannerProps) => {
           <Kpi
             icon={<Activity className="w-3 h-3" />}
             label="Transactions"
-            value={Math.round(animatedTx).toLocaleString()}
+            value={
+              txKnown ? (
+                Math.round(animatedTx).toLocaleString()
+              ) : (
+                <span className="text-muted-foreground text-sm">Not available</span>
+              )
+            }
           />
           <Kpi
             icon={<Network className="w-3 h-3" />}
@@ -250,9 +258,14 @@ const VerdictBanner = ({ wallet }: VerdictBannerProps) => {
           <Kpi
             icon={<Clock className="w-3 h-3" />}
             label="Analysis"
-            value={`${Math.round(animatedTime)}ms`}
+            value={
+              wallet.processing_time_ms
+                ? `${Math.round(animatedTime)}ms`
+                : <span className="text-muted-foreground text-sm">—</span>
+            }
           />
         </div>
+
       </div>
     </Card>
   );

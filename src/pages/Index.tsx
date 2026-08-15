@@ -119,12 +119,26 @@ const Index = () => {
           if (result.success && result.record) {
             console.log('✅ Found record in database:', result.record);
 
+            const analysis =
+              result.record.analysis_data &&
+              typeof result.record.analysis_data === 'object' &&
+              result.record.analysis_data !== null
+                ? (result.record.analysis_data as Record<string, any>)
+                : {};
+
+            // Health-check records nest their counts one level down. Read from
+            // whichever shape the record was stored in so the verdict banner and
+            // the AI summary never disagree about the same number.
+            const healthCheck = (analysis.health_check ?? {}) as Record<string, any>;
+            const transactionCount =
+              analysis.transaction_count ??
+              healthCheck.total_transactions ??
+              healthCheck.transaction_count ??
+              undefined;
+
             const loadedWalletData = {
-              ...(result.record.analysis_data &&
-                typeof result.record.analysis_data === 'object' &&
-                result.record.analysis_data !== null
-                ? result.record.analysis_data
-                : {}),
+              ...analysis,
+              transaction_count: transactionCount,
               recordId: result.record.record_id || result.record.id,
               address: result.record.wallet_address,
               network: result.record.network,
@@ -135,6 +149,7 @@ const Index = () => {
               case_status: result.record.case_status,
               case_created_at: result.record.case_created_at,
             };
+
             setWalletData(loadedWalletData);
             setRecordNotFound(false);
             setDbRecordId(result.record.id);

@@ -168,23 +168,34 @@ class ReportExportService {
       doc.text('Transaction Volume:', rightX, yPosition);
       
       if (data.wallet.volume_metrics?.lifetime_value) {
-        const inbound = data.wallet.volume_metrics.lifetime_value.inbound || 0;
-        const outbound = data.wallet.volume_metrics.lifetime_value.outbound || 0;
-        const usdValue = data.wallet.volume_metrics.lifetime_value.usd_equivalent || 0;
+        const inbound = data.wallet.volume_metrics.lifetime_value.inbound;
+        const outbound = data.wallet.volume_metrics.lifetime_value.outbound;
+        const usdValue = data.wallet.volume_metrics.lifetime_value.usd_equivalent;
         const currency = data.wallet.network === 'bitcoin' ? 'BTC' : 'ETH';
-        
+
         // Volume display in a compact format
         doc.setFillColor(248, 250, 252);
         drawRoundedRect(rightX, yPosition + 4, 80, 30, 3);
-        
+
         doc.setTextColor(15, 23, 42);
         doc.setFont(undefined, 'bold');
         doc.setFontSize(8);
-        doc.text(`IN: ${inbound.toFixed(4)} ${currency}`, rightX + 4, yPosition + 12);
-        doc.text(`OUT: ${outbound.toFixed(4)} ${currency}`, rightX + 4, yPosition + 20);
+        doc.text(
+          `IN: ${typeof inbound === 'number' ? `${inbound.toFixed(4)} ${currency}` : 'Not available'}`,
+          rightX + 4,
+          yPosition + 12
+        );
+        doc.text(
+          `OUT: ${typeof outbound === 'number' ? `${outbound.toFixed(4)} ${currency}` : 'Not available'}`,
+          rightX + 4,
+          yPosition + 20
+        );
         doc.setFontSize(9);
-        doc.text(`≈ $${usdValue.toLocaleString()}`, rightX + 4, yPosition + 28);
+        if (typeof usdValue === 'number') {
+          doc.text(`≈ $${usdValue.toLocaleString()}`, rightX + 4, yPosition + 28);
+        }
       }
+
 
       // Transaction Activity - bottom section
       doc.setTextColor(71, 85, 105);

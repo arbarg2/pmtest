@@ -173,14 +173,11 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
         proximity_score: sanctionsResults.length > 0 ? 
           Math.max(...sanctionsResults.map(r => r.confidence_score)) : 0
       },
-      top_counterparties: realData.transactions && realData.transactions.length > 0 ? [{
-        address: 'unknown',
-        entity_name: 'Unknown Entity',
-        risk_level: 'Low',
-        risk_score: 0.1,
-        transaction_count: Math.min(realData.transactions.length, 10),
-        total_volume: volumeMetrics.lifetime_value.outbound
-      }] : [],
+      // Counterparty intelligence requires resolved counterparty addresses.
+      // Until that is derived from real transaction parties we report none
+      // rather than inventing an "Unknown Entity" placeholder.
+      top_counterparties: [],
+
       transaction_count: realData.transactionCount || realData.transactions?.length || 0,
       last_activity: realData.transactions && realData.transactions.length > 0
         ? network === 'bitcoin'
@@ -200,9 +197,11 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       asset_breakdown: {
         [network.toUpperCase()]: {
           balance: realData.balance || 0,
-          usd_value: (realData.balance || 0) * (network === 'bitcoin' ? 45000 : network === 'ethereum' ? 2500 : 150)
+          // No price feed is wired in — a USD figure would be fabricated.
+          usd_value: undefined as number | undefined
         }
       },
+
       lookupId: `LR_${Date.now()}`
     };
     

@@ -32,11 +32,11 @@ export function WalletDetailTabs({ wallet, activeTab }: WalletDetailTabsProps) {
           <CardTitle>Volume Metrics</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <p><strong>Lifetime Inbound:</strong> {wallet.volume_metrics?.lifetime_value?.inbound?.toFixed(2) || '0.00'}</p>
-          <p><strong>Lifetime Outbound:</strong> {wallet.volume_metrics?.lifetime_value?.outbound?.toFixed(2) || '0.00'}</p>
-          <p><strong>Net Value:</strong> {wallet.volume_metrics?.lifetime_value?.net?.toFixed(2) || '0.00'}</p>
-          <p><strong>USD Equivalent:</strong> ${wallet.volume_metrics?.lifetime_value?.usd_equivalent?.toFixed(2) || '0.00'}</p>
-          <p><strong>Average Transaction Size:</strong> {wallet.volume_metrics?.average_transaction_size?.toFixed(2) || '0.00'}</p>
+          <p><strong>Lifetime Inbound:</strong> {typeof wallet.volume_metrics?.lifetime_value?.inbound === 'number' ? wallet.volume_metrics.lifetime_value.inbound.toFixed(2) : 'Not available'}</p>
+          <p><strong>Lifetime Outbound:</strong> {typeof wallet.volume_metrics?.lifetime_value?.outbound === 'number' ? wallet.volume_metrics.lifetime_value.outbound.toFixed(2) : 'Not available'}</p>
+          <p><strong>Current Balance:</strong> {typeof wallet.volume_metrics?.lifetime_value?.net === 'number' ? wallet.volume_metrics.lifetime_value.net.toFixed(2) : 'Not available'}</p>
+          <p><strong>Average Transaction Size:</strong> {typeof wallet.volume_metrics?.average_transaction_size === 'number' ? wallet.volume_metrics.average_transaction_size.toFixed(2) : 'Not available'}</p>
+
         </CardContent>
       </Card>
     );

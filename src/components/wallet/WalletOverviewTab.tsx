@@ -40,15 +40,18 @@ export function WalletOverviewTab({ wallet }: WalletOverviewTabProps) {
             {Object.entries(wallet.asset_breakdown || {}).map(([asset, data]) => {
               const assetData = data as any;
               const balance = typeof assetData?.balance === 'number' ? assetData.balance : 0;
-              const usdValue = typeof assetData?.usd_value === 'number' ? assetData.usd_value : 0;
+              const usdValue = typeof assetData?.usd_value === 'number' ? assetData.usd_value : null;
               return (
                 <div key={asset} className="flex items-center justify-between">
                   <span>{asset}</span>
                   <span className="text-sm text-slate-600">{balance.toFixed(2)}</span>
-                  <span className="text-sm text-slate-600">${usdValue.toFixed(2)}</span>
+                  <span className="text-sm text-slate-600">
+                    {usdValue === null ? 'No price feed' : `$${usdValue.toFixed(2)}`}
+                  </span>
                 </div>
               );
             })}
+
           </div>
         </CardContent>
       </Card>

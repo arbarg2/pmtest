@@ -87,24 +87,31 @@ const TransactionFlowPreview = ({ wallet, onViewFlow }: TransactionFlowPreviewPr
           <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
             <div className="text-sm text-green-600 dark:text-green-400 mb-1">Inbound Flow</div>
             <div className="font-bold text-green-700 dark:text-green-300">
-              {wallet.volume_metrics?.lifetime_value?.inbound?.toFixed(2) || '0'} {wallet.network.toUpperCase()}
+              {typeof wallet.volume_metrics?.lifetime_value?.inbound === 'number'
+                ? `${wallet.volume_metrics.lifetime_value.inbound.toFixed(2)} ${wallet.network.toUpperCase()}`
+                : 'Not available'}
             </div>
           </div>
-          
+
           <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
             <div className="text-sm text-red-600 dark:text-red-400 mb-1">Outbound Flow</div>
             <div className="font-bold text-red-700 dark:text-red-300">
-              {wallet.volume_metrics?.lifetime_value?.outbound?.toFixed(2) || '0'} {wallet.network.toUpperCase()}
+              {typeof wallet.volume_metrics?.lifetime_value?.outbound === 'number'
+                ? `${wallet.volume_metrics.lifetime_value.outbound.toFixed(2)} ${wallet.network.toUpperCase()}`
+                : 'Not available'}
             </div>
           </div>
-          
+
           <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <div className="text-sm text-blue-600 dark:text-blue-400 mb-1">Net Flow</div>
+            <div className="text-sm text-blue-600 dark:text-blue-400 mb-1">Current balance</div>
             <div className="font-bold text-blue-700 dark:text-blue-300">
-              {wallet.volume_metrics?.lifetime_value?.net?.toFixed(2) || '0'} {wallet.network.toUpperCase()}
+              {typeof wallet.volume_metrics?.lifetime_value?.net === 'number'
+                ? `${wallet.volume_metrics.lifetime_value.net.toFixed(2)} ${wallet.network.toUpperCase()}`
+                : 'Not available'}
             </div>
           </div>
         </div>
+
 
         {/* Call to Action */}
         <div className="text-center p-4 bg-gradient-to-r from-accent/10 to-accent/5 rounded-lg">
