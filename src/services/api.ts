@@ -37,18 +37,19 @@ export interface WalletRiskResponse {
   } | null;
   volume_metrics: {
     lifetime_value: {
-      inbound: number;
-      outbound: number;
-      net: number;
-      usd_equivalent: number;
+      inbound?: number;
+      outbound?: number;
+      net?: number;
+      usd_equivalent?: number;
     };
-    average_transaction_size: number;
+    average_transaction_size?: number;
     largest_transaction?: {
       amount: number;
       direction: string;
       timestamp?: string;
     };
   } | null;
+
   geographic_risk: {
     primary_region: string;
     risk_jurisdictions: string[];
