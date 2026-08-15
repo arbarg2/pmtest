@@ -227,7 +227,13 @@ const VerdictBanner = ({ wallet }: VerdictBannerProps) => {
           <Kpi
             icon={<Activity className="w-3 h-3" />}
             label="Transactions"
-            value={Math.round(animatedTx).toLocaleString()}
+            value={
+              txKnown ? (
+                Math.round(animatedTx).toLocaleString()
+              ) : (
+                <span className="text-muted-foreground text-sm">Not available</span>
+              )
+            }
           />
           <Kpi
             icon={<Network className="w-3 h-3" />}
@@ -250,9 +256,14 @@ const VerdictBanner = ({ wallet }: VerdictBannerProps) => {
           <Kpi
             icon={<Clock className="w-3 h-3" />}
             label="Analysis"
-            value={`${Math.round(animatedTime)}ms`}
+            value={
+              wallet.processing_time_ms
+                ? `${Math.round(animatedTime)}ms`
+                : <span className="text-muted-foreground text-sm">—</span>
+            }
           />
         </div>
+
       </div>
     </Card>
   );
