@@ -112,9 +112,10 @@ export interface WalletRiskResponse {
   asset_breakdown?: {
     [asset: string]: {
       balance: number;
-      usd_value: number;
+      usd_value?: number;
     };
   };
+
   ai_summary?: string;
   analyst_notes?: string;
 }
