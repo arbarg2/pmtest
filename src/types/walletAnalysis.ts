@@ -8,18 +8,19 @@ export interface EntityAttribution {
 
 export interface VolumeMetrics {
   lifetime_value: {
-    inbound: number;
-    outbound: number;
-    net: number;
-    usd_equivalent: number;
+    inbound?: number;
+    outbound?: number;
+    net?: number;
+    usd_equivalent?: number;
   };
-  largest_transaction: {
+  largest_transaction?: {
     amount: number;
     counterparty?: string;
     timestamp: string;
     direction: 'inbound' | 'outbound';
   };
-  average_transaction_size: number;
+  average_transaction_size?: number;
+
   volume_trends: {
     daily: number[];
     weekly: number[];
