@@ -654,26 +654,31 @@ class RealBlockchainAPI {
   calculateVolumeMetrics(networkData: any, network: 'bitcoin' | 'ethereum' | 'solana') {
     const balance = networkData.balance || 0;
     const txCount = networkData.transactionCount || networkData.transactions?.length || 0;
-    const totalReceived = networkData.totalReceived || 0;
-    const totalSent = networkData.totalSent || 0;
-    
-    // Use real received/sent data if available, otherwise estimate
-    const inboundVolume = totalReceived || (balance * (txCount > 0 ? Math.log(txCount + 1) * 0.6 : 1));
-    const outboundVolume = totalSent || (balance * (txCount > 0 ? Math.log(txCount + 1) * 0.5 : 0.8));
-    
-    // Current market prices (rough estimates - in production, fetch from price API)
-    const usdPrice = network === 'bitcoin' ? 45000 : network === 'ethereum' ? 2500 : 150;
-    
+
+    // Only report volumes the chain actually gave us. No estimates, no
+    // hardcoded market prices — an unknown figure is reported as unknown.
+    const inboundVolume =
+      typeof networkData.totalReceived === 'number' ? networkData.totalReceived : undefined;
+    const outboundVolume =
+      typeof networkData.totalSent === 'number' ? networkData.totalSent : undefined;
+
+    const knownVolume =
+      inboundVolume !== undefined && outboundVolume !== undefined
+        ? inboundVolume + outboundVolume
+        : undefined;
+
     return {
       lifetime_value: {
         inbound: inboundVolume,
         outbound: outboundVolume,
         net: balance,
-        usd_equivalent: balance * usdPrice
+        usd_equivalent: undefined as number | undefined
       },
-      average_transaction_size: txCount > 0 ? (inboundVolume + outboundVolume) / (txCount * 2) : balance
+      average_transaction_size:
+        knownVolume !== undefined && txCount > 0 ? knownVolume / (txCount * 2) : undefined
     };
   }
+
 }
 
 export const realBlockchainAPI = new RealBlockchainAPI();
