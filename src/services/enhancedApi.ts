@@ -197,9 +197,11 @@ export const analyzeWalletWithRealData = async (address: string): Promise<Wallet
       asset_breakdown: {
         [network.toUpperCase()]: {
           balance: realData.balance || 0,
-          usd_value: (realData.balance || 0) * (network === 'bitcoin' ? 45000 : network === 'ethereum' ? 2500 : 150)
+          // No price feed is wired in — a USD figure would be fabricated.
+          usd_value: undefined as number | undefined
         }
       },
+
       lookupId: `LR_${Date.now()}`
     };
     
