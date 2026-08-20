@@ -312,13 +312,89 @@ var list_alerts_default = defineTool8({
   }
 });
 
+// src/lib/mcp/tools/investigate-downstream.ts
+import { defineTool as defineTool9 } from "npm:@lovable.dev/mcp-js@0.26.1";
+import { z as z9 } from "npm:zod@^3.25.76";
+var investigate_downstream_default = defineTool9({
+  name: "investigate_downstream",
+  title: "Start autonomous downstream investigation",
+  description: "Launch the autonomous forensic agent on a wallet address. It recursively walks downstream fund flows (up to 3 hops), screens every hop against sanctions/scam/attribution data, classifies unknown smart contracts from on-chain bytecode, and drafts a cited investigative narrative. Returns the trace id; poll `get_investigation_trace` for results.",
+  inputSchema: {
+    address: z9.string().trim().min(4).describe("Root wallet address to investigate."),
+    depth_limit: z9.number().int().min(1).max(3).optional().describe("Hops to walk downstream (default 3)."),
+    reason: z9.string().max(300).optional().describe("Why this investigation was started.")
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  handler: async ({ address, depth_limit, reason }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    const supabase = supabaseForUser(ctx);
+    const { data, error } = await supabase.functions.invoke("trace-agent", {
+      body: {
+        action: "enqueue",
+        address,
+        depth_limit: depth_limit ?? 3,
+        source: "mcp",
+        trigger_reason: reason ?? "Requested via MCP"
+      }
+    });
+    if (error) return { content: [{ type: "text", text: `Failed to start: ${error.message}` }], isError: true };
+    if (data?.error) return { content: [{ type: "text", text: String(data.error) }], isError: true };
+    return {
+      content: [{
+        type: "text",
+        text: `Autonomous investigation ${data.reused ? "already running" : "started"} for ${address}. Trace id: ${data.id}`
+      }],
+      structuredContent: data
+    };
+  }
+});
+
+// src/lib/mcp/tools/get-investigation-trace.ts
+import { defineTool as defineTool10 } from "npm:@lovable.dev/mcp-js@0.26.1";
+import { z as z10 } from "npm:zod@^3.25.76";
+var get_investigation_trace_default = defineTool10({
+  name: "get_investigation_trace",
+  title: "Get autonomous investigation trace",
+  description: "Read the result of an autonomous downstream investigation: status, every screened hop with its verdict, risk score, entity attribution and contract classification, and the cited investigative narrative once complete. Look up by trace id or by root wallet address.",
+  inputSchema: {
+    trace_id: z10.string().uuid().optional().describe("The trace id returned by investigate_downstream."),
+    address: z10.string().trim().min(4).optional().describe("Root wallet address \u2014 returns the most recent trace.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ trace_id, address }, ctx) => {
+    if (!ctx.isAuthenticated()) {
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    }
+    if (!trace_id && !address) {
+      return { content: [{ type: "text", text: "Provide trace_id or address." }], isError: true };
+    }
+    const supabase = supabaseForUser(ctx);
+    let query = supabase.from("agent_traces").select("*").order("created_at", { ascending: false }).limit(1);
+    query = trace_id ? query.eq("id", trace_id) : query.ilike("root_address", address);
+    const { data: traces, error } = await query;
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    const trace = traces?.[0];
+    if (!trace) {
+      return { content: [{ type: "text", text: "No autonomous trace found." }], isError: true };
+    }
+    const { data: nodes } = await supabase.from("agent_trace_nodes").select("address, network, depth, status, verdict, risk_score, entity_name, entity_category, classification, labels, edge").eq("trace_id", trace.id).order("depth", { ascending: true });
+    const payload = { trace, nodes: nodes ?? [] };
+    return {
+      content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
+      structuredContent: payload
+    };
+  }
+});
+
 // src/lib/mcp/index.ts
 var projectRef = "nqjorzsehawucorvaqyi";
 var mcp_default = defineMcp({
   name: "tryrian",
   title: "tryrian",
   version: "0.1.0",
-  instructions: "Blockchain compliance tools for R\xECan. Use `analyze_wallet` for a full live risk analysis of any address, `screen_address` for a fast OFAC sanctions check, `list_investigations` / `get_investigation` to review saved investigation records and AI risk summaries, `list_watched_wallets` / `watch_wallet` / `unwatch_wallet` to manage monitoring, and `list_alerts` to read monitoring alerts. All tools act as the signed-in analyst.",
+  instructions: "Blockchain compliance tools for R\xECan. Use `analyze_wallet` for a full live risk analysis of any address, `screen_address` for a fast OFAC sanctions check, `list_investigations` / `get_investigation` to review saved investigation records and AI risk summaries, `list_watched_wallets` / `watch_wallet` / `unwatch_wallet` to manage monitoring, `investigate_downstream` to launch the autonomous multi-hop forensic agent and `get_investigation_trace` to read its risk tree and narrative, and `list_alerts` to read monitoring alerts. All tools act as the signed-in analyst.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"
@@ -331,7 +407,9 @@ var mcp_default = defineMcp({
     list_watched_wallets_default,
     watch_wallet_default,
     unwatch_wallet_default,
-    list_alerts_default
+    list_alerts_default,
+    investigate_downstream_default,
+    get_investigation_trace_default
   ]
 });
 

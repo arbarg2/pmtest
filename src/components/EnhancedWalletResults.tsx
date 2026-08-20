@@ -29,6 +29,7 @@ import SanctionsPanel from '@/components/wallet/SanctionsPanel';
 import VerdictBanner from '@/components/wallet/VerdictBanner';
 import ProvenanceCard from '@/components/record/ProvenanceCard';
 import SarDraftPanel from '@/components/compliance/SarDraftPanel';
+import AgentTracePanel from '@/components/agent/AgentTracePanel';
 
 import AnalystNotesThread, { AnalystNotesThreadRef } from '@/components/AnalystNotesThread';
 import CaseManagement from '@/components/CaseManagement';
@@ -282,6 +283,7 @@ const EnhancedWalletResults = ({
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="risk">Risk &amp; Sanctions</TabsTrigger>
+            <TabsTrigger value="agent">Agent Trace</TabsTrigger>
             <TabsTrigger value="evidence">Evidence</TabsTrigger>
             <TabsTrigger value="case">Case</TabsTrigger>
           </TabsList>
@@ -332,6 +334,15 @@ const EnhancedWalletResults = ({
               <TransactionFlowPreview wallet={wallet} onViewFlow={handleViewFlow} />
               <CounterpartyIntelligence wallet={wallet} />
             </div>
+          </TabsContent>
+
+          {/* Autonomous agent trace */}
+          <TabsContent value="agent" className={tabPanel}>
+            <AgentTracePanel
+              address={wallet.address}
+              network={wallet.network}
+              recordId={recordId}
+            />
           </TabsContent>
 
           {/* Evidence */}

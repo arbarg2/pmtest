@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { screenAndLog, detectNetwork } from "../_shared/screening.ts";
+import { maybeEnqueueTrace } from "../_shared/trace-enqueue.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -65,6 +66,15 @@ serve(async (req) => {
     }
 
     const result = await screenAndLog(supabase, address, { source: "safe" });
+
+    // Autonomous multi-hop forensic trace kicks in on medium-to-high risk.
+    await maybeEnqueueTrace(supabase, {
+      address: result.address,
+      network: result.network,
+      source: "safe",
+      trigger_reason: `Safe check returned ${result.verdict} (${result.risk_score}/100)`,
+      risk_score: result.risk_score,
+    });
 
     const payload = {
       address: result.address,

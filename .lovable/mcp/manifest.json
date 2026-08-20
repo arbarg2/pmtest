@@ -259,6 +259,71 @@
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "outputSchema": null
+      },
+      {
+        "name": "investigate_downstream",
+        "title": "Start autonomous downstream investigation",
+        "description": "Launch the autonomous forensic agent on a wallet address. It recursively walks downstream fund flows (up to 3 hops), screens every hop against sanctions/scam/attribution data, classifies unknown smart contracts from on-chain bytecode, and drafts a cited investigative narrative. Returns the trace id; poll `get_investigation_trace` for results.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "address": {
+              "type": "string",
+              "minLength": 4,
+              "description": "Root wallet address to investigate."
+            },
+            "depth_limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3,
+              "description": "Hops to walk downstream (default 3)."
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 300,
+              "description": "Why this investigation was started."
+            }
+          },
+          "required": [
+            "address"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_investigation_trace",
+        "title": "Get autonomous investigation trace",
+        "description": "Read the result of an autonomous downstream investigation: status, every screened hop with its verdict, risk score, entity attribution and contract classification, and the cited investigative narrative once complete. Look up by trace id or by root wallet address.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "trace_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The trace id returned by investigate_downstream."
+            },
+            "address": {
+              "type": "string",
+              "minLength": 4,
+              "description": "Root wallet address — returns the most recent trace."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
       }
     ]
   }

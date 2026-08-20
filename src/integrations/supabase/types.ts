@@ -14,6 +14,198 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_job_state: {
+        Row: {
+          job: string
+          paused_at: string | null
+          reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          job: string
+          paused_at?: string | null
+          reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          job?: string
+          paused_at?: string | null
+          reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      agent_trace_nodes: {
+        Row: {
+          address: string
+          classification: string | null
+          created_at: string
+          depth: number
+          edge: Json
+          entity_category: string | null
+          entity_name: string | null
+          error: string | null
+          evidence: Json
+          id: string
+          labels: Json
+          network: string
+          parent_id: string | null
+          risk_score: number | null
+          status: string
+          trace_id: string
+          updated_at: string
+          verdict: string | null
+        }
+        Insert: {
+          address: string
+          classification?: string | null
+          created_at?: string
+          depth?: number
+          edge?: Json
+          entity_category?: string | null
+          entity_name?: string | null
+          error?: string | null
+          evidence?: Json
+          id?: string
+          labels?: Json
+          network: string
+          parent_id?: string | null
+          risk_score?: number | null
+          status?: string
+          trace_id: string
+          updated_at?: string
+          verdict?: string | null
+        }
+        Update: {
+          address?: string
+          classification?: string | null
+          created_at?: string
+          depth?: number
+          edge?: Json
+          entity_category?: string | null
+          entity_name?: string | null
+          error?: string | null
+          evidence?: Json
+          id?: string
+          labels?: Json
+          network?: string
+          parent_id?: string | null
+          risk_score?: number | null
+          status?: string
+          trace_id?: string
+          updated_at?: string
+          verdict?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_trace_nodes_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_trace_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_trace_nodes_trace_id_fkey"
+            columns: ["trace_id"]
+            isOneToOne: false
+            referencedRelation: "agent_traces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_traces: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          depth_limit: number
+          error: string | null
+          id: string
+          lease_expires_at: string | null
+          max_downstream_risk: number | null
+          narrative: string | null
+          narrative_validation: Json
+          network: string
+          node_budget: number
+          nodes_done: number
+          record_id: string | null
+          root_address: string
+          runs: number
+          source: string
+          started_at: string | null
+          status: string
+          trigger_reason: string | null
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          depth_limit?: number
+          error?: string | null
+          id?: string
+          lease_expires_at?: string | null
+          max_downstream_risk?: number | null
+          narrative?: string | null
+          narrative_validation?: Json
+          network: string
+          node_budget?: number
+          nodes_done?: number
+          record_id?: string | null
+          root_address: string
+          runs?: number
+          source?: string
+          started_at?: string | null
+          status?: string
+          trigger_reason?: string | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          depth_limit?: number
+          error?: string | null
+          id?: string
+          lease_expires_at?: string | null
+          max_downstream_risk?: number | null
+          narrative?: string | null
+          narrative_validation?: Json
+          network?: string
+          node_budget?: number
+          nodes_done?: number
+          record_id?: string | null
+          root_address?: string
+          runs?: number
+          source?: string
+          started_at?: string | null
+          status?: string
+          trigger_reason?: string | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_traces_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "investigation_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_traces_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_keys: {
         Row: {
           created_at: string
