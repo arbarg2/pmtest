@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { screenAndLog } from '../_shared/screening.ts'
+import { maybeEnqueueTrace } from '../_shared/trace-enqueue.ts'
 import { dispatchWebhooks } from '../_shared/webhooks.ts'
 
 const corsHeaders = {
@@ -186,7 +187,19 @@ serve(async (req) => {
               });
             }
           }
+
+          // Autonomous forensic trace on medium-to-high risk escalation
+          await maybeEnqueueTrace(supabaseClient, {
+            address: wallet.wallet_address,
+            network: screened.network,
+            workspace_id: (wallet as any).workspace_id ?? null,
+            created_by: (wallet as any).user_id ?? null,
+            source: 'monitor',
+            trigger_reason: `Monitored wallet risk moved to ${newRiskScore.toFixed(0)}/100 (${screened.verdict})`,
+            risk_score: newRiskScore,
+          });
         }
+
 
         // Update wallet with new risk score and last checked time
         const { error: updateError } = await supabaseClient
